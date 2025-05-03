@@ -3,7 +3,7 @@ import { AttendanceTracker } from "@/components/attendance-tracker"
 import { ClassManagementActions } from "@/components/class-management-actions"
 import { StatusBadge } from "@/components/status-badge"
 import { formatDuration } from "@/lib/utils"
-import { differenceInMinutes, format, parseISO, isValid } from "date-fns"
+import { differenceInMinutes, format, parseISO, isValid, parse } from "date-fns"
 import Link from "next/link"
 
 // Helper function to safely format dates
@@ -14,6 +14,37 @@ const safeFormat = (date: Date, formatStr: string, fallback = "N/A") => {
   } catch (error) {
     console.error("Error formatting date:", error);
     return fallback;
+  }
+}
+
+// Helper function to safely parse ISO date strings
+const safeParseISO = (dateString: string | null | undefined): Date | null => {
+  if (!dateString) return null;
+  try {
+    const parsedDate = parseISO(dateString);
+    return isValid(parsedDate) ? parsedDate : null;
+  } catch (error) {
+    console.error("Error parsing date:", error);
+    return null;
+  }
+}
+
+// Helper function to parse time strings (HH:mm:ss)
+const parseTimeString = (timeString: string | null | undefined): Date | null => {
+  if (!timeString) return null;
+  try {
+    // Check if it's just a time string (no date part)
+    if (timeString.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
+      const today = new Date();
+      // Parse time using date-fns parse with appropriate format
+      const parsedTime = parse(timeString, 'HH:mm:ss', today);
+      return isValid(parsedTime) ? parsedTime : null;
+    }
+    // If not a simple time string, try standard ISO parsing
+    return safeParseISO(timeString);
+  } catch (error) {
+    console.error("Error parsing time:", error);
+    return null;
   }
 }
 
@@ -43,31 +74,15 @@ type ClassDetailsProps = {
 }
 
 export function ClassDetails({ classData }: ClassDetailsProps) {
-  // Add proper validation for date parsing
-  let startTime: Date;
-  let endTime: Date;
-  let durationMinutes: number;
+  // Parse dates safely
 
-  try {
-    startTime = parseISO(classData.start_time);
-    endTime = parseISO(classData.end_time);
+  const startTime = parseTimeString(classData.start_time) || new Date();
+  const endTime = parseTimeString(classData.end_time) || new Date(startTime.getTime() + 60 * 60 * 1000);
 
-    // Check if dates are valid
-    if (!startTime || !isValid(startTime)) {
-      throw new Error('Invalid start time');
-    }
-    if (!endTime || !isValid(endTime)) {
-      throw new Error('Invalid end time');
-    }
-
-    durationMinutes = differenceInMinutes(endTime, startTime);
-  } catch (error) {
-    console.error("Error parsing dates:", error);
-    // Fallback to current date if parsing fails
-    startTime = new Date();
-    endTime = new Date();
-    endTime.setHours(endTime.getHours() + 1);
-    durationMinutes = 60;
+  // Calculate duration safely
+  let durationMinutes = 60; // default to 1 hour
+  if (isValid(startTime) && isValid(endTime)) {
+    durationMinutes = Math.max(differenceInMinutes(endTime, startTime), 0);
   }
 
   const duration = formatDuration(durationMinutes);

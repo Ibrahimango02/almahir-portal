@@ -54,4 +54,41 @@ export async function getTeachersCount() {
     return count
 }
 
+export async function getTeacherById(id: string) {
+    const supabase = await createClient()
+
+    // Get the teacher's profile data
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name, phone, status, created_at')
+        .eq('id', id)
+        .eq('role', 'teacher')
+        .single()
+
+    if (!profile) {
+        return null
+    }
+
+    // Get the teacher-specific data
+    const { data: teacher } = await supabase
+        .from('teachers')
+        .select('specialization, hourly_rate')
+        .eq('profile_id', id)
+        .single()
+
+    // Combine the profile and teacher data
+    return {
+        id: profile.id,
+        email: profile.email,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        status: profile.status,
+        created_at: profile.created_at,
+        specialization: teacher?.specialization || null,
+        hourly_rate: teacher?.hourly_rate || null
+    }
+}
+
+
 

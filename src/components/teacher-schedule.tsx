@@ -27,7 +27,6 @@ type Class = {
   start_time: string
   end_time: string
   status: string
-  max_students: number
   class_link: string
   teacher?: {
     first_name: string

@@ -7,7 +7,7 @@ import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getClasses } from "@/lib/get-classes"
-import { ScheduleListViewProps, ClassType, ClassSessionType, StudentType, TeacherType, SessionStatusType } from "@/types"
+import { ScheduleListViewProps, ClassType, ClassSessionType, StudentType, TeacherType, SessionType } from "@/types"
 
 
 export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewProps) {
@@ -86,8 +86,8 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
 
       // Create entry for each session - times are now in each session
       return cls.sessions.map(session => ({
-        id: cls.id,
-        sessionId: session.id,
+        id: cls.classId,
+        sessionId: session.sessionId,
         title: cls.title,
         description: cls.description,
         subject: cls.subject,

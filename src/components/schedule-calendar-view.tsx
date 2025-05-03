@@ -6,50 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { getClasses } from "@/lib/get-classes"
+import { WeeklyScheduleProps, ClassType } from "@/types"
 
-type TeacherType = {
-    id: string
-    first_name: string
-    last_name: string
-}
-
-type StudentType = {
-    id: string
-    first_name: string
-    last_name: string
-}
-
-type SessionStatusType = {
-    id: string
-    class_id: string
-    date: string
-    status: string
-    start_time: string
-    end_time: string
-}
-
-type ClassType = {
-    id: string
-    title: string
-    description: string
-    subject: string
-    start_date: string
-    end_date: string
-    days_repeated: string[]
-    sessions_status: SessionStatusType[]
-    class_link?: string
-    teachers: TeacherType[]
-    enrolled_students: StudentType[]
-}
-
-type WeeklyScheduleProps = {
-    filter?: "morning" | "afternoon" | "evening"
-    currentWeekStart: Date
-    timeRangeStart?: number
-    timeRangeEnd?: number
-}
-
-const classData = await getClasses()
+const classData: ClassType[] = await getClasses()
 
 export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd }: WeeklyScheduleProps) {
     const router = useRouter()
@@ -114,7 +73,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
 
                     // Create the session object for this week
                     sessionsForWeek.push({
-                        id: cls.id,
+                        id: cls.classId,
                         title: cls.title,
                         description: cls.description,
                         subject: cls.subject,
@@ -127,13 +86,13 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                         start_time: startDateTime.toISOString(),
                         end_time: endDateTime.toISOString(),
                         status: session.status,
-                        session_id: session.id,
+                        session_id: session.sessionId,
                         session_date: session.date
                     });
                 } catch (error) {
                     console.error("Error processing session:", {
-                        classId: cls.id,
-                        sessionId: session.id,
+                        classId: cls.classId,
+                        sessionId: session.sessionId,
                         date: session.date
                     }, error);
                 }

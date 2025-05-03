@@ -3,6 +3,13 @@ export type ScheduleListViewProps = {
     currentWeekStart?: Date
 }
 
+export type WeeklyScheduleProps = {
+    filter?: "morning" | "afternoon" | "evening"
+    currentWeekStart: Date
+    timeRangeStart?: number
+    timeRangeEnd?: number
+}
+
 export type StudentType = {
     id: string
     first_name: string
@@ -15,41 +22,42 @@ export type TeacherType = {
     last_name: string
 }
 
-export type SessionStatusType = {
-    id: string
-    class_id: string
-    date: string
-    status: string
-    start_time: string
-    end_time: string
-}
-
+// all sessions for a class
 export type ClassType = {
-    id: string
+    classId: string
     title: string
-    description: string
+    description?: string
     subject: string
     start_date: string
     end_date: string
-    days_repeated?: string[]
-    sessions: SessionStatusType[]
-    class_link?: string
+    days_repeated: string[]
+    sessions: SessionType[]
+    class_link: string
     teachers: TeacherType[]
     enrolled_students: StudentType[]
 }
 
-// For displaying in the list - a class session with all needed data
+export type SessionType = {
+    sessionId: string
+    classId: string
+    date: string
+    status: string
+    start_time: string
+    end_time: string
+}
+
+
+// one session for a class
 export type ClassSessionType = {
-    id: string
     sessionId: string
     title: string
-    description: string
+    description?: string
     subject: string
     date: string
     start_time: string
     end_time: string
     status: string
-    class_link?: string
+    class_link: string
     teachers: TeacherType[]
     enrolled_students: StudentType[]
 }

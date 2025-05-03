@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, PlayCircle, Play, StopCircle, Calendar } from "lucide-react"
+import { Video, PlayCircle, Play, StopCircle, Calendar, LogOut, UserX } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
@@ -54,6 +54,24 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
     })
   }
 
+  const handleLeaveClass = () => {
+    // Only available before initiation (when status is "scheduled")
+    setClassStatus("ended_early")
+    toast({
+      title: "Class Cancelled",
+      description: "You have left and cancelled the class session",
+    })
+  }
+
+  const handleAbsence = () => {
+    // Available after initiation (when status is "initiating" or "in_progress")
+    setClassStatus("ended_early")
+    toast({
+      title: "Class Marked as Absence",
+      description: "The class has been marked as absence and ended",
+    })
+  }
+
   const handleRescheduleClass = () => {
     // Redirect to the reschedule page
     router.push(`/admin/schedule/${classData.id}/reschedule`)
@@ -61,6 +79,13 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
 
   // Check if rescheduling is allowed (only in "scheduled" status)
   const canReschedule = classStatus === "scheduled"
+
+  // Check if leaving is allowed (only in "scheduled" status - before initiation)
+  const canLeave = classStatus === "scheduled"
+
+  // Check if absence button should be shown (after initiation but before ending)
+  // Modified to only allow absence in "initiating" state, not in "in_progress" state
+  const showAbsence = classStatus === "initiating"
 
   return (
     <div className="space-y-4">
@@ -84,33 +109,73 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           )}
           variant={classStatus === "scheduled" ? "default" : "outline"}
           disabled={classStatus !== "scheduled"}
+          style={classStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
         >
           <PlayCircle className="h-4 w-4" />
-          <span>Initiate</span>
+          <span>{classStatus === "scheduled" ? "Initiate" : "Initiated"}</span>
         </Button>
 
-        <Button
-          onClick={handleStartClass}
-          className={cn(
-            "flex items-center gap-2 transition-colors duration-300",
-            classStatus === "initiating" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
-          )}
-          variant={classStatus === "initiating" ? "default" : "outline"}
-          disabled={classStatus !== "initiating"}
-        >
-          <Play className="h-4 w-4" />
-          <span>Start Class</span>
-        </Button>
+        {classStatus === "initiating" ? (
+          <Button
+            onClick={handleStartClass}
+            className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            variant="default"
+            style={{ backgroundColor: "#3d8f5b", color: "white" }}
+          >
+            <Play className="h-4 w-4" />
+            <span>Start Class</span>
+          </Button>
+        ) : classStatus === "in_progress" ? (
+          <Button
+            onClick={handleEndClassEarly}
+            className="flex items-center gap-2"
+            variant="destructive"
+            style={{ backgroundColor: "#d14747", color: "white" }}
+          >
+            <StopCircle className="h-4 w-4" />
+            <span>End Class</span>
+          </Button>
+        ) : (
+          <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
+            {classStatus === "ended_early" ? (
+              <>
+                <StopCircle className="h-4 w-4" />
+                <span>Ended</span>
+              </>
+            ) : (
+              <>
+                <Play className="h-4 w-4" />
+                <span>Start Class</span>
+              </>
+            )}
+          </Button>
+        )}
 
-        <Button
-          onClick={handleEndClassEarly}
-          className="flex items-center gap-2"
-          variant="destructive"
-          disabled={classStatus !== "in_progress"}
-        >
-          <StopCircle className="h-4 w-4" />
-          <span>End Class</span>
-        </Button>
+        {/* Conditionally show Leave or Absence button based on class status */}
+        {canLeave ? (
+          <Button
+            onClick={handleLeaveClass}
+            className="flex items-center gap-2 hover:bg-red-700 text-white"
+            style={{ backgroundColor: "#d14747", color: "white" }}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Leave</span>
+          </Button>
+        ) : showAbsence ? (
+          <Button
+            onClick={handleAbsence}
+            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <UserX className="h-4 w-4" />
+            <span>Absence</span>
+          </Button>
+        ) : (
+          <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
+            <UserX className="h-4 w-4" />
+            <span>Absence</span>
+            {classStatus === "in_progress" && <span className="sr-only">(Disabled: Class in progress)</span>}
+          </Button>
+        )}
 
         {canReschedule ? (
           <Button onClick={handleRescheduleClass} className="flex items-center gap-2" variant="outline">
@@ -129,6 +194,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
       {!canReschedule && classStatus !== "in_progress" && classStatus !== "ended_early" && (
         <p className="text-xs text-muted-foreground mt-1">Note: Rescheduling is not available after class initiation</p>
       )}
+
     </div>
   )
 }

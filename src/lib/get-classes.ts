@@ -88,8 +88,8 @@ export async function getClasses() {
         const sessions = classSessions
             ?.filter(session => session.class_id === classItem.id)
             .map(session => ({
-                id: session.id,
-                class_id: session.class_id,
+                sessionId: session.id,
+                classId: session.class_id,
                 date: session.date,
                 status: session.status,
                 start_time: session.start_time,
@@ -103,7 +103,7 @@ export async function getClasses() {
         }
 
         return {
-            id: classItem.id,
+            classId: classItem.id,
             title: classItem.title,
             description: classItem.description,
             subject: classItem.subject,
@@ -117,63 +117,9 @@ export async function getClasses() {
         }
     }) || []
 
-    //console.log('Arabic sessions_status: ', formattedClasses[0].sessions_status)
-    //console.log('Quran sessions_status: ', formattedClasses[1].sessions_status)
-    //console.log('formattedClasses: ', formattedClasses)
-
     return formattedClasses
 }
 
-export async function getWeeklyClassesCount() {
-    const supabase = await createClient()
-
-    // Get current date
-    const now = new Date()
-
-    // Get start of current week (Monday)
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
-    startOfWeek.setHours(0, 0, 0, 0)
-
-    // Get end of current week (Sunday)
-    const endOfWeek = new Date(startOfWeek)
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
-    endOfWeek.setHours(23, 59, 59, 999)
-
-    // Format dates for database query
-    const startDate = startOfWeek.toISOString().split('T')[0]
-    const endDate = endOfWeek.toISOString().split('T')[0]
-
-    // Query class sessions within the current week
-    const { count, error } = await supabase
-        .from('class_sessions')
-        .select('*', { count: 'exact', head: true })
-        .gte('date', startDate)
-        .lte('date', endDate)
-
-    if (error) {
-        console.error('Error fetching weekly class sessions count:', error)
-        return 0
-    }
-
-    return count
-}
-
-export async function getClassesCountByStatus(status: string) {
-    const supabase = await createClient()
-
-    const { count, error } = await supabase
-        .from('class_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', status)
-
-    if (error) {
-        console.error('Error fetching class sessions count by status:', error)
-        return 0
-    }
-
-    return count
-}
 
 export async function getClassesToday() {
     const supabase = await createClient()
@@ -376,4 +322,97 @@ export async function getClassBySessionId(sessionId: string) {
         teachers,
         enrolled_students: students
     }
+}
+
+export async function getClassesByTeacherId(teacherId: string) {
+    const supabase = await createClient()
+
+    // Get class IDs for this teacher
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    const classIds = teacherClasses?.map(tc => tc.class_id) || []
+
+    // Get class details
+    const { data: classes } = await supabase
+        .from('classes')
+        .select('*')
+        .in('id', classIds)
+
+    // Get sessions for these classes
+    const { data: sessions } = await supabase
+        .from('class_sessions')
+        .select('*')
+        .in('class_id', classIds)
+
+    // Combine class and session data
+    const classesWithSessions = classes?.map(classData => {
+        const classSessions = sessions?.filter(s => s.class_id === classData.id) || []
+        return {
+            id: classData.id,
+            teacher_id: teacherId,
+            title: classData.title,
+            description: classData.description,
+            subject: classData.subject,
+            start_time: classSessions[0]?.start_time,
+            end_time: classSessions[0]?.end_time,
+            status: classSessions[0]?.status || 'scheduled',
+            class_link: classData.class_link
+        }
+    }) || []
+
+    return classesWithSessions
+}
+
+export async function getWeeklyClassesCount() {
+    const supabase = await createClient()
+
+    // Get current date
+    const now = new Date()
+
+    // Get start of current week (Monday)
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    // Get end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    endOfWeek.setHours(23, 59, 59, 999)
+
+    // Format dates for database query
+    const startDate = startOfWeek.toISOString().split('T')[0]
+    const endDate = endOfWeek.toISOString().split('T')[0]
+
+    // Query class sessions within the current week
+    const { count, error } = await supabase
+        .from('class_sessions')
+        .select('*', { count: 'exact', head: true })
+        .gte('date', startDate)
+        .lte('date', endDate)
+
+    if (error) {
+        console.error('Error fetching weekly class sessions count:', error)
+        return 0
+    }
+
+    return count
+}
+
+export async function getClassesCountByStatus(status: string) {
+    const supabase = await createClient()
+
+    const { count, error } = await supabase
+        .from('class_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', status)
+
+    if (error) {
+        console.error('Error fetching class sessions count by status:', error)
+        return 0
+    }
+
+    return count
 }
