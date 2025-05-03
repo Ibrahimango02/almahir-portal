@@ -50,7 +50,7 @@ const parseTimeString = (timeString: string | null | undefined): Date | null => 
 
 type ClassDetailsProps = {
   classData: {
-    id: number
+    sessionId: string
     title: string
     description: string
     subject: string
@@ -58,18 +58,18 @@ type ClassDetailsProps = {
     end_time: string
     status: string
     class_link: string
-    teacher_id: number
+    teacher_id: string
     teacher: {
-      id: number
+      id: string
       first_name: string
       last_name: string
     }
     enrolled_students: {
-      id: number
+      id: string
       first_name: string
       last_name: string
     }[]
-    attendance?: Record<number, boolean>
+    attendance?: Record<string, boolean>
   }
 }
 
@@ -139,7 +139,7 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
           {/* Attendance Tracking - Takes the full width */}
           <div className="md:col-span-3">
             <AttendanceTracker
-              classId={classData.id}
+              classId={classData.sessionId}
               classDate={classData.start_time}
               students={classData.enrolled_students}
               initialAttendance={classData.attendance || {}}

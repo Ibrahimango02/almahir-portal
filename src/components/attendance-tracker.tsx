@@ -9,36 +9,32 @@ import { format, parseISO } from "date-fns"
 import { CheckCircle, Save, X } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
+import { StudentType } from "@/types"
 
-type Student = {
-  id: number
-  first_name: string
-  last_name: string
-}
 
 type AttendanceRecord = {
-  studentId: number
+  studentId: string
   present: boolean
   notes?: string
 }
 
 type AttendanceTrackerProps = {
-  classId: number
+  classId: string
   classDate: string
-  students: Student[]
-  initialAttendance?: Record<number, boolean>
+  students: StudentType[]
+  initialAttendance?: Record<string, boolean>
 }
 
 export function AttendanceTracker({ classId, classDate, students, initialAttendance = {} }: AttendanceTrackerProps) {
   const { toast } = useToast()
-  const [attendance, setAttendance] = useState<Record<number, boolean>>({})
+  const [attendance, setAttendance] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [isAttendanceTaken, setIsAttendanceTaken] = useState(false)
 
   // Initialize attendance from props or default all to absent
   useEffect(() => {
-    const initialData: Record<number, boolean> = {}
+    const initialData: Record<string, boolean> = {}
     students.forEach((student) => {
       initialData[student.id] = initialAttendance[student.id] || false
     })
@@ -60,7 +56,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
   }
 
   // Handle checkbox change
-  const handleAttendanceChange = (studentId: number, isPresent: boolean) => {
+  const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
     setAttendance((prev) => ({
       ...prev,
       [studentId]: isPresent,
@@ -70,7 +66,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
 
   // Mark all as present
   const markAllPresent = () => {
-    const updatedAttendance: Record<number, boolean> = {}
+    const updatedAttendance: Record<string, boolean> = {}
     students.forEach((student) => {
       updatedAttendance[student.id] = true
     })
@@ -131,7 +127,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
             variant="outline"
             size="sm"
             onClick={() => {
-              const updatedAttendance: Record<number, boolean> = {}
+              const updatedAttendance: Record<string, boolean> = {}
               students.forEach((student) => {
                 updatedAttendance[student.id] = false
               })
@@ -143,7 +139,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
             <X className="mr-1 h-3.5 w-3.5" />
             Mark All Absent
           </Button>
-          <Button size="sm" onClick={saveAttendance} disabled={!hasChanges || saving} className="h-8">
+          <Button size="sm" onClick={saveAttendance} disabled={!hasChanges || saving} className="h-8" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
             {saving ? (
               "Saving..."
             ) : (
@@ -187,6 +183,11 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
                       checked={attendance[student.id] || false}
                       onCheckedChange={(checked) => {
                         handleAttendanceChange(student.id, checked === true)
+                      }}
+                      style={{
+                        backgroundColor: attendance[student.id] ? "#3d8f5b" : "white",
+                        color: "white",
+                        borderColor: "#3d8f5b"
                       }}
                     />
                   </div>

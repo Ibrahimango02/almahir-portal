@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/client'
+import { ClassType, ClassSessionType } from '@/types'
 
-export async function getClasses() {
+
+export async function getClasses(): Promise<ClassType[]> {
     const supabase = await createClient()
 
     // Get all classes
@@ -121,7 +123,7 @@ export async function getClasses() {
 }
 
 
-export async function getClassesToday() {
+export async function getClassesToday(): Promise<ClassType[]> {
     const supabase = await createClient()
 
     // Get today's date in YYYY-MM-DD format (using local timezone)
@@ -178,7 +180,7 @@ export async function getClassesToday() {
         .select('id, first_name, last_name')
         .in('id', studentIds)
 
-    // Format the data as required
+    // Format the data to match ClassType
     const formattedClasses = classes?.map(classItem => {
         // Find teachers for this class
         const classTeacherIds = classTeachers
@@ -224,16 +226,17 @@ export async function getClassesToday() {
             daysRepeated = daysRepeated.split(',').map(day => day.trim())
         }
 
+        // Return object matching ClassType
         return {
             classId: classItem.id,
             title: classItem.title,
-            description: classItem.description,
+            description: classItem.description || '',
             subject: classItem.subject,
             start_date: classItem.start_date,
             end_date: classItem.end_date,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link,
+            class_link: classItem.class_link || '',
             teachers: teachers,
             enrolled_students: enrolledStudents
         }
@@ -243,7 +246,7 @@ export async function getClassesToday() {
     return formattedClasses.filter(cls => cls.sessions.length > 0)
 }
 
-export async function getClassBySessionId(sessionId: string) {
+export async function getClassSessionById(sessionId: string): Promise<ClassSessionType | null> {
     const supabase = await createClient()
 
     // Get the session details
@@ -307,19 +310,17 @@ export async function getClassBySessionId(sessionId: string) {
     })) || []
 
     return {
-        id: classData.id,
+        classId: classData.id,
+        sessionId: sessionData.id,
         title: classData.title,
-        description: classData.description,
+        description: classData.description || "",
         subject: classData.subject,
-        class_link: classData.class_link,
-        session: {
-            id: sessionData.id,
-            date: sessionData.date,
-            status: sessionData.status,
-            start_time: sessionData.start_time,
-            end_time: sessionData.end_time
-        },
-        teachers,
+        date: sessionData.date,
+        start_time: sessionData.start_time,
+        end_time: sessionData.end_time,
+        status: sessionData.status,
+        class_link: classData.class_link || "",
+        teachers: teachers,
         enrolled_students: students
     }
 }

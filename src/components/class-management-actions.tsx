@@ -9,12 +9,29 @@ import { useRouter } from "next/navigation"
 
 type ClassManagementActionsProps = {
   classData: {
-    id: number
+    sessionId: string
     title: string
-    class_link: string
+    description: string
+    subject: string
+    start_time: string
+    end_time: string
     status: string
+    class_link: string
+    teacher_id: string
+    teacher: {
+      id: string
+      first_name: string
+      last_name: string
+    }
+    enrolled_students: {
+      id: string
+      first_name: string
+      last_name: string
+    }[]
+    attendance?: Record<string, boolean>
   }
 }
+
 
 export function ClassManagementActions({ classData }: ClassManagementActionsProps) {
   const [classStatus, setClassStatus] = useState(classData.status)
@@ -74,7 +91,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
 
   const handleRescheduleClass = () => {
     // Redirect to the reschedule page
-    router.push(`/admin/schedule/${classData.id}/reschedule`)
+    router.push(`/admin/schedule/${classData.sessionId}/reschedule`)
   }
 
   // Check if rescheduling is allowed (only in "scheduled" status)
