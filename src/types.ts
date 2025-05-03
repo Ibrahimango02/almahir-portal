@@ -49,6 +49,7 @@ export type SessionType = {
 
 // one session for a class
 export type ClassSessionType = {
+    classId: string
     sessionId: string
     title: string
     description?: string

@@ -210,8 +210,8 @@ export async function getClassesToday() {
         const sessions = classSessions
             ?.filter(session => session.class_id === classItem.id)
             .map(session => ({
-                id: session.id,
-                class_id: session.class_id,
+                sessionId: session.id,
+                classId: session.class_id,
                 date: session.date,
                 status: session.status,
                 start_time: session.start_time,
@@ -225,7 +225,7 @@ export async function getClassesToday() {
         }
 
         return {
-            id: classItem.id,
+            classId: classItem.id,
             title: classItem.title,
             description: classItem.description,
             subject: classItem.subject,

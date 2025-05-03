@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { StatusBadge } from "./status-badge"
 import { getClassesToday } from "@/lib/get-classes"
-import { ClassType } from "@/types"
+import { ClassType, ClassSessionType } from "@/types"
 // Helper function to format duration
 
 const formatDuration = (minutes: number) => {
@@ -43,7 +43,7 @@ const safeParseISO = (dateStr: string): Date | null => {
 }
 
 export async function UpcomingClasses() {
-  const todayClasses = await getClassesToday();
+  const todayClasses: ClassType[] = await getClassesToday();
 
   // Create session objects for display - times are now in each session
   const todaySessions = todayClasses.flatMap(cls => {
@@ -107,28 +107,19 @@ export async function UpcomingClasses() {
         }
 
         return {
-          id: cls.id,
+          classId: cls.classId,
+          sessionId: session.sessionId,
           title: cls.title,
           description: cls.description || "",
           subject: cls.subject,
+          date: session.date,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           status: session.status,
           class_link: cls.class_link || "",
-          teacher_id: cls.teachers && cls.teachers.length > 0 ? cls.teachers[0]?.id || 0 : 0,
-          teacher: cls.teachers && cls.teachers.length > 0 ? cls.teachers[0] : {
-            id: 0,
-            first_name: "No",
-            last_name: "Teacher"
-          },
-          enrolled_students: cls.enrolled_students || [],
-          session: {
-            id: session.id,
-            start_time: startDateTime.toISOString(),
-            end_time: endDateTime.toISOString(),
-            status: session.status
-          }
-        };
+          teachers: cls.teachers || [],
+          enrolled_students: cls.enrolled_students || []
+        } as ClassSessionType;
       } catch (error) {
         console.error("Error processing session:", error);
         return null;
@@ -151,11 +142,11 @@ export async function UpcomingClasses() {
   // Filter to show only upcoming sessions that haven't ended yet
   const upcomingSessions = sortedSessions
     .filter(session => {
-      if (!session || !session.session || !session.session.end_time || !session.session.status) return false;
+      if (!session || !session.end_time || !session.status) return false;
 
       try {
         const now = new Date();
-        const endTime = new Date(session.session.end_time);
+        const endTime = new Date(session.end_time);
 
         // Classes with date AND time greater than or equal to current date AND time
         return !isBefore(endTime, now);
@@ -180,7 +171,7 @@ export async function UpcomingClasses() {
 
               // Skip if we couldn't parse the dates
               if (!startTime || !endTime) {
-                console.error("Invalid dates in class session:", cls.id);
+                console.error("Invalid dates in class session:", cls.sessionId);
                 return null;
               }
 
@@ -189,28 +180,28 @@ export async function UpcomingClasses() {
 
 
               return (
-                <Link href={`/admin/schedule/${cls.session.id}`} key={cls.id}>
+                <Link href={`/admin/schedule/${cls.sessionId}`} key={cls.sessionId}>
                   <Card className="p-4 cursor-pointer hover:shadow-md transition-shadow">
                     <div className="flex flex-col space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar>
                             <AvatarFallback>
-                              {cls.teacher?.first_name?.[0] || '?'}
-                              {cls.teacher?.last_name?.[0] || '?'}
+                              {cls.teachers?.[0]?.first_name?.[0] || '?'}
+                              {cls.teachers?.[0]?.last_name?.[0] || '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium leading-none">{cls.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              {cls.teacher?.first_name || 'No'} {cls.teacher?.last_name || 'Teacher'}
+                              {cls.teachers?.[0]?.first_name || 'No'} {cls.teachers?.[0]?.last_name || 'Teacher'}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {safeFormat(startTime, "MMM d, yyyy")} • {safeFormat(startTime, "h:mm a")} - {safeFormat(endTime, "h:mm a")} ({durationText})
                             </p>
                           </div>
                         </div>
-                        <StatusBadge status={cls.session.status} />
+                        <StatusBadge status={cls.status} />
                       </div>
                     </div>
                   </Card>

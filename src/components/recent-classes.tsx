@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { StatusBadge } from "./status-badge"
 import { getClassesToday } from "@/lib/get-classes"
-
+import { ClassType, ClassSessionType } from "@/types"
 // Helper function to format duration
 const formatDuration = (minutes: number) => {
   if (minutes < 0) {
@@ -42,7 +42,7 @@ const safeParseISO = (dateStr: string): Date | null => {
 }
 
 export async function RecentClasses() {
-  const todayClasses = await getClassesToday();
+  const todayClasses: ClassType[] = await getClassesToday();
 
   // Create session objects for display - times are now in each session
   const todaySessions = todayClasses.flatMap(cls => {
@@ -106,20 +106,19 @@ export async function RecentClasses() {
         }
 
         return {
-          id: `${cls.id}-${session.id}`,
+          classId: cls.classId,
+          sessionId: session.sessionId,
           title: cls.title,
+          description: cls.description || "",
           subject: cls.subject,
-          teacher: cls.teachers && cls.teachers.length > 0 ? cls.teachers[0] : {
-            first_name: "No",
-            last_name: "Teacher"
-          },
+          date: session.date,
           start_time: startDateTime.toISOString(),
           end_time: endDateTime.toISOString(),
           status: session.status,
-          students_count: cls.enrolled_students?.length || 0,
-          max_students: 30, // Default value as it's not in our data model
-          class_link: cls.class_link || ""
-        };
+          class_link: cls.class_link || "",
+          teachers: cls.teachers || [],
+          enrolled_students: cls.enrolled_students || []
+        } as ClassSessionType;
       } catch (error) {
         console.error("Error processing session:", error);
         return null;
@@ -170,7 +169,7 @@ export async function RecentClasses() {
 
               // Skip if we couldn't parse the dates
               if (!startTime || !endTime) {
-                console.error("Invalid dates in class session:", cls.id);
+                console.error("Invalid dates in class session:", cls.sessionId);
                 return null;
               }
 
@@ -178,24 +177,24 @@ export async function RecentClasses() {
               const durationText = formatDuration(durationMinutes);
 
               // Extract the original class ID from the session ID (format: classId-sessionId)
-              const classId = cls.id.split('-')[0];
+              //const sessionId = cls.id.split('-')[1];
 
               return (
-                <Link href={`/admin/schedule/${classId}`} key={cls.id}>
+                <Link href={`/admin/schedule/${cls.sessionId}`} key={cls.sessionId}>
                   <Card className="p-4 cursor-pointer hover:shadow-md transition-shadow">
                     <div className="flex flex-col space-y-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <Avatar>
                             <AvatarFallback>
-                              {cls.teacher?.first_name?.[0] || '?'}
-                              {cls.teacher?.last_name?.[0] || '?'}
+                              {cls.teachers?.[0]?.first_name?.[0] || '?'}
+                              {cls.teachers?.[0]?.last_name?.[0] || '?'}
                             </AvatarFallback>
                           </Avatar>
                           <div>
                             <p className="text-sm font-medium leading-none">{cls.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              {cls.teacher?.first_name || 'No'} {cls.teacher?.last_name || 'Teacher'}
+                              {cls.teachers?.[0]?.first_name || 'No'} {cls.teachers?.[0]?.last_name || 'Teacher'}
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {safeFormat(startTime, "MMM d, yyyy")} • {safeFormat(startTime, "h:mm a")} - {safeFormat(endTime, "h:mm a")} ({durationText})
