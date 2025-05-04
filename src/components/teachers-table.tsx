@@ -16,22 +16,63 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, MoreHorizontal, CalendarPlus } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getTeachers } from "@/lib/get-teachers"
 import { getTeacherClassCount } from "@/lib/get-classes"
+import { TeacherType } from "@/types"
 
-const teachers = await getTeachers()
-
-export async function TeachersTable() {
+export function TeachersTable() {
+  const [teachers, setTeachers] = useState<TeacherType[]>([])
+  const [classCount, setClassCount] = useState<Record<string, number>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const data = await getTeachers()
+        setTeachers(data)
+        setLoading(false)
+      } catch (error) {
+        console.error("Failed to fetch teachers:", error)
+        setLoading(false)
+      }
+    }
+
+    fetchTeachers()
+  }, [])
+
+  useEffect(() => {
+    const fetchClassCounts = async () => {
+      const counts: Record<string, number> = {}
+      for (const teacher of teachers) {
+        try {
+          const count = await getTeacherClassCount(teacher.teacher_id)
+          counts[teacher.teacher_id] = count ?? 0
+        } catch (error) {
+          console.error(`Failed to fetch class count for teacher ${teacher.teacher_id}:`, error)
+          counts[teacher.teacher_id] = 0
+        }
+      }
+      setClassCount(counts)
+    }
+
+    if (teachers.length > 0) {
+      fetchClassCounts()
+    }
+  }, [teachers])
 
   // Calculate pagination
   const totalItems = teachers.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedTeachers = teachers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  if (loading) {
+    return <div>Loading teachers...</div>
+  }
 
   return (
     <div>
@@ -90,10 +131,7 @@ export async function TeachersTable() {
                 </TableCell>
                 <TableCell>
                   <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {(async () => {
-                      const classCount = await getTeacherClassCount(teacher.teacher_id)
-                      return classCount
-                    })()}
+                    {classCount[teacher.teacher_id] || 0}
                   </Link>
                 </TableCell>
                 <TableCell className="text-center">

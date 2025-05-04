@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import {
   format,
   parseISO,
@@ -22,12 +22,52 @@ import { StatusBadge } from "./status-badge"
 import { ClassSessionType } from "@/types"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { TablePagination } from "./table-pagination"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+// Utility function to parse class date and time
+const parseClassDateTime = (
+  cls: { date?: string; start_time?: string; end_time?: string },
+  timeField: "start_time" | "end_time"
+): Date | null => {
+  try {
+    const time = cls[timeField]
+    if (!time) return null
+
+    if (cls.date) {
+      // If the class has a separate date field, use it with time
+      const cleanTime = time.replace(/(-|\+)\d{2}.*$/, '')
+      const [hours, minutes] = cleanTime.split(':').map(Number)
+      const [year, month, day] = cls.date.split('-').map(Number)
+
+      const result = new Date(year, month - 1, day)
+      result.setHours(hours || 0, minutes || 0, 0)
+
+      // If this is an end time and it's earlier than start time, add a day
+      if (timeField === "end_time" && cls.start_time) {
+        const startTime = parseClassDateTime(cls, "start_time")
+        if (startTime && result < startTime) {
+          result.setDate(result.getDate() + 1)
+        }
+      }
+
+      return result
+    } else {
+      // Otherwise, try to parse the ISO date from time fields
+      return parseISO(time)
+    }
+  } catch (error) {
+    console.error(`Error parsing ${timeField} for class:`, error, cls)
+    return null
+  }
+}
 
 export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
   const [view, setView] = useState<"list" | "calendar">("list")
-  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date()))
-  const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>([])
+  const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(classes)
+  const [timeFilter, setTimeFilter] = useState<"all" | "morning" | "afternoon" | "evening">("all")
+  const [activeListTab, setActiveListTab] = useState<"upcoming" | "recent">("upcoming")
 
   // Memoize sorted classes to prevent recreation on every render
   const sortedClasses = useMemo(() => {
@@ -38,50 +78,122 @@ export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
   useEffect(() => {
     if (view === "calendar") {
       // For calendar view, filter classes to show only those in the current week
-      const weekEnd = addDays(currentWeekStart, 6)
-      const filtered = sortedClasses.filter((cls) => {
-        const classDate = parseISO(cls.start_time)
-        return isWithinInterval(classDate, {
+      const weekEnd = addDays(currentWeekStart, 6) // 6 days after Monday = Sunday
+      let filtered = sortedClasses.filter((cls) => {
+        const classDate = parseClassDateTime(cls, "start_time")
+        return classDate && isWithinInterval(classDate, {
           start: startOfDay(currentWeekStart),
           end: endOfDay(weekEnd),
         })
       })
+
+      // Apply time filter if not "all"
+      if (timeFilter !== "all") {
+        filtered = filtered.filter((cls) => {
+          const startTime = parseClassDateTime(cls, "start_time")
+          if (!startTime) return false;
+
+          const hour = startTime.getHours();
+
+          if (timeFilter === "morning") {
+            return hour >= 4 && hour < 12;
+          } else if (timeFilter === "afternoon") {
+            return hour >= 12 && hour < 20;
+          } else if (timeFilter === "evening") {
+            return hour >= 20 || hour < 4;
+          }
+
+          return true;
+        });
+      }
+
       setVisibleClasses(filtered)
-    } else {
-      // For list view, show all classes
-      setVisibleClasses(sortedClasses)
+    } else if (view === "list") {
+      // For list view, filter based on the week and the active tab
+      const weekEnd = addDays(currentWeekStart, 6) // 6 days after Monday = Sunday
+      const now = new Date()
+
+      let filtered = sortedClasses.filter((cls) => {
+        const classDate = parseClassDateTime(cls, "start_time")
+        return classDate && isWithinInterval(classDate, {
+          start: startOfDay(currentWeekStart),
+          end: endOfDay(weekEnd),
+        })
+      })
+
+      // Apply the upcoming/recent filter
+      if (activeListTab === "upcoming") {
+        filtered = filtered.filter((cls) => {
+          const startTime = parseClassDateTime(cls, "start_time")
+          return startTime && startTime >= now;
+        });
+      } else if (activeListTab === "recent") {
+        filtered = filtered.filter((cls) => {
+          const startTime = parseClassDateTime(cls, "start_time")
+          return startTime && startTime < now;
+        });
+      }
+
+      setVisibleClasses(filtered)
     }
-  }, [sortedClasses, currentWeekStart, view])
+  }, [sortedClasses, view, timeFilter, currentWeekStart, activeListTab])
 
   const navigateWeek = (direction: "next" | "prev") => {
     setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
+
+    // For list view, adjust visible classes to show appropriate date range
+    if (view === "list") {
+      const newWeekStart = direction === "next" ? addWeeks(currentWeekStart, 1) : subWeeks(currentWeekStart, 1)
+      const weekEnd = addDays(newWeekStart, 6)
+      const now = new Date()
+
+      let filtered = sortedClasses.filter((cls) => {
+        const classDate = parseClassDateTime(cls, "start_time")
+        return classDate && isWithinInterval(classDate, {
+          start: startOfDay(newWeekStart),
+          end: endOfDay(weekEnd),
+        })
+      })
+
+      // Apply the upcoming/recent filter
+      if (activeListTab === "upcoming") {
+        filtered = filtered.filter((cls) => {
+          const startTime = parseClassDateTime(cls, "start_time")
+          return startTime && startTime >= now;
+        });
+      } else if (activeListTab === "recent") {
+        filtered = filtered.filter((cls) => {
+          const startTime = parseClassDateTime(cls, "start_time")
+          return startTime && startTime < now;
+        });
+      }
+
+      setVisibleClasses(filtered)
+    }
   }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <div className="inline-flex items-center rounded-md border p-1 bg-muted/50">
-          <Button
-            variant={view === "list" ? "default" : "ghost"}
-            size="sm"
-            className="rounded-sm"
-            onClick={() => setView("list")}
-          >
-            <List className="h-4 w-4 mr-2" />
-            List
-          </Button>
-          <Button
-            variant={view === "calendar" ? "default" : "ghost"}
-            size="sm"
-            className="rounded-sm"
-            onClick={() => setView("calendar")}
-          >
-            <CalendarDays className="h-4 w-4 mr-2" />
-            Calendar
-          </Button>
+        <div className="flex items-center">
+          <h3 className="text-lg font-bold tracking-tight">Class Schedule</h3>
         </div>
 
-        {view === "calendar" && (
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setView(view === "list" ? "calendar" : "list")}>
+            {view === "calendar" ? (
+              <>
+                <List className="mr-2 h-4 w-4" />
+                View List
+              </>
+            ) : (
+              <>
+                <CalendarDays className="mr-2 h-4 w-4" />
+                View Calendar
+              </>
+            )}
+          </Button>
+
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => navigateWeek("prev")}>
               <ChevronLeft className="h-4 w-4" />
@@ -93,141 +205,301 @@ export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-        )}
+        </div>
       </div>
 
+      {view === "calendar" && (
+        <div className="flex justify-end mb-4">
+          <Tabs
+            value={timeFilter}
+            onValueChange={(value) => setTimeFilter(value as "all" | "morning" | "afternoon" | "evening")}
+          >
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="morning">Morning</TabsTrigger>
+              <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
+              <TabsTrigger value="evening">Evening</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+
       {view === "list" ? (
-        <ListScheduleView classes={visibleClasses} />
+        <>
+          <div className="flex justify-end mb-4">
+            <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as "upcoming" | "recent")}>
+              <TabsList className="bg-muted/80">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="recent">Recent</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <ListScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={activeListTab} />
+        </>
       ) : (
-        <CalendarScheduleView classes={visibleClasses} weekStart={currentWeekStart} />
+        <CalendarScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={timeFilter} />
       )}
     </div>
   )
 }
 
-function ListScheduleView({ classes }: { classes: ClassSessionType[] }) {
+function ListScheduleView({
+  classes,
+  weekStart,
+  filter
+}: {
+  classes: ClassSessionType[];
+  weekStart: Date;
+  filter: "upcoming" | "recent";
+}) {
   const router = useRouter()
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
 
-  // Group classes by day
-  const classesByDay = useMemo(() => {
-    return classes.reduce(
-      (acc, cls) => {
-        try {
-          // Verify that start_time is a valid date string before parsing
-          if (!cls.start_time || isNaN(Date.parse(cls.start_time))) {
-            console.warn("Invalid date encountered:", cls.start_time)
-            return acc
-          }
+  console.log("This is the list view")
 
-          const day = format(parseISO(cls.start_time), "yyyy-MM-dd")
-          if (!acc[day]) {
-            acc[day] = []
-          }
-          acc[day].push(cls)
-          return acc
-        } catch (error) {
-          console.error("Error processing class date:", error, cls)
-          return acc
-        }
-      },
-      {} as Record<string, ClassSessionType[]>,
-    )
-  }, [classes])
+  // Calculate the end of the week (Monday to Sunday)
+  const weekEnd = addDays(weekStart, 6)
 
-  // Sort days
-  const sortedDays = useMemo(() => {
-    return Object.keys(classesByDay).sort()
-  }, [classesByDay])
+  // Current date and time for filtering
+  const now = new Date()
 
-  const handleClassClick = (classId: string) => {
-    router.push(`/admin/schedule/${classId}`)
+  // Sort and filter classes by date and time
+  const filteredSortedClasses = useMemo(() => {
+    // First get properly sorted classes
+    const sorted = [...classes].sort((a, b) => {
+      try {
+        const aDateTime = parseClassDateTime(a, "start_time")
+        const bDateTime = parseClassDateTime(b, "start_time")
+
+        if (!aDateTime || !bDateTime) return 0
+        return aDateTime.getTime() - bDateTime.getTime()
+      } catch (error) {
+        console.error("Error sorting classes:", error)
+        return 0
+      }
+    })
+
+    // Then filter based on the active tab
+    return sorted.filter(cls => {
+      const startDateTime = parseClassDateTime(cls, "start_time")
+      if (!startDateTime) return false
+
+      if (filter === "upcoming") {
+        // Show classes that start from now into the future
+        return startDateTime >= now
+      } else if (filter === "recent") {
+        // Show classes that occurred in the past
+        return startDateTime < now
+      }
+
+      return true
+    })
+  }, [classes, filter, now])
+
+  // Paginate the classes
+  const totalItems = filteredSortedClasses.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const paginatedClasses = filteredSortedClasses.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
+
+  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, classId: string) => {
+    // Check if the click was on a link or other interactive element
+    const target = e.target as HTMLElement
+    const isLink = target.tagName === "A" || target.closest("a")
+
+    // Only navigate if the click wasn't on a link
+    if (!isLink) {
+      router.push(`/admin/schedule/${classId}`)
+    }
   }
 
   return (
-    <div className="space-y-6">
-      {sortedDays.map((day) => (
-        <div key={day} className="space-y-2">
-          <h3 className="font-medium text-sm text-muted-foreground">{format(parseISO(day), "EEEE, MMMM d, yyyy")}</h3>
-          <div className="space-y-2">
-            {classesByDay[day].map((cls) => (
-              <div
-                key={cls.session_id}
-                className="flex items-center justify-between p-3 border rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => handleClassClick(cls.session_id)}
-              >
-                <div>
-                  <div className="font-medium flex items-center">
-                    {cls.title}
-                    <ExternalLink className="h-3.5 w-3.5 ml-1 text-muted-foreground" />
-                  </div>
-                  <div className="text-sm text-muted-foreground">{cls.subject}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {format(parseISO(cls.start_time), "h:mm a")} - {format(parseISO(cls.end_time), "h:mm a")}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={cls.status} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-medium">
+          {filter === "upcoming" ? "Upcoming Classes" : "Recent Classes"}
+        </h3>
+      </div>
 
-      {sortedDays.length === 0 && <div className="text-center py-8 text-muted-foreground">No classes scheduled</div>}
+      {filteredSortedClasses.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          {filter === "upcoming" ? "No upcoming classes scheduled" : "No recent classes found"}
+        </div>
+      ) : (
+        <>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th className="text-left p-3 font-medium text-sm">Class</th>
+                  <th className="text-left p-3 font-medium text-sm">Date & Time</th>
+                  <th className="text-left p-3 font-medium text-sm">Subject</th>
+                  <th className="text-left p-3 font-medium text-sm">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedClasses.map((classItem) => {
+                  const startDateTime = parseClassDateTime(classItem, "start_time")
+                  const endDateTime = parseClassDateTime(classItem, "end_time")
+
+                  if (!startDateTime || !endDateTime) return null
+
+                  return (
+                    <tr
+                      key={classItem.session_id}
+                      className="border-t hover:bg-muted/20 cursor-pointer transition-colors"
+                      onClick={(e) => handleRowClick(e, classItem.session_id)}
+                    >
+                      <td className="p-3">
+                        <div className="font-medium">{classItem.title}</div>
+                        <p className="text-xs text-muted-foreground">
+                          {classItem.description && classItem.description.substring(0, 50)}
+                          {classItem.description && classItem.description.length > 50 ? '...' : ''}
+                        </p>
+                      </td>
+                      <td className="p-3">
+                        <div>{format(startDateTime, "EEEE, MMMM d, yyyy")}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {format(startDateTime, "h:mm a")} - {format(endDateTime, "h:mm a")}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div className="inline-block">{classItem.subject}</div>
+                      </td>
+                      <td className="p-3">
+                        <StatusBadge status={classItem.status} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
+        </>
+      )}
     </div>
   )
 }
 
-function CalendarScheduleView({ classes, weekStart }: { classes: ClassSessionType[]; weekStart: Date }) {
+function CalendarScheduleView({
+  classes,
+  weekStart,
+  filter = "all"
+}: {
+  classes: ClassSessionType[];
+  weekStart: Date;
+  filter?: "all" | "morning" | "afternoon" | "evening";
+}) {
   const router = useRouter()
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollbarWidth, setScrollbarWidth] = useState(0)
+
+  console.log("This is the calendar view")
+  console.log(classes)
 
   // Create an array of the days of the week
   const weekDays = useMemo(() => {
+    // Start from Monday (index 0) to Sunday (index 6)
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   }, [weekStart])
 
+  // Scroll to 8 AM when the filter changes to "all"
+  useEffect(() => {
+    if (filter === "all" && scrollContainerRef.current) {
+      // Scroll to 8 AM (8 * 60px = 480px) - adjust as needed
+      setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 480;
+        }
+      }, 100);
+    }
+  }, [filter]);
+
+  // Calculate scrollbar width using a ref and effect
+  useEffect(() => {
+    // Create a div with overflow to measure scrollbar width
+    const scrollDiv = document.createElement('div')
+    scrollDiv.style.overflow = 'scroll'
+    scrollDiv.style.height = '100px'
+    scrollDiv.style.width = '100px'
+    scrollDiv.style.position = 'absolute'
+    scrollDiv.style.top = '-9999px'
+    document.body.appendChild(scrollDiv)
+
+    // Calculate scrollbar width
+    const width = scrollDiv.offsetWidth - scrollDiv.clientWidth
+
+    // Remove the div
+    document.body.removeChild(scrollDiv)
+
+    // Set scrollbar width
+    setScrollbarWidth(width)
+  }, []) // Calculate once on mount
+
   // Find earliest and latest class times to determine time slots
   const timeRange = useMemo(() => {
-    if (classes.length === 0) {
-      return { earliestHour: 8, latestHour: 20 }
+    // Determine time range based on filter
+    if (filter === "morning") {
+      return { earliestHour: 4, latestHour: 12 }
+    } else if (filter === "afternoon") {
+      return { earliestHour: 12, latestHour: 20 }
+    } else if (filter === "evening") {
+      return { earliestHour: 20, latestHour: 4 } // 20 to 4 represents 8 PM to 4 AM
+    } else if (filter === "all") {
+      // For "all", show full 24 hours
+      return { earliestHour: 0, latestHour: 24 }
     }
 
-    const validClasses = classes.filter(cls =>
-      cls.start_time && cls.end_time &&
-      !isNaN(Date.parse(cls.start_time)) &&
-      !isNaN(Date.parse(cls.end_time))
-    )
-
-    if (validClasses.length === 0) {
-      return { earliestHour: 8, latestHour: 20 }
-    }
-
-    const classStartTimes = validClasses.map((cls) => parseISO(cls.start_time).getHours())
-    const classEndTimes = validClasses.map(
-      (cls) => parseISO(cls.end_time).getHours() + (parseISO(cls.end_time).getMinutes() > 0 ? 1 : 0),
-    )
-
-    const earliestHour = Math.max(8, Math.min(...classStartTimes))
-    const latestHour = Math.min(20, Math.max(...classEndTimes))
-
-    return { earliestHour, latestHour }
-  }, [classes])
+    // If we get here, it's likely a default case or invalid filter
+    // Provide a reasonable default range
+    return { earliestHour: 8, latestHour: 20 }
+  }, [filter])
 
   // Time slots for the day (dynamic based on class times, with defaults)
   const timeSlots = useMemo(() => {
+    // Handle evening view that wraps around midnight
+    if (filter === "evening") {
+      // Create slots for 8 PM to midnight, then midnight to 4 AM
+      const eveningSlots = []
+      // From 8 PM (20) to midnight (24)
+      for (let i = timeRange.earliestHour; i < 24; i++) {
+        eveningSlots.push(i)
+      }
+      // From midnight (0) to 4 AM (4)
+      for (let i = 0; i < timeRange.latestHour; i++) {
+        eveningSlots.push(i)
+      }
+      return eveningSlots
+    }
+
+    // For other time ranges
     return Array.from(
-      { length: timeRange.latestHour - timeRange.earliestHour + 1 },
+      { length: timeRange.latestHour - timeRange.earliestHour },
       (_, i) => i + timeRange.earliestHour,
     )
-  }, [timeRange])
+  }, [timeRange, filter])
 
   // Function to check if two classes overlap
   const doClassesOverlap = (class1: ClassSessionType, class2: ClassSessionType) => {
-    const start1 = parseISO(class1.start_time)
-    const end1 = parseISO(class1.end_time)
-    const start2 = parseISO(class2.start_time)
-    const end2 = parseISO(class2.end_time)
+    const start1 = parseClassDateTime(class1, "start_time")
+    const end1 = parseClassDateTime(class1, "end_time")
+    const start2 = parseClassDateTime(class2, "start_time")
+    const end2 = parseClassDateTime(class2, "end_time")
+
+    if (!start1 || !end1 || !start2 || !end2) return false
 
     return start1 < end2 && start2 < end1
   }
@@ -328,18 +600,8 @@ function CalendarScheduleView({ classes, weekStart }: { classes: ClassSessionTyp
     const byDay = weekDays.map((day) => {
       // Get all valid classes for this day
       const classesForDay = classes.filter((cls) => {
-        try {
-          // Validate date strings
-          if (!cls.start_time || !cls.end_time ||
-            isNaN(Date.parse(cls.start_time)) ||
-            isNaN(Date.parse(cls.end_time))) {
-            return false
-          }
-
-          return isSameDay(day, parseISO(cls.start_time))
-        } catch (error) {
-          return false
-        }
+        const startDateTime = parseClassDateTime(cls, "start_time")
+        return startDateTime && isSameDay(day, startDateTime)
       })
 
       // Group overlapping classes
@@ -360,21 +622,24 @@ function CalendarScheduleView({ classes, weekStart }: { classes: ClassSessionTyp
   }, [classes, weekDays])
 
   return (
-    <div className="overflow-x-auto border rounded-lg">
-      <div className="min-w-[800px]">
+    <div className="overflow-x-auto border rounded-lg" ref={wrapperRef}>
+      <div className="min-w-[700px] w-full">
         {/* Calendar header - Days of the week */}
-        <div className="grid grid-cols-8 border-b">
-          <div className="p-3 border-r bg-muted/30 font-medium text-sm"></div>
+        <div
+          className="grid grid-cols-8 border-b"
+          style={{ paddingRight: filter === "all" ? `${scrollbarWidth}px` : '0' }}
+        >
+          <div className="p-2 border-r bg-muted/30 text-sm"></div>
           {weekDays.map((day) => (
             <div
               key={day.toISOString()}
               className={cn(
-                "p-3 border-r last:border-r-0 font-medium text-center",
+                "p-2 border-r last:border-r-0 font-medium text-center",
                 isToday(day) ? "bg-blue-50 dark:bg-blue-950" : "bg-muted/30",
               )}
             >
               <div className="text-sm uppercase">{format(day, "EEE")}</div>
-              <div className={cn("text-2xl font-normal", isToday(day) ? "text-blue-700 dark:text-blue-400" : "")}>
+              <div className={cn("text-xl font-normal", isToday(day) ? "text-blue-700 dark:text-blue-400" : "")}>
                 {format(day, "d")}
               </div>
             </div>
@@ -382,85 +647,101 @@ function CalendarScheduleView({ classes, weekStart }: { classes: ClassSessionTyp
         </div>
 
         {/* Time slots */}
-        {timeSlots.map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
-            <div className="p-3 border-r bg-muted/20 text-sm flex items-center justify-end pr-4">
-              {formatHour(hour)}
-            </div>
+        <div
+          ref={scrollContainerRef}
+          className={cn(filter === "all" && "max-h-[600px] overflow-y-auto")}
+        >
+          {timeSlots.map((hour) => (
+            <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
+              <div className="p-2 border-r bg-muted/20 text-sm flex items-center justify-end pr-3">
+                {formatHour(hour)}
+              </div>
 
-            {weekDays.map((day, dayIndex) => (
-              <div key={day.toISOString()} className="p-0 border-r last:border-r-0 text-sm relative min-h-[60px]">
-                {classesByDay[dayIndex].map((extendedClass: any) => {
-                  try {
-                    const startTime = parseISO(extendedClass.start_time)
-                    const endTime = parseISO(extendedClass.end_time)
-                    const classStartHour = startTime.getHours()
+              {weekDays.map((day, dayIndex) => (
+                <div key={day.toISOString()} className="p-0 border-r last:border-r-0 text-sm relative min-h-[50px]">
+                  {classesByDay[dayIndex].map((extendedClass: any) => {
+                    try {
+                      const startTime = parseClassDateTime(extendedClass, "start_time")
+                      const endTime = parseClassDateTime(extendedClass, "end_time")
 
-                    // Skip if class doesn't start in this hour
-                    if (classStartHour !== hour) {
+                      if (!startTime || !endTime) return null
+
+                      const classStartHour = startTime.getHours()
+
+                      // For the evening view, we need to handle classes that start or span this hour
+                      if (filter === "evening") {
+                        // For evening view, still only show classes starting at the current hour
+                        if (classStartHour !== hour) {
+                          return null
+                        }
+                      } else {
+                        // For morning and afternoon views, only show classes that start in this hour
+                        if (classStartHour !== hour) {
+                          return null
+                        }
+                      }
+
+                      // Calculate duration in minutes and convert to pixels (50px per hour)
+                      const durationMinutes = differenceInMinutes(endTime, startTime)
+                      const heightPx = Math.max(50, Math.round((durationMinutes * 50) / 60))
+
+                      // Calculate width based on group size
+                      const width = 100 / extendedClass.groupSize
+                      // Calculate left offset based on index within group
+                      const left = extendedClass.classIndex * width
+
+                      return (
+                        <div
+                          key={`${extendedClass.id}-${extendedClass.session_id}`}
+                          className={cn(
+                            "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
+                            getStatusStyles(extendedClass.status),
+                          )}
+                          style={{
+                            height: `${heightPx}px`,
+                            top: `${(startTime.getMinutes() / 60) * 50}px`,
+                            left: `${left}%`,
+                            width: `${width}%`,
+                            zIndex: 10,
+                          }}
+                          onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
+                        >
+                          <div>
+                            <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
+                            {heightPx >= 70 && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {extendedClass.subject}
+                              </p>
+                            )}
+                            {heightPx >= 90 && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                              </p>
+                            )}
+                          </div>
+                          {/* Always show status badge regardless of height */}
+                          <div className="flex justify-end items-center mt-auto">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
+                                getStatusTextColor(extendedClass.status),
+                              )}
+                            >
+                              {extendedClass.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      )
+                    } catch (error) {
                       return null
                     }
-
-                    // Calculate duration in minutes and convert to pixels (60px per hour)
-                    const durationMinutes = differenceInMinutes(endTime, startTime)
-                    const heightPx = Math.max(60, Math.round((durationMinutes * 60) / 60))
-
-                    // Calculate width based on group size
-                    const width = 100 / extendedClass.groupSize
-                    // Calculate left offset based on index within group
-                    const left = extendedClass.classIndex * width
-
-                    return (
-                      <div
-                        key={`${extendedClass.id}-${extendedClass.session_id}`}
-                        className={cn(
-                          "absolute rounded-md border p-2 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
-                          getStatusStyles(extendedClass.status),
-                        )}
-                        style={{
-                          height: `${heightPx}px`,
-                          top: `${(startTime.getMinutes() / 60) * 60}px`,
-                          left: `${left}%`,
-                          width: `${width}%`,
-                          zIndex: 10,
-                        }}
-                        onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
-                      >
-                        <div>
-                          <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
-                          {heightPx >= 80 && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {extendedClass.subject}
-                            </p>
-                          )}
-                          {heightPx >= 100 && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
-                            </p>
-                          )}
-                        </div>
-                        {/* Always show status badge regardless of height */}
-                        <div className="flex justify-end items-center mt-auto">
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
-                              getStatusTextColor(extendedClass.status),
-                            )}
-                          >
-                            {extendedClass.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    )
-                  } catch (error) {
-                    return null
-                  }
-                })}
-              </div>
-            ))}
-          </div>
-        ))}
+                  })}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )

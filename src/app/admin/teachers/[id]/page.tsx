@@ -11,96 +11,6 @@ import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get-teachers"
 import { getClassesByTeacherId } from "@/lib/get-classes"
 
-// Mock classes data for the teacher
-const getTeacherClasses = (teacherId: string) => {
-  // In a real app, this would be a database query
-  return [
-    {
-      id: 1,
-      teacher_id: "T001",
-      title: "Mathematics 101",
-      description: "Introduction to algebra and geometry",
-      subject: "Mathematics",
-      start_time: "2023-04-17T08:00:00",
-      end_time: "2023-04-17T09:30:00",
-      status: "scheduled",
-      max_students: 15,
-      class_link: "https://meet.google.com/abc-defg-hij",
-    },
-    {
-      id: 2,
-      teacher_id: "T002",
-      title: "Physics Fundamentals",
-      description: "Basic principles of physics",
-      subject: "Physics",
-      start_time: "2023-04-17T11:00:00",
-      end_time: "2023-04-17T12:30:00",
-      status: "scheduled",
-      max_students: 12,
-      class_link: "https://meet.google.com/jkl-mnop-qrs",
-    },
-    {
-      id: 3,
-      teacher_id: "T003",
-      title: "English Literature",
-      description: "Analysis of classic literature",
-      subject: "English",
-      start_time: "2023-04-17T14:30:00",
-      end_time: "2023-04-17T16:00:00",
-      status: "scheduled",
-      max_students: 20,
-      class_link: "https://meet.google.com/tuv-wxyz-123",
-    },
-    {
-      id: 4,
-      teacher_id: "T001",
-      title: "Advanced Mathematics",
-      description: "Complex mathematical concepts",
-      subject: "Mathematics",
-      start_time: "2023-04-18T10:00:00",
-      end_time: "2023-04-18T11:30:00",
-      status: "scheduled",
-      max_students: 10,
-      class_link: "https://meet.google.com/def-ghi-jkl",
-    },
-    {
-      id: 5,
-      teacher_id: "T001",
-      title: "Calculus I",
-      description: "Introduction to calculus",
-      subject: "Mathematics",
-      start_time: "2023-04-19T13:00:00",
-      end_time: "2023-04-19T14:30:00",
-      status: "scheduled",
-      max_students: 15,
-      class_link: "https://meet.google.com/mno-pqr-stu",
-    },
-    {
-      id: 6,
-      teacher_id: "T001",
-      title: "Geometry",
-      description: "Study of shapes and spaces",
-      subject: "Mathematics",
-      start_time: "2023-04-20T09:00:00",
-      end_time: "2023-04-20T10:30:00",
-      status: "scheduled",
-      max_students: 18,
-      class_link: "https://meet.google.com/vwx-yza-bcd",
-    },
-    {
-      id: 7,
-      teacher_id: "T001",
-      title: "Algebra II",
-      description: "Advanced algebraic concepts",
-      subject: "Mathematics",
-      start_time: "2023-04-21T15:00:00",
-      end_time: "2023-04-21T16:30:00",
-      status: "scheduled",
-      max_students: 12,
-      class_link: "https://meet.google.com/efg-hij-klm",
-    },
-  ].filter((cls) => cls.teacher_id === teacherId)
-}
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
   const { id } = await params
@@ -112,7 +22,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
 
   const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
 
-  console.log(teacherClasses)
+  //console.log(teacherClasses)
 
   return (
     <div className="flex flex-col gap-6">

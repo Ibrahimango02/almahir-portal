@@ -97,7 +97,7 @@ export default function SchedulePage() {
           {view === "calendar" ? (
             <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mb-4">
-                <TabsTrigger value="all">8-Hour</TabsTrigger>
+                <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="morning">Morning</TabsTrigger>
                 <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
                 <TabsTrigger value="evening">Evening</TabsTrigger>
@@ -105,8 +105,8 @@ export default function SchedulePage() {
               <TabsContent value="all">
                 <ScheduleCalendarView
                   currentWeekStart={currentWeekStart}
-                  timeRangeStart={currentHour}
-                  timeRangeEnd={currentHour + 8 > 24 ? 24 : currentHour + 8}
+                  timeRangeStart={0}
+                  timeRangeEnd={24}
                 />
               </TabsContent>
               <TabsContent value="morning">
