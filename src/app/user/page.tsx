@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getTeachers, getTeachersCount, getTeacherById } from '@/lib/get-teachers'
 import { getParents } from '@/lib/get-parents'
 import { getStudents, getStudentsCount } from '@/lib/get-students'
-import { getClasses, getClassesToday, getWeeklyClassesCount, getClassSessionById, getClassesByTeacherId } from '@/lib/get-classes'
+import { getClasses, getClassesToday, getWeeklyClassesCount, getClassSessionById, getClassesByTeacherId, getTeacherClassCount } from '@/lib/get-classes'
 
 export default async function PrivatePage() {
     const supabase = await createClient()
@@ -42,6 +42,7 @@ export default async function PrivatePage() {
     const weeklyClassesCount = await getWeeklyClassesCount()
     const classBySessionId = await getClassSessionById('c24adafd-661f-4cde-a2d9-0bf5e91a0d50')
     const classesByTeacherId = await getClassesByTeacherId('eb85a255-1c83-4e65-93f0-1e57364b7c3c')
+    const teacherClassCount = await getTeacherClassCount('eb85a255-1c83-4e65-93f0-1e57364b7c3c')
 
     //console.log(parentss)
     //console.log(tteachers)
@@ -53,7 +54,8 @@ export default async function PrivatePage() {
     //console.log(weeklyClassesCount)
     //console.log("classBySessionId", classBySessionId)
     //console.log("teacher", teacher)
-    console.log("classesByTeacherId", classesByTeacherId)
+    //console.log("classesByTeacherId", classesByTeacherId)
+    console.log("teacherClassCount", teacherClassCount)
 
     return <p>Hello {firstname} {lastname} you are a {user_role}</p>
 }

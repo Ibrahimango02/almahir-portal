@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/client'
-import { ClassType, ClassSessionType } from '@/types'
+import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType } from '@/types'
 
 
 export async function getClasses(): Promise<ClassType[]> {
@@ -49,13 +49,18 @@ export async function getClasses(): Promise<ClassType[]> {
     // Get teacher profile information
     const { data: teacherProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email, phone, status, created_at')
         .in('id', teacherIds)
+
+    const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('profile_id, specialization, hourly_rate')
+        .in('profile_id', teacherIds)
 
     // Get student profile information
     const { data: studentProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email, age, status, created_at')
         .in('id', studentIds)
 
     // Format the data as required
@@ -65,12 +70,18 @@ export async function getClasses(): Promise<ClassType[]> {
             ?.filter(ct => ct.class_id === classItem.id)
             .map(ct => ct.teacher_id) || []
 
-        const teachers = teacherProfiles
+        const teachers: TeacherType[] = teacherProfiles
             ?.filter(tp => classTeacherIds.includes(tp.id))
             .map(teacher => ({
-                id: teacher.id,
+                teacher_id: teacher.id,
+                email: teacher.email,
                 first_name: teacher.first_name,
-                last_name: teacher.last_name
+                last_name: teacher.last_name,
+                phone: teacher.phone,
+                status: teacher.status,
+                specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
+                hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                created_at: teacher.created_at
             })) || []
 
         // Find students for this class
@@ -78,20 +89,23 @@ export async function getClasses(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents = studentProfiles
+        const enrolledStudents: StudentType[] = studentProfiles
             ?.filter(sp => classStudentIds.includes(sp.id))
             .map(student => ({
-                id: student.id,
+                student_id: student.id,
                 first_name: student.first_name,
-                last_name: student.last_name
+                last_name: student.last_name,
+                email: student.email,
+                age: student.age,
+                status: student.status,
+                created_at: student.created_at
             })) || []
 
         // Find sessions for this class - now including start_time and end_time
-        const sessions = classSessions
+        const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
             .map(session => ({
-                sessionId: session.id,
-                classId: session.class_id,
+                session_id: session.id,
                 date: session.date,
                 status: session.status,
                 start_time: session.start_time,
@@ -105,7 +119,7 @@ export async function getClasses(): Promise<ClassType[]> {
         }
 
         return {
-            classId: classItem.id,
+            class_id: classItem.id,
             title: classItem.title,
             description: classItem.description,
             subject: classItem.subject,
@@ -115,7 +129,8 @@ export async function getClasses(): Promise<ClassType[]> {
             sessions: sessions,
             class_link: classItem.class_link,
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            enrolled_students: enrolledStudents,
+            created_at: classItem.created_at
         }
     }) || []
 
@@ -171,13 +186,18 @@ export async function getClassesToday(): Promise<ClassType[]> {
     // Get teacher profile information
     const { data: teacherProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email, phone, status, created_at')
         .in('id', teacherIds)
+
+    const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('profile_id, specialization, hourly_rate')
+        .in('profile_id', teacherIds)
 
     // Get student profile information
     const { data: studentProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, email, age, status, created_at')
         .in('id', studentIds)
 
     // Format the data to match ClassType
@@ -187,12 +207,18 @@ export async function getClassesToday(): Promise<ClassType[]> {
             ?.filter(ct => ct.class_id === classItem.id)
             .map(ct => ct.teacher_id) || []
 
-        const teachers = teacherProfiles
+        const teachers: TeacherType[] = teacherProfiles
             ?.filter(tp => classTeacherIds.includes(tp.id))
             .map(teacher => ({
-                id: teacher.id,
+                teacher_id: teacher.id,
                 first_name: teacher.first_name,
-                last_name: teacher.last_name
+                last_name: teacher.last_name,
+                email: teacher.email,
+                phone: teacher.phone,
+                status: teacher.status,
+                specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
+                hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                created_at: teacher.created_at
             })) || []
 
         // Find students for this class
@@ -200,20 +226,23 @@ export async function getClassesToday(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents = studentProfiles
+        const enrolledStudents: StudentType[] = studentProfiles
             ?.filter(sp => classStudentIds.includes(sp.id))
             .map(student => ({
-                id: student.id,
+                student_id: student.id,
                 first_name: student.first_name,
-                last_name: student.last_name
+                last_name: student.last_name,
+                email: student.email,
+                age: student.age,
+                status: student.status,
+                created_at: student.created_at
             })) || []
 
         // Get today's sessions for this class
-        const sessions = classSessions
+        const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
             .map(session => ({
-                sessionId: session.id,
-                classId: session.class_id,
+                session_id: session.id,
                 date: session.date,
                 status: session.status,
                 start_time: session.start_time,
@@ -228,17 +257,18 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
         // Return object matching ClassType
         return {
-            classId: classItem.id,
+            class_id: classItem.id,
             title: classItem.title,
-            description: classItem.description || '',
+            description: classItem.description || "",
             subject: classItem.subject,
             start_date: classItem.start_date,
             end_date: classItem.end_date,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link || '',
+            class_link: classItem.class_link || "",
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            enrolled_students: enrolledStudents,
+            created_at: classItem.created_at
         }
     }) || []
 
@@ -284,10 +314,16 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
         .select('*')
         .in('id', teacherIds)
 
-    const teachers = teacherProfiles?.map(teacher => ({
-        id: teacher.id,
+    const teachers: TeacherType[] = teacherProfiles?.map(teacher => ({
+        teacher_id: teacher.id,
         first_name: teacher.first_name,
-        last_name: teacher.last_name
+        last_name: teacher.last_name,
+        email: teacher.email,
+        phone: teacher.phone,
+        status: teacher.status,
+        specialization: teacher.specialization,
+        hourly_rate: teacher.hourly_rate,
+        created_at: teacher.created_at
     })) || []
 
     // Get students for this class
@@ -303,15 +339,19 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
         .select('*')
         .in('id', studentIds)
 
-    const students = studentProfiles?.map(student => ({
-        id: student.id,
+    const students: StudentType[] = studentProfiles?.map(student => ({
+        student_id: student.id,
         first_name: student.first_name,
-        last_name: student.last_name
+        last_name: student.last_name,
+        email: student.email,
+        age: student.age,
+        status: student.status,
+        created_at: student.created_at
     })) || []
 
     return {
-        classId: classData.id,
-        sessionId: sessionData.id,
+        class_id: classData.id,
+        session_id: sessionData.id,
         title: classData.title,
         description: classData.description || "",
         subject: classData.subject,
@@ -325,7 +365,7 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
     }
 }
 
-export async function getClassesByTeacherId(teacherId: string) {
+export async function getClassesByTeacherId(teacherId: string): Promise<ClassSessionType[]> {
     const supabase = await createClient()
 
     // Get class IDs for this teacher
@@ -348,23 +388,227 @@ export async function getClassesByTeacherId(teacherId: string) {
         .select('*')
         .in('class_id', classIds)
 
-    // Combine class and session data
-    const classesWithSessions = classes?.map(classData => {
-        const classSessions = sessions?.filter(s => s.class_id === classData.id) || []
-        return {
-            id: classData.id,
-            teacher_id: teacherId,
-            title: classData.title,
-            description: classData.description,
-            subject: classData.subject,
-            start_time: classSessions[0]?.start_time,
-            end_time: classSessions[0]?.end_time,
-            status: classSessions[0]?.status || 'scheduled',
-            class_link: classData.class_link
-        }
-    }) || []
+    // Get all teachers for these classes
+    const { data: classTeachers } = await supabase
+        .from('class_teachers')
+        .select('class_id, teacher_id')
+        .in('class_id', classIds)
 
-    return classesWithSessions
+    // Get teacher profiles
+    const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+    const { data: teacherProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', teacherIds)
+
+    // Get students for these classes
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('class_id, student_id')
+        .in('class_id', classIds)
+
+    // Get student profiles
+    const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', studentIds)
+
+    // Combine class and session data to match ClassSessionType
+    const classSessionsData: ClassSessionType[] = []
+
+    sessions?.forEach(sessionData => {
+        const classData = classes?.find(c => c.id === sessionData.class_id)
+        if (!classData) return
+
+        // Get teachers for this class
+        const classTeacherIds = classTeachers
+            ?.filter(ct => ct.class_id === classData.id)
+            .map(ct => ct.teacher_id) || []
+
+        const teachers: TeacherType[] = teacherProfiles
+            ?.filter(tp => classTeacherIds.includes(tp.id))
+            .map(teacher => ({
+                teacher_id: teacher.id,
+                first_name: teacher.first_name,
+                last_name: teacher.last_name,
+                email: teacher.email,
+                phone: teacher.phone,
+                status: teacher.status,
+                specialization: teacher.specialization,
+                hourly_rate: teacher.hourly_rate,
+                created_at: teacher.created_at
+            })) || []
+
+        // Get students for this class
+        const classStudentIds = classStudents
+            ?.filter(cs => cs.class_id === classData.id)
+            .map(cs => cs.student_id) || []
+
+        const students: StudentType[] = studentProfiles
+            ?.filter(sp => classStudentIds.includes(sp.id))
+            .map(student => ({
+                student_id: student.id,
+                first_name: student.first_name,
+                last_name: student.last_name,
+                email: student.email,
+                age: student.age,
+                status: student.status,
+                created_at: student.created_at
+            })) || []
+
+        classSessionsData.push({
+            class_id: classData.id,
+            session_id: sessionData.id,
+            title: classData.title,
+            description: classData.description || "",
+            subject: classData.subject,
+            date: sessionData.date,
+            start_time: sessionData.start_time,
+            end_time: sessionData.end_time,
+            status: sessionData.status,
+            class_link: classData.class_link || "",
+            teachers: teachers,
+            enrolled_students: students
+        })
+    })
+
+    return classSessionsData
+}
+
+export async function getClassesByStudentId(studentId: string): Promise<ClassSessionType[]> {
+    const supabase = await createClient()
+
+    // Get class IDs for this student
+    const { data: studentClasses } = await supabase
+        .from('class_students')
+        .select('class_id')
+        .eq('student_id', studentId)
+
+    const classIds = studentClasses?.map(sc => sc.class_id) || []
+
+    // Get class details
+    const { data: classes } = await supabase
+        .from('classes')
+        .select('*')
+        .in('id', classIds)
+
+    // Get sessions for these classes
+    const { data: sessions } = await supabase
+        .from('class_sessions')
+        .select('*')
+        .in('class_id', classIds)
+
+    // Get all teachers for these classes
+    const { data: classTeachers } = await supabase
+        .from('class_teachers')
+        .select('class_id, teacher_id')
+        .in('class_id', classIds)
+
+    // Get teacher profiles
+    const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+    const { data: teacherProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', teacherIds)
+
+    // Get students for these classes
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('class_id, student_id')
+        .in('class_id', classIds)
+
+    // Get student profiles
+    const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', studentIds)
+
+    // Combine class and session data to match ClassSessionType
+    const classSessionsData: ClassSessionType[] = []
+
+    sessions?.forEach(sessionData => {
+        const classData = classes?.find(c => c.id === sessionData.class_id)
+        if (!classData) return
+
+        // Get teachers for this class
+        const classTeacherIds = classTeachers
+            ?.filter(ct => ct.class_id === classData.id)
+            .map(ct => ct.teacher_id) || []
+
+        const teachers: TeacherType[] = teacherProfiles
+            ?.filter(tp => classTeacherIds.includes(tp.id))
+            .map(teacher => ({
+                teacher_id: teacher.id,
+                first_name: teacher.first_name,
+                last_name: teacher.last_name,
+                email: teacher.email,
+                phone: teacher.phone,
+                status: teacher.status,
+                specialization: teacher.specialization,
+                hourly_rate: teacher.hourly_rate,
+                created_at: teacher.created_at
+            })) || []
+
+        // Get students for this class
+        const classStudentIds = classStudents
+            ?.filter(cs => cs.class_id === classData.id)
+            .map(cs => cs.student_id) || []
+
+        const students: StudentType[] = studentProfiles
+            ?.filter(sp => classStudentIds.includes(sp.id))
+            .map(student => ({
+                student_id: student.id,
+                first_name: student.first_name,
+                last_name: student.last_name,
+                email: student.email,
+                age: student.age,
+                status: student.status,
+                created_at: student.created_at
+            })) || []
+
+        classSessionsData.push({
+            class_id: classData.id,
+            session_id: sessionData.id,
+            title: classData.title,
+            description: classData.description || "",
+            subject: classData.subject,
+            date: sessionData.date,
+            start_time: sessionData.start_time,
+            end_time: sessionData.end_time,
+            status: sessionData.status,
+            class_link: classData.class_link || "",
+            teachers: teachers,
+            enrolled_students: students
+        })
+    })
+
+    return classSessionsData
+}
+
+
+export async function getTeacherClassCount(teacherId: string) {
+    const supabase = await createClient()
+
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    const classIds = teacherClasses?.map(tc => tc.class_id) || []
+
+    const { count, error } = await supabase
+        .from('class_sessions')
+        .select('*', { count: 'exact', head: true })
+        .in('class_id', classIds)
+
+    if (error) {
+        console.error('Error fetching teacher classes count:', error)
+        return 0
+    }
+
+    return count
 }
 
 export async function getWeeklyClassesCount() {

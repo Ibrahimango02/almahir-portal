@@ -73,7 +73,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
 
                     // Create the session object for this week
                     sessionsForWeek.push({
-                        id: cls.classId,
+                        id: cls.class_id,
                         title: cls.title,
                         description: cls.description,
                         subject: cls.subject,
@@ -86,13 +86,13 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                         start_time: startDateTime.toISOString(),
                         end_time: endDateTime.toISOString(),
                         status: session.status,
-                        session_id: session.sessionId,
+                        session_id: session.session_id,
                         session_date: session.date
                     });
                 } catch (error) {
                     console.error("Error processing session:", {
-                        classId: cls.classId,
-                        sessionId: session.sessionId,
+                        class_id: cls.class_id,
+                        session_id: session.session_id,
                         date: session.date
                     }, error);
                 }

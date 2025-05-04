@@ -106,8 +106,8 @@ export async function RecentClasses() {
         }
 
         return {
-          classId: cls.classId,
-          sessionId: session.sessionId,
+          class_id: cls.class_id,
+          session_id: session.session_id,
           title: cls.title,
           description: cls.description || "",
           subject: cls.subject,
@@ -169,7 +169,7 @@ export async function RecentClasses() {
 
               // Skip if we couldn't parse the dates
               if (!startTime || !endTime) {
-                console.error("Invalid dates in class session:", cls.sessionId);
+                console.error("Invalid dates in class session:", cls.session_id);
                 return null;
               }
 
@@ -180,7 +180,7 @@ export async function RecentClasses() {
               //const sessionId = cls.id.split('-')[1];
 
               return (
-                <Link href={`/admin/schedule/${cls.sessionId}`} key={cls.sessionId}>
+                <Link href={`/admin/schedule/${cls.session_id}`} key={cls.session_id}>
                   <Card className="p-4 cursor-pointer hover:shadow-md transition-shadow">
                     <div className="flex flex-col space-y-4">
                       <div className="flex items-center justify-between">

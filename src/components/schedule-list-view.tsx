@@ -86,8 +86,8 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
 
       // Create entry for each session - times are now in each session
       return cls.sessions.map(session => ({
-        id: cls.classId,
-        sessionId: session.sessionId,
+        class_id: cls.class_id,
+        session_id: session.session_id,
         title: cls.title,
         description: cls.description,
         subject: cls.subject,
@@ -227,9 +227,9 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
 
                   return (
                     <tr
-                      key={session.sessionId}
+                      key={session.session_id}
                       className="border-t hover:bg-muted/20 cursor-pointer transition-colors"
-                      onClick={(e) => handleRowClick(e, session.sessionId)}
+                      onClick={(e) => handleRowClick(e, session.session_id)}
                     >
                       <td className="p-3">
                         <div className="font-medium">{session.title}</div>

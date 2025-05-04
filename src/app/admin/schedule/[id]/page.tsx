@@ -15,15 +15,15 @@ export default async function ClassPage({ params }: { params: { id: string } }) 
 
   // Transform the data to match the expected structure for ClassDetails
   const classData = {
-    sessionId: classSessionData.sessionId,
+    session_id: classSessionData.session_id,
     title: classSessionData.title,
     description: classSessionData.description || "",
     subject: classSessionData.subject,
+    date: classSessionData.date,
     start_time: classSessionData.start_time,
     end_time: classSessionData.end_time,
     status: classSessionData.status,
     class_link: classSessionData.class_link,
-    teacher_id: classSessionData.teachers[0]?.id,
     teacher: classSessionData.teachers[0],
     enrolled_students: classSessionData.enrolled_students || []
   }

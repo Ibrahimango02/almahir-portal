@@ -103,14 +103,15 @@ const getTeacherClasses = (teacherId: string) => {
 }
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
-  const id = params.id
+  const { id } = await params
   const teacher = await getTeacherById(id)
 
   if (!teacher) {
     notFound()
   }
 
-  const teacherClasses = await getTeacherClasses(teacher.id)
+  const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
+
   console.log(teacherClasses)
 
   return (
@@ -221,7 +222,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 asChild
                 className="w-full mt-6 bg-primary/90 hover:bg-primary text-white shadow-sm transition-all hover:shadow-md"
               >
-                <Link href={`/admin/teachers/${teacher.id}/edit`} className="flex items-center justify-center gap-2">
+                <Link href={`/admin/teachers/${teacher.teacher_id}/edit`} className="flex items-center justify-center gap-2">
                   <Edit className="h-4 w-4" />
                   Edit Teacher Information
                 </Link>
@@ -238,7 +239,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 <CardTitle>Class Schedule</CardTitle>
                 <CardDescription>View {teacher.first_name}'s upcoming classes and schedule</CardDescription>
               </div>
-              <Link href={`/admin/teachers/${teacher.id}/assign-class`}>
+              <Link href={`/admin/teachers/${teacher.teacher_id}/assign-class`}>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Class

@@ -19,13 +19,17 @@ type AttendanceRecord = {
 }
 
 type AttendanceTrackerProps = {
-  classId: string
-  classDate: string
-  students: StudentType[]
+  sessionId: string
+  sessionDate: string
+  students: {
+    student_id: string
+    first_name: string
+    last_name: string
+  }[]
   initialAttendance?: Record<string, boolean>
 }
 
-export function AttendanceTracker({ classId, classDate, students, initialAttendance = {} }: AttendanceTrackerProps) {
+export function AttendanceTracker({ sessionId, sessionDate, students, initialAttendance = {} }: AttendanceTrackerProps) {
   const { toast } = useToast()
   const [attendance, setAttendance] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
@@ -36,7 +40,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
   useEffect(() => {
     const initialData: Record<string, boolean> = {}
     students.forEach((student) => {
-      initialData[student.id] = initialAttendance[student.id] || false
+      initialData[student.student_id] = initialAttendance[student.student_id] || false
     })
     setAttendance(initialData)
 
@@ -68,7 +72,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
   const markAllPresent = () => {
     const updatedAttendance: Record<string, boolean> = {}
     students.forEach((student) => {
-      updatedAttendance[student.id] = true
+      updatedAttendance[student.student_id] = true
     })
     setAttendance(updatedAttendance)
     setHasChanges(true)
@@ -86,9 +90,9 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
       // Check if all students are absent
       const allAbsent = students.length > 0 && Object.values(attendance).every((status) => status === false)
 
-      let description = `Attendance records for ${format(parseISO(classDate), "MMMM d, yyyy")} have been updated.`
+      let description = `Attendance records for ${format(parseISO(sessionDate), "MMMM d, yyyy")} have been updated.`
       if (allAbsent) {
-        description = `Recorded that no students attended class on ${format(parseISO(classDate), "MMMM d, yyyy")}.`
+        description = `Recorded that no students attended class on ${format(parseISO(sessionDate), "MMMM d, yyyy")}.`
       }
 
       toast({
@@ -129,7 +133,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
             onClick={() => {
               const updatedAttendance: Record<string, boolean> = {}
               students.forEach((student) => {
-                updatedAttendance[student.id] = false
+                updatedAttendance[student.student_id] = false
               })
               setAttendance(updatedAttendance)
               setHasChanges(true)
@@ -162,7 +166,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
           </TableHeader>
           <TableBody>
             {students.map((student) => (
-              <TableRow key={student.id}>
+              <TableRow key={student.student_id}>
                 <TableCell className="flex items-center gap-2 py-2">
                   <Avatar className="h-6 w-6">
                     <AvatarFallback className="text-xs">
@@ -170,7 +174,7 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
                     </AvatarFallback>
                   </Avatar>
                   <Link
-                    href={`/admin/students/${student.id}`}
+                    href={`/admin/students/${student.student_id}`}
                     className="hover:underline text-primary inline-block text-sm"
                   >
                     {student.first_name} {student.last_name}
@@ -179,13 +183,13 @@ export function AttendanceTracker({ classId, classDate, students, initialAttenda
                 <TableCell className="text-center">
                   <div className="flex justify-center">
                     <Checkbox
-                      id={`attendance-${student.id}`}
-                      checked={attendance[student.id] || false}
+                      id={`attendance-${student.student_id}`}
+                      checked={attendance[student.student_id] || false}
                       onCheckedChange={(checked) => {
-                        handleAttendanceChange(student.id, checked === true)
+                        handleAttendanceChange(student.student_id, checked === true)
                       }}
                       style={{
-                        backgroundColor: attendance[student.id] ? "#3d8f5b" : "white",
+                        backgroundColor: attendance[student.student_id] ? "#3d8f5b" : "white",
                         color: "white",
                         borderColor: "#3d8f5b"
                       }}

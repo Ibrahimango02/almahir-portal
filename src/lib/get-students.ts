@@ -1,12 +1,34 @@
 import { createClient } from '@/utils/supabase/client'
+import { StudentType, TeacherType, ParentType, ClassType } from '@/types'
 
-export async function getStudents() {
+// Calculate age function
+const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0 // Default to 0 instead of null to match StudentType
+
+    // Parse YYYY-MM-DD format
+    const [year, month, day] = birthDate.split('-').map(num => parseInt(num, 10))
+
+    const today = new Date()
+    const birth = new Date(year, month - 1, day) // Month is 0-indexed in JavaScript Date
+
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+
+    // If birth month is after current month or same month but birth day is after today
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--
+    }
+
+    return age
+}
+
+export async function getStudents(): Promise<StudentType[]> {
     const supabase = await createClient()
 
     // Get student profiles
     const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, status, created_at')
+        .select('id, email, first_name, last_name, phone, status, created_at')
         .eq('role', 'student')
 
     // Get student-specific data (including birth_date)
@@ -33,39 +55,24 @@ export async function getStudents() {
     const parentIds = [...new Set(parentStudents?.map(ps => ps.parent_id) || [])]
     const { data: parentProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, email, first_name, last_name, phone, status, created_at')
         .in('id', parentIds)
 
     // Get teacher profiles
     const teacherIds = [...new Set(teacherStudents?.map(ts => ts.teacher_id) || [])]
     const { data: teacherProfiles } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, email, first_name, last_name, phone, status, created_at')
         .in('id', teacherIds)
 
-    // Calculate age function
-    const calculateAge = (birthDate: string | null): number | null => {
-        if (!birthDate) return null
-
-        // Parse YYYY-MM-DD format
-        const [year, month, day] = birthDate.split('-').map(num => parseInt(num, 10))
-
-        const today = new Date()
-        const birth = new Date(year, month - 1, day) // Month is 0-indexed in JavaScript Date
-
-        let age = today.getFullYear() - birth.getFullYear()
-        const monthDiff = today.getMonth() - birth.getMonth()
-
-        // If birth month is after current month or same month but birth day is after today
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-            age--
-        }
-
-        return age
-    }
+    const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('profile_id, specialization, hourly_rate')
+        .in('profile_id', teacherIds)
 
     // Combine the data into a single array of objects
     const combinedStudents = profile?.map(studentProfile => {
+
         // Find student data
         const student = studentData?.find(s => s.profile_id === studentProfile.id)
 
@@ -75,11 +82,16 @@ export async function getStudents() {
             .map(ps => {
                 const parentProfile = parentProfiles?.find(p => p.id === ps.parent_id)
                 return parentProfile ? {
-                    id: parentProfile.id,
-                    name: `${parentProfile.first_name} ${parentProfile.last_name}`
+                    parent_id: parentProfile.id,
+                    email: parentProfile.email,
+                    first_name: parentProfile.first_name,
+                    last_name: parentProfile.last_name,
+                    phone: parentProfile.phone,
+                    status: parentProfile.status,
+                    created_at: parentProfile.created_at
                 } : null
             })
-            .filter(Boolean) || []
+            .filter((p): p is ParentType => p !== null) || []
 
         // Find all teachers for this student
         const studentTeachers = teacherStudents
@@ -87,14 +99,21 @@ export async function getStudents() {
             .map(ts => {
                 const teacherProfile = teacherProfiles?.find(t => t.id === ts.teacher_id)
                 return teacherProfile ? {
-                    id: teacherProfile.id,
-                    name: `${teacherProfile.first_name} ${teacherProfile.last_name}`
+                    teacher_id: teacherProfile.id,
+                    email: teacherProfile.email,
+                    first_name: teacherProfile.first_name,
+                    last_name: teacherProfile.last_name,
+                    phone: teacherProfile.phone,
+                    status: teacherProfile.status,
+                    created_at: teacherProfile.created_at,
+                    specialization: teacherData?.find(t => t.profile_id === teacherProfile.id)?.specialization || "",
+                    hourly_rate: teacherData?.find(t => t.profile_id === teacherProfile.id)?.hourly_rate || 0
                 } : null
             })
-            .filter(Boolean) || []
+            .filter((t): t is TeacherType => t !== null) || []
 
         return {
-            id: studentProfile.id,
+            student_id: studentProfile.id,
             first_name: studentProfile.first_name,
             last_name: studentProfile.last_name,
             email: studentProfile.email,
@@ -106,8 +125,79 @@ export async function getStudents() {
         }
     }) || []
 
-
     return combinedStudents
+}
+
+export async function getStudentById(id: string): Promise<StudentType | null> {
+    const supabase = await createClient()
+    // Get the parent's profile data
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name, phone, status, created_at')
+        .eq('id', id)
+        .eq('role', 'student')
+        .single()
+
+    const { data: student } = await supabase
+        .from('students')
+        .select('profile_id, birth_date')
+        .eq('profile_id', id)
+        .single()
+
+    if (!profile) {
+        return null
+    }
+
+    // Return the parent with their students
+    return {
+        student_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        age: calculateAge(student?.birth_date),
+        status: profile.status,
+        created_at: profile.created_at
+    }
+}
+
+export async function getStudentParents(id: string) {
+    const supabase = await createClient()
+
+    const { data } = await supabase
+        .from('parent_students')
+        .select('parent_id')
+        .eq('student_id', id)
+
+    if (!data) return []
+
+    const parentIds = data.map(parent => parent.parent_id)
+
+    const { data: parents } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', parentIds)
+
+    return parents
+}
+
+export async function getStudentTeachers(id: string) {
+    const supabase = await createClient()
+
+    const { data } = await supabase
+        .from('teacher_students')
+        .select('teacher_id')
+        .eq('student_id', id)
+
+    if (!data) return []
+
+    const teacherIds = data.map(teacher => teacher.teacher_id)
+
+    const { data: teachers } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', teacherIds)
+
+    return teachers
 }
 
 export async function getStudentsCount() {

@@ -50,22 +50,22 @@ const parseTimeString = (timeString: string | null | undefined): Date | null => 
 
 type ClassDetailsProps = {
   classData: {
-    sessionId: string
+    session_id: string
     title: string
     description: string
     subject: string
+    date: string
     start_time: string
     end_time: string
     status: string
     class_link: string
-    teacher_id: string
     teacher: {
-      id: string
+      teacher_id: string
       first_name: string
       last_name: string
     }
     enrolled_students: {
-      id: string
+      student_id: string
       first_name: string
       last_name: string
     }[]
@@ -107,7 +107,7 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
           <div>
             <h3 className="text-sm font-medium text-muted-foreground">Teacher</h3>
             <Link
-              href={`/admin/teachers/${classData.teacher.id}`}
+              href={`/admin/teachers/${classData.teacher.teacher_id}`}
               className="text-base font-medium mt-1 hover:underline text-primary inline-block"
             >
               {classData.teacher.first_name} {classData.teacher.last_name}
@@ -139,8 +139,8 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
           {/* Attendance Tracking - Takes the full width */}
           <div className="md:col-span-3">
             <AttendanceTracker
-              classId={classData.sessionId}
-              classDate={classData.start_time}
+              sessionId={classData.session_id}
+              sessionDate={classData.date}
               students={classData.enrolled_students}
               initialAttendance={classData.attendance || {}}
             />

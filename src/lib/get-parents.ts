@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/client'
+import { ParentType } from '@/types'
 
-export async function getParents() {
+export async function getParents(): Promise<ParentType[]> {
     const supabase = await createClient()
 
     // select profiles of users who are parents
@@ -9,45 +10,69 @@ export async function getParents() {
         .select('id, email, first_name, last_name, phone, status, created_at')
         .eq('role', 'parent')
 
-    // select teacher-specific data
-    const profileIds = profile?.map(p => p.id) || []
+    if (!profile) return []
 
-    // Get parent-student relationships
-    const { data: parentStudents } = await supabase
+    // Map the profile data to match ParentType
+    const parents: ParentType[] = profile.map(parent => {
+
+        return {
+            parent_id: parent.id,
+            first_name: parent.first_name,
+            last_name: parent.last_name,
+            email: parent.email,
+            phone: parent.phone,
+            status: parent.status,
+            created_at: parent.created_at
+        }
+    })
+
+    return parents
+}
+
+export async function getParentById(id: string): Promise<ParentType | null> {
+    const supabase = await createClient()
+
+    // Get the parent's profile data
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, first_name, last_name, phone, status, created_at')
+        .eq('id', id)
+        .eq('role', 'parent')
+        .single()
+
+    if (!profile) {
+        return null
+    }
+
+    // Return the parent with their students
+    return {
+        parent_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        email: profile.email,
+        phone: profile.phone,
+        status: profile.status,
+        created_at: profile.created_at
+    }
+}
+
+export async function getParentStudents(id: string) {
+    const supabase = await createClient()
+
+    const { data } = await supabase
         .from('parent_students')
-        .select('parent_id, student_id')
-        .in('parent_id', profileIds)
+        .select('student_id')
+        .eq('parent_id', id)
 
-    // Get student information
-    const studentIds = [...new Set(parentStudents?.map(ps => ps.student_id) || [])]
+    if (!data) return []
+
+    const studentIds = data.map(student => student.student_id)
+
 
     const { data: students } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
         .in('id', studentIds)
 
-    // Combine the data
-    const parentsWithStudents = profile?.map(parent => {
-        // Find all student IDs for this parent
-        const parentStudentIds = parentStudents
-            ?.filter(ps => ps.parent_id === parent.id)
-            .map(ps => ps.student_id) || []
-
-        // Get the student details for each ID
-        const parentStudentDetails = parentStudentIds.map(studentId => {
-            const student = students?.find(s => s.id === studentId)
-            return student ? {
-                id: student.id,
-                name: `${student.first_name} ${student.last_name}`
-            } : null
-        }).filter(Boolean)
-
-        return {
-            ...parent,
-            students: parentStudentDetails
-        }
-    }) || []
-
-
-    return parentsWithStudents
+    return students
 }

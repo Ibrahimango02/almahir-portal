@@ -16,28 +16,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, MoreHorizontal, CalendarPlus } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getTeachers } from "@/lib/get-teachers"
+import { getTeacherClassCount } from "@/lib/get-classes"
 
 const teachers = await getTeachers()
 
 export async function TeachersTable() {
-  const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-
-  const handleRowClick = (id: string, e: React.MouseEvent) => {
-    // Check if the click was on or inside a dropdown menu
-    const target = e.target as HTMLElement
-    if (target.closest("[data-no-row-click]")) {
-      return
-    }
-
-    router.push(`/admin/teachers/${id}`)
-  }
 
   // Calculate pagination
   const totalItems = teachers.length
@@ -63,12 +52,14 @@ export async function TeachersTable() {
           <TableBody>
             {paginatedTeachers.map((teacher) => (
               <TableRow
-                key={teacher.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={(e) => handleRowClick(teacher.id, e)}
+                key={teacher.teacher_id}
+                className="hover:bg-muted/50 transition-colors"
               >
                 <TableCell>
-                  <div className="flex items-center gap-3">
+                  <Link
+                    href={`/admin/teachers/${teacher.teacher_id}`}
+                    className="flex items-center gap-3"
+                  >
                     <Avatar>
                       <AvatarFallback>
                         {teacher.first_name[0]}
@@ -80,35 +71,60 @@ export async function TeachersTable() {
                         {teacher.first_name} {teacher.last_name}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 </TableCell>
-                <TableCell>{teacher.specialization}</TableCell>
-                <TableCell>{teacher.email}</TableCell>
-                <TableCell>{teacher.phone}</TableCell>
-                <TableCell>{5}</TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.specialization}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.email}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.phone}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {(async () => {
+                      const classCount = await getTeacherClassCount(teacher.teacher_id)
+                      return classCount
+                    })()}
+                  </Link>
+                </TableCell>
                 <TableCell className="text-center">
-                  <StatusBadge status={teacher.status} />
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    <StatusBadge status={teacher.status} />
+                  </Link>
                 </TableCell>
-                <TableCell>{new Date(teacher.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {new Date(teacher.created_at).toLocaleDateString()}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild data-no-row-click>
+                    <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" data-no-row-click>
+                    <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/teachers/${teacher.id}/assign-class`}>
+                        <Link href={`/admin/teachers/${teacher.teacher_id}/assign-class`}>
                           <CalendarPlus className="mr-2 h-4 w-4" />
                           Assign Class
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/teachers/${teacher.id}/edit`}>
+                        <Link href={`/admin/teachers/${teacher.teacher_id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>

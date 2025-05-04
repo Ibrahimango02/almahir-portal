@@ -10,36 +10,56 @@ export type WeeklyScheduleProps = {
     timeRangeEnd?: number
 }
 
-export type StudentType = {
-    id: string
+export type ParentType = {
+    parent_id: string
     first_name: string
     last_name: string
+    email: string
+    phone: string | null
+    status: string
+    created_at: string
+}
+
+export type StudentType = {
+    student_id: string
+    first_name: string
+    last_name: string
+    email: string | null
+    age: number
+    status: string
+    created_at: string
 }
 
 export type TeacherType = {
-    id: string
+    teacher_id: string
     first_name: string
     last_name: string
+    email: string
+    phone: string | null
+    status: string
+    specialization: string
+    hourly_rate: number
+    created_at: string
 }
 
 // all sessions for a class
 export type ClassType = {
-    classId: string
+    class_id: string
     title: string
-    description?: string
+    description: string | ""
     subject: string
     start_date: string
     end_date: string
     days_repeated: string[]
     sessions: SessionType[]
-    class_link: string
+    class_link: string | null
     teachers: TeacherType[]
     enrolled_students: StudentType[]
+    created_at: string
 }
 
 export type SessionType = {
-    sessionId: string
-    classId: string
+    session_id: string
     date: string
     status: string
     start_time: string
@@ -49,10 +69,10 @@ export type SessionType = {
 
 // one session for a class
 export type ClassSessionType = {
-    classId: string
-    sessionId: string
+    class_id: string
+    session_id: string
     title: string
-    description?: string
+    description: string | ""
     subject: string
     date: string
     start_time: string
