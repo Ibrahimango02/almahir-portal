@@ -16,22 +16,84 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, GraduationCap, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getStudents, getStudentParents, getStudentTeachers } from "@/lib/get-students"
+import { StudentType } from "@/types"
 
-// Mock data based on the database schema
-const students = await getStudents()
+// Define types for related data
+type ParentType = {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+type TeacherType = {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
 
 export function StudentsTable() {
+  const [students, setStudents] = useState<StudentType[]>([])
+  const [parentData, setParentData] = useState<Record<string, ParentType[]>>({})
+  const [teacherData, setTeacherData] = useState<Record<string, TeacherType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      try {
+        const data = await getStudents()
+        setStudents(data)
+        setLoading(false)
+      } catch (error) {
+        console.error("Failed to fetch students:", error)
+        setLoading(false)
+      }
+    }
+
+    fetchStudents()
+  }, [])
+
+  useEffect(() => {
+    const fetchRelatedData = async () => {
+      const parentResults: Record<string, ParentType[]> = {}
+      const teacherResults: Record<string, TeacherType[]> = {}
+
+      for (const student of students) {
+        try {
+          const parents = await getStudentParents(student.student_id)
+          parentResults[student.student_id] = parents || []
+
+          const teachers = await getStudentTeachers(student.student_id)
+          teacherResults[student.student_id] = teachers || []
+        } catch (error) {
+          console.error(`Failed to fetch related data for student ${student.student_id}:`, error)
+          parentResults[student.student_id] = []
+          teacherResults[student.student_id] = []
+        }
+      }
+
+      setParentData(parentResults)
+      setTeacherData(teacherResults)
+    }
+
+    if (students.length > 0) {
+      fetchRelatedData()
+    }
+  }, [students])
 
   // Calculate pagination
   const totalItems = students.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  if (loading) {
+    return <div>Loading students...</div>
+  }
 
   return (
     <div>
@@ -78,28 +140,22 @@ export function StudentsTable() {
                 <TableCell>
                   <Link href={`/admin/students/${student.student_id}`}>
                     <div className="flex flex-wrap gap-1">
-                      {(async () => {
-                        const parents = await getStudentParents(student.student_id)
-                        return parents?.map((parent) => (
-                          <Badge key={parent.id} variant="outline">
-                            {parent.first_name} {parent.last_name}
-                          </Badge>
-                        ))
-                      })()}
+                      {parentData[student.student_id]?.map((parent) => (
+                        <Badge key={parent.id} variant="outline">
+                          {parent.first_name} {parent.last_name}
+                        </Badge>
+                      ))}
                     </div>
                   </Link>
                 </TableCell>
                 <TableCell>
                   <Link href={`/admin/students/${student.student_id}`}>
                     <div className="flex flex-wrap gap-1">
-                      {(async () => {
-                        const teachers = await getStudentTeachers(student.student_id)
-                        return teachers?.map((teacher) => (
-                          <Badge key={teacher.id} variant="outline">
-                            {teacher.first_name} {teacher.last_name}
-                          </Badge>
-                        ))
-                      })()}
+                      {teacherData[student.student_id]?.map((teacher) => (
+                        <Badge key={teacher.id} variant="outline">
+                          {teacher.first_name} {teacher.last_name}
+                        </Badge>
+                      ))}
                     </div>
                   </Link>
                 </TableCell>

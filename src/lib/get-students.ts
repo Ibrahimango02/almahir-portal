@@ -1,26 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
 import { StudentType, TeacherType, ParentType, ClassType } from '@/types'
-
-// Calculate age function
-const calculateAge = (birthDate: string): number => {
-    if (!birthDate) return 0 // Default to 0 instead of null to match StudentType
-
-    // Parse YYYY-MM-DD format
-    const [year, month, day] = birthDate.split('-').map(num => parseInt(num, 10))
-
-    const today = new Date()
-    const birth = new Date(year, month - 1, day) // Month is 0-indexed in JavaScript Date
-
-    let age = today.getFullYear() - birth.getFullYear()
-    const monthDiff = today.getMonth() - birth.getMonth()
-
-    // If birth month is after current month or same month but birth day is after today
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--
-    }
-
-    return age
-}
+import { calculateAge } from '@/lib/utils'
 
 export async function getStudents(): Promise<StudentType[]> {
     const supabase = await createClient()
@@ -36,7 +16,7 @@ export async function getStudents(): Promise<StudentType[]> {
 
     const { data: studentData } = await supabase
         .from('students')
-        .select('profile_id, birth_date')
+        .select('profile_id, birth_date, grade_level, notes')
         .in('profile_id', profileIds)
 
     // Get parent-student relationships
@@ -117,6 +97,8 @@ export async function getStudents(): Promise<StudentType[]> {
             first_name: studentProfile.first_name,
             last_name: studentProfile.last_name,
             email: studentProfile.email,
+            grade_level: student?.grade_level || "",
+            notes: student?.notes || "",
             age: calculateAge(student?.birth_date),
             parents: studentParents,
             teachers: studentTeachers,
@@ -140,7 +122,7 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
 
     const { data: student } = await supabase
         .from('students')
-        .select('profile_id, birth_date')
+        .select('profile_id, birth_date, grade_level, notes')
         .eq('profile_id', id)
         .single()
 
@@ -155,6 +137,8 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
         last_name: profile.last_name,
         email: profile.email,
         age: calculateAge(student?.birth_date),
+        grade_level: student?.grade_level || "",
+        notes: student?.notes || "",
         status: profile.status,
         created_at: profile.created_at
     }

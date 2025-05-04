@@ -4,42 +4,24 @@ import { Edit, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { BackButton } from "@/components/back-button"
+import { getParentById, getParentStudents } from "@/lib/get-parents"
+import { notFound } from "next/navigation"
 
-// This would normally come from a database
-const getParentById = (id: string) => {
-  const parents = [
-    {
-      id: "P001",
-      name: "John Smith",
-      email: "john.smith@example.com",
-      phone: "+1 (555) 123-4567",
-      address: "123 Main St, Anytown, CA 12345",
-      students: [
-        { id: "S001", name: "Emma Smith" },
-        { id: "S002", name: "Noah Smith" },
-      ],
-      joinDate: "2021-08-15",
-    },
-    {
-      id: "P002",
-      name: "Maria Garcia",
-      email: "maria.garcia@example.com",
-      phone: "+1 (555) 234-5678",
-      address: "456 Oak Ave, Somewhere, CA 12345",
-      students: [{ id: "S003", name: "Sophia Garcia" }],
-      joinDate: "2022-01-10",
-    },
-  ]
 
-  return parents.find((parent) => parent.id === id)
-}
 
-export default function ParentDetailPage({ params }: { params: { id: string } }) {
-  const parent = getParentById(params.id)
+export default async function ParentDetailPage({ params }: { params: { id: string } }) {
+  const { id } = await params
+  const parent = await getParentById(id)
+  const parentStudents = await getParentStudents(id) ?? []
 
   if (!parent) {
-    // This would be handled by not-found.tsx in production
-    return <div>Parent not found</div>
+    notFound()
+    return (
+      <div>
+        <h2>Parent not found</h2>
+        <Link href="/admin/parents">Return to Parents List</Link>
+      </div>
+    )
   }
 
   return (
@@ -47,9 +29,9 @@ export default function ParentDetailPage({ params }: { params: { id: string } })
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex flex-col gap-4">
           <BackButton href="/admin/parents" label="Back to Parents" />
-          <h1 className="text-3xl font-bold tracking-tight">{parent.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{parent.first_name} {parent.last_name}</h1>
         </div>
-        <Link href={`/admin/parents/${params.id}/edit`}>
+        <Link href={`/admin/parents/${id}/edit`}>
           <Button>
             <Edit className="mr-2 h-4 w-4" />
             Edit Parent
@@ -87,13 +69,12 @@ export default function ParentDetailPage({ params }: { params: { id: string } })
             <CardDescription>Students linked to this parent</CardDescription>
           </CardHeader>
           <CardContent>
-            {parent.students.length > 0 ? (
+            {parentStudents.length > 0 ? (
               <div className="space-y-4">
-                {parent.students.map((student) => (
+                {parentStudents.map((student) => (
                   <div key={student.id} className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium">{student.name}</p>
-                      <p className="text-xs text-muted-foreground">ID: {student.id}</p>
+                      <p className="font-medium">{student.first_name} {student.last_name}</p>
                     </div>
                     <Link href={`/admin/students/${student.id}`}>
                       <Button variant="outline" size="sm">
@@ -119,7 +100,7 @@ export default function ParentDetailPage({ params }: { params: { id: string } })
           <div className="grid gap-4 md:grid-cols-3">
             <div>
               <p className="text-sm font-medium">Join Date</p>
-              <p className="text-sm text-muted-foreground">{new Date(parent.joinDate).toLocaleDateString()}</p>
+              <p className="text-sm text-muted-foreground">{parent.created_at.split('T')[0]}</p>
             </div>
             <div>
               <p className="text-sm font-medium">Status</p>
@@ -129,7 +110,7 @@ export default function ParentDetailPage({ params }: { params: { id: string } })
             </div>
             <div>
               <p className="text-sm font-medium">Number of Students</p>
-              <p className="text-sm text-muted-foreground">{parent.students.length}</p>
+              <p className="text-sm text-muted-foreground">{parentStudents.length}</p>
             </div>
           </div>
         </CardContent>

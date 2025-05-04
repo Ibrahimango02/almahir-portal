@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { TeacherSchedule } from "@/components/teacher-schedule"
+import { WeeklySchedule } from "@/components/weekly-schedule"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,11 +18,15 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
 
   if (!teacher) {
     notFound()
+    return (
+      <div>
+        <h2>Teacher not found</h2>
+        <Link href="/admin/teachers">Return to Teachers List</Link>
+      </div>
+    )
   }
 
   const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
-
-  //console.log(teacherClasses)
 
   return (
     <div className="flex flex-col gap-6">
@@ -158,7 +162,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
             </div>
           </CardHeader>
           <CardContent>
-            <TeacherSchedule classes={teacherClasses} />
+            <WeeklySchedule classes={teacherClasses} />
           </CardContent>
         </Card>
       </div>

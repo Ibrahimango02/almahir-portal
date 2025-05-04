@@ -62,7 +62,7 @@ const parseClassDateTime = (
   }
 }
 
-export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
+export function WeeklySchedule({ classes }: { classes: ClassSessionType[] }) {
   const [view, setView] = useState<"list" | "calendar">("list")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(classes)
@@ -124,13 +124,13 @@ export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
       // Apply the upcoming/recent filter
       if (activeListTab === "upcoming") {
         filtered = filtered.filter((cls) => {
-          const startTime = parseClassDateTime(cls, "start_time")
-          return startTime && startTime >= now;
+          const endTime = parseClassDateTime(cls, "end_time")
+          return endTime && endTime <= now;
         });
       } else if (activeListTab === "recent") {
         filtered = filtered.filter((cls) => {
-          const startTime = parseClassDateTime(cls, "start_time")
-          return startTime && startTime < now;
+          const endTime = parseClassDateTime(cls, "end_time")
+          return endTime && endTime > now;
         });
       }
 
@@ -158,13 +158,13 @@ export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
       // Apply the upcoming/recent filter
       if (activeListTab === "upcoming") {
         filtered = filtered.filter((cls) => {
-          const startTime = parseClassDateTime(cls, "start_time")
-          return startTime && startTime >= now;
+          const endTime = parseClassDateTime(cls, "end_time")
+          return endTime && endTime <= now;
         });
       } else if (activeListTab === "recent") {
         filtered = filtered.filter((cls) => {
-          const startTime = parseClassDateTime(cls, "start_time")
-          return startTime && startTime < now;
+          const endTime = parseClassDateTime(cls, "end_time")
+          return endTime && endTime > now;
         });
       }
 
@@ -229,8 +229,8 @@ export function TeacherSchedule({ classes }: { classes: ClassSessionType[] }) {
           <div className="flex justify-end mb-4">
             <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as "upcoming" | "recent")}>
               <TabsList className="bg-muted/80">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-                <TabsTrigger value="recent">Recent</TabsTrigger>
+                <TabsTrigger value="upcoming">Recent</TabsTrigger>
+                <TabsTrigger value="recent">Upcoming</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -256,8 +256,6 @@ function ListScheduleView({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  console.log("This is the list view")
-
   // Calculate the end of the week (Monday to Sunday)
   const weekEnd = addDays(weekStart, 6)
 
@@ -282,15 +280,15 @@ function ListScheduleView({
 
     // Then filter based on the active tab
     return sorted.filter(cls => {
-      const startDateTime = parseClassDateTime(cls, "start_time")
-      if (!startDateTime) return false
+      const endDateTime = parseClassDateTime(cls, "end_time")
+      if (!endDateTime) return false
 
       if (filter === "upcoming") {
-        // Show classes that start from now into the future
-        return startDateTime >= now
+        // Show classes that have ended (end time <= now)
+        return endDateTime <= now
       } else if (filter === "recent") {
-        // Show classes that occurred in the past
-        return startDateTime < now
+        // Show classes that haven't ended yet (end time > now)
+        return endDateTime > now
       }
 
       return true
@@ -320,13 +318,13 @@ function ListScheduleView({
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium">
-          {filter === "upcoming" ? "Upcoming Classes" : "Recent Classes"}
+          {filter === "upcoming" ? "Completed Classes" : "Ongoing & Upcoming Classes"}
         </h3>
       </div>
 
       {filteredSortedClasses.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {filter === "upcoming" ? "No upcoming classes scheduled" : "No recent classes found"}
+          {filter === "upcoming" ? "No completed classes found" : "No ongoing or upcoming classes found"}
         </div>
       ) : (
         <>
@@ -406,9 +404,6 @@ function CalendarScheduleView({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
-
-  console.log("This is the calendar view")
-  console.log(classes)
 
   // Create an array of the days of the week
   const weekDays = useMemo(() => {

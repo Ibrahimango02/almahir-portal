@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Plus, Search } from "lucide-react"
+import { Link, Plus, Search } from "lucide-react"
 import { StudentsTable } from "@/components/students-table"
 import { useRouter } from "next/navigation"
 
@@ -19,10 +19,12 @@ export default function StudentsPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input type="search" placeholder="Search students..." className="w-full pl-8" />
           </div>
-          <Button onClick={() => router.push("/admin/students/add")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Student
-          </Button>
+          <Link href="/admin/students/add">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Student
+            </Button>
+          </Link>
         </div>
       </div>
 

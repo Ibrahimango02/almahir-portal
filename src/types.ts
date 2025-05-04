@@ -26,7 +26,9 @@ export type StudentType = {
     last_name: string
     email: string | null
     age: number
-    status: string
+    grade_level: number | null
+    status: string,
+    notes: string | ""
     created_at: string
 }
 
