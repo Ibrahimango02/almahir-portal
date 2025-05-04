@@ -113,23 +113,16 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                   <Calendar className="h-4 w-4 mr-2 text-primary" />
                   Availability
                 </h3>
+
+                {/* TODO: Implement availability */}
                 <div className="pl-6">
                   <div className="p-3 bg-muted/30 rounded-md">
-                    <span className="text-sm text-muted-foreground">Schedule information not available</span>
+                    <span className="text-sm text-muted-foreground">IMPLEMENT LATER</span>
                   </div>
                 </div>
               </div>
 
               <Separator />
-
-              {/* Biography */}
-              <div>
-                <h3 className="text-base font-semibold flex items-center mb-3">
-                  <BookOpen className="h-4 w-4 mr-2 text-primary" />
-                  Biography
-                </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed pl-6">No biography available</p>
-              </div>
 
               {/* Edit Button */}
               <Button
@@ -154,7 +147,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 <CardDescription>View {teacher.first_name}'s upcoming classes and schedule</CardDescription>
               </div>
               <Link href={`/admin/teachers/${teacher.teacher_id}/assign-class`}>
-                <Button>
+                <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Class
                 </Button>

@@ -133,6 +133,7 @@ export async function getClasses(): Promise<ClassType[]> {
             start_date: classItem.start_date,
             end_date: classItem.end_date,
             days_repeated: daysRepeated,
+            status: classItem.status,
             sessions: sessions,
             class_link: classItem.class_link,
             teachers: teachers,
@@ -278,6 +279,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
             start_date: classItem.start_date,
             end_date: classItem.end_date,
             days_repeated: daysRepeated,
+            status: classItem.status,
             sessions: sessions,
             class_link: classItem.class_link || "",
             teachers: teachers,
@@ -288,6 +290,145 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
     // Only return classes that have sessions today
     return formattedClasses.filter(cls => cls.sessions.length > 0)
+}
+
+export async function getActiveClasses(): Promise<ClassType[]> {
+    const supabase = await createClient()
+
+    const { data: classes, error } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('status', 'active')
+
+    if (error) {
+        console.error('Error fetching active classes:', error)
+        return []
+    }
+
+    // Extract class IDs
+    const classIds = classes?.map(c => c.id) || []
+
+    // Get class-teacher relationships
+    const { data: classTeachers } = await supabase
+        .from('class_teachers')
+        .select('class_id, teacher_id')
+        .in('class_id', classIds)
+
+    // Get class-student relationships
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('class_id, student_id')
+        .in('class_id', classIds)
+
+    // Get session data for all classes
+    const { data: classSessions } = await supabase
+        .from('class_sessions')
+        .select('id, class_id, date, status, start_time, end_time')
+        .in('class_id', classIds)
+
+    // Get all unique teacher IDs
+    const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+
+    // Get all unique student IDs
+    const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+
+    // Get teacher profiles and data
+    const { data: teacherProfiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone, status, created_at')
+        .in('id', teacherIds)
+
+    const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('profile_id, specialization, hourly_rate')
+        .in('profile_id', teacherIds)
+
+    // Get student profiles and data
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, status, created_at')
+        .in('id', studentIds)
+
+    const { data: studentData } = await supabase
+        .from('students')
+        .select('profile_id, birth_date, grade_level, notes')
+        .in('profile_id', studentIds)
+
+    // Format the classes with all related data
+    const formattedClasses: ClassType[] = classes?.map(classItem => {
+        // Find teachers for this class
+        const classTeacherIds = classTeachers
+            ?.filter(ct => ct.class_id === classItem.id)
+            .map(ct => ct.teacher_id) || []
+
+        const teachers: TeacherType[] = teacherProfiles
+            ?.filter(tp => classTeacherIds.includes(tp.id))
+            .map(teacher => ({
+                teacher_id: teacher.id,
+                first_name: teacher.first_name,
+                last_name: teacher.last_name,
+                email: teacher.email,
+                phone: teacher.phone,
+                status: teacher.status,
+                specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
+                hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                created_at: teacher.created_at
+            })) || []
+
+        // Find students for this class
+        const classStudentIds = classStudents
+            ?.filter(cs => cs.class_id === classItem.id)
+            .map(cs => cs.student_id) || []
+
+        const enrolledStudents: StudentType[] = studentProfiles
+            ?.filter(sp => classStudentIds.includes(sp.id))
+            .map(student => ({
+                student_id: student.id,
+                first_name: student.first_name,
+                last_name: student.last_name,
+                email: student.email,
+                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
+                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || 0,
+                notes: studentData?.find(s => s.profile_id === student.id)?.notes || "",
+                status: student.status,
+                created_at: student.created_at
+            })) || []
+
+        // Get sessions for this class
+        const sessions: SessionType[] = classSessions
+            ?.filter(session => session.class_id === classItem.id)
+            .map(session => ({
+                session_id: session.id,
+                date: session.date,
+                status: session.status,
+                start_time: session.start_time,
+                end_time: session.end_time
+            })) || []
+
+        // Parse days_repeated to an array if it's a string
+        let daysRepeated = classItem.days_repeated
+        if (typeof daysRepeated === 'string') {
+            daysRepeated = daysRepeated.split(',').map(day => day.trim())
+        }
+
+        return {
+            class_id: classItem.id,
+            title: classItem.title,
+            description: classItem.description || "",
+            subject: classItem.subject,
+            start_date: classItem.start_date,
+            end_date: classItem.end_date,
+            days_repeated: daysRepeated,
+            status: classItem.status,
+            sessions: sessions,
+            class_link: classItem.class_link || null,
+            teachers: teachers,
+            enrolled_students: enrolledStudents,
+            created_at: classItem.created_at
+        }
+    }) || []
+
+    return formattedClasses
 }
 
 export async function getClassSessionById(sessionId: string): Promise<ClassSessionType | null> {
@@ -706,6 +847,22 @@ export async function getClassesCountByStatus(status: string) {
 
     if (error) {
         console.error('Error fetching class sessions count by status:', error)
+        return 0
+    }
+
+    return count
+}
+
+export async function getClassStudentCount(classId: string) {
+    const supabase = await createClient()
+
+    const { count, error } = await supabase
+        .from('class_students')
+        .select('*', { count: 'exact', head: true })
+        .eq('class_id', classId)
+
+    if (error) {
+        console.error('Error fetching class student count:', error)
         return 0
     }
 

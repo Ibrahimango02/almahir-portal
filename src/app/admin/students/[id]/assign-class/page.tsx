@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -19,169 +19,99 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BackButton } from "@/components/back-button"
+import { createClient } from "@/utils/supabase/client"
+import { StudentType, ClassType } from "@/types"
+import { getActiveClasses, getClassStudentCount } from "@/lib/get-classes"
+
 
 // Define the form schema with validation
 const formSchema = z.object({
   classIds: z.array(z.string()).min(1, { message: "Please select at least one class" }),
 })
 
-// Mock data for students - in a real app, this would come from your database
-const students = [
-  {
-    id: "S001",
-    first_name: "Emma",
-    last_name: "Smith",
-    grade_level: "10th",
-    age: 16,
-    parent: "John Smith",
-    email: "emma.smith@student.almahir.edu",
-    enrolledClasses: ["Mathematics", "Physics", "English"],
-    created_at: "2021-09-01T00:00:00",
-  },
-  {
-    id: "S002",
-    first_name: "Noah",
-    last_name: "Smith",
-    grade_level: "8th",
-    age: 14,
-    parent: "John Smith",
-    email: "noah.smith@student.almahir.edu",
-    enrolledClasses: ["Mathematics", "Biology", "History"],
-    created_at: "2021-09-01T00:00:00",
-  },
-  // Other students...
-]
-
-// Mock data for active classes
-const activeClasses = [
-  {
-    id: "C001",
-    title: "Mathematics 101",
-    subject: "Mathematics",
-    teacher: {
-      id: "T001",
-      first_name: "Sarah",
-      last_name: "Johnson",
-    },
-    schedule: "Mon, Wed, Fri 10:00 - 11:30",
-    start_date: "2023-09-01",
-    end_date: "2023-12-15",
-    max_students: 15,
-    enrolled_students: 12,
-    status: "active",
-  },
-  {
-    id: "C002",
-    title: "Physics Fundamentals",
-    subject: "Physics",
-    teacher: {
-      id: "T002",
-      first_name: "Michael",
-      last_name: "Chen",
-    },
-    schedule: "Tue, Thu 13:00 - 14:30",
-    start_date: "2023-09-02",
-    end_date: "2023-12-16",
-    max_students: 12,
-    enrolled_students: 8,
-    status: "active",
-  },
-  {
-    id: "C003",
-    title: "English Literature",
-    subject: "English",
-    teacher: {
-      id: "T003",
-      first_name: "Emily",
-      last_name: "Davis",
-    },
-    schedule: "Mon, Wed 14:30 - 16:00",
-    start_date: "2023-09-01",
-    end_date: "2023-12-15",
-    max_students: 20,
-    enrolled_students: 15,
-    status: "active",
-  },
-  {
-    id: "C004",
-    title: "Chemistry Basics",
-    subject: "Chemistry",
-    teacher: {
-      id: "T004",
-      first_name: "Robert",
-      last_name: "Wilson",
-    },
-    schedule: "Tue, Thu 09:00 - 10:30",
-    start_date: "2023-09-02",
-    end_date: "2023-12-16",
-    max_students: 15,
-    enrolled_students: 10,
-    status: "active",
-  },
-  {
-    id: "C005",
-    title: "Biology 101",
-    subject: "Biology",
-    teacher: {
-      id: "T005",
-      first_name: "Jennifer",
-      last_name: "Lee",
-    },
-    schedule: "Mon, Wed, Fri 08:00 - 09:30",
-    start_date: "2023-09-01",
-    end_date: "2023-12-15",
-    max_students: 18,
-    enrolled_students: 14,
-    status: "active",
-  },
-  {
-    id: "C006",
-    title: "World History",
-    subject: "History",
-    teacher: {
-      id: "T006",
-      first_name: "David",
-      last_name: "Brown",
-    },
-    schedule: "Tue, Thu 11:00 - 12:30",
-    start_date: "2023-09-02",
-    end_date: "2023-12-16",
-    max_students: 25,
-    enrolled_students: 18,
-    status: "active",
-  },
-  {
-    id: "C007",
-    title: "Computer Science",
-    subject: "Computer Science",
-    teacher: {
-      id: "T002",
-      first_name: "Michael",
-      last_name: "Chen",
-    },
-    schedule: "Mon, Wed 16:00 - 17:30",
-    start_date: "2023-09-01",
-    end_date: "2023-12-15",
-    max_students: 15,
-    enrolled_students: 10,
-    status: "active",
-  },
-]
 
 export default function AssignToClassPage({ params }: { params: { id: string } }) {
+  const { id } = params
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [student, setStudent] = useState<StudentType | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [classes, setClasses] = useState<ClassType[]>([])
+  const [studentCounts, setStudentCounts] = useState<Record<string, number>>({})
 
-  // Find the student by ID
-  const student = students.find((s) => s.id === params.id)
+  // Fetch student data and classes on component mount
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const supabase = await createClient()
+
+        // Get the student's profile data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, email, first_name, last_name, phone, status, created_at')
+          .eq('id', id)
+          .eq('role', 'student')
+          .single()
+
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('profile_id, birth_date, grade_level, notes')
+          .eq('profile_id', id)
+          .single()
+
+        if (profile) {
+          setStudent({
+            student_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            email: profile.email,
+            age: studentData?.birth_date ? calculateAge(studentData.birth_date) : 0,
+            grade_level: studentData?.grade_level || "",
+            notes: studentData?.notes || "",
+            status: profile.status,
+            created_at: profile.created_at
+          })
+        }
+
+        // Fetch active classes
+        const activeClasses = await getActiveClasses()
+        setClasses(activeClasses)
+
+        // Fetch student counts for each class
+        const counts: Record<string, number> = {}
+        for (const cls of activeClasses) {
+          counts[cls.class_id] = await getClassStudentCount(cls.class_id) || 0
+        }
+        setStudentCounts(counts)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [id])
+
+  // Calculate age helper function
+  function calculateAge(birthDate: string) {
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    return age
+  }
 
   // Filter classes based on search query
-  const filteredClasses = activeClasses.filter(
+  const filteredClasses = classes.filter(
     (cls) =>
       cls.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cls.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      `${cls.teacher.first_name} ${cls.teacher.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()),
+      `${cls.teachers[0]?.first_name} ${cls.teachers[0]?.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   // Initialize the form
@@ -191,6 +121,14 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
       classIds: [],
     },
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p>Loading student information...</p>
+      </div>
+    )
+  }
 
   if (!student) {
     // Handle case where student is not found
@@ -206,31 +144,32 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
   }
 
   // Handle form submission
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
 
     try {
       // In a real application, this would send data to your backend
       console.log({
-        studentId: student.id,
+        studentId: student?.student_id,
         classIds: values.classIds,
       })
 
       // Get the class names for the toast message
-      const selectedClasses = activeClasses.filter((cls) => values.classIds.includes(cls.id))
+      const selectedClasses = classes.filter((cls) => values.classIds.includes(cls.class_id))
       const classNames = selectedClasses.map((cls) => cls.title).join(", ")
 
       // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      setTimeout(() => {
+        // Show success message
+        toast({
+          title: "Student assigned to classes successfully",
+          description: `${student?.first_name} ${student?.last_name} has been assigned to: ${classNames}`,
+        })
 
-      // Show success message
-      toast({
-        title: "Student assigned to classes successfully",
-        description: `${student.first_name} ${student.last_name} has been assigned to: ${classNames}`,
-      })
-
-      // Navigate back to the student's page
-      router.push(`/admin/students/${student.id}`)
+        // Navigate back to the student's page
+        router.push(`/admin/students/${student?.student_id}`)
+        setIsSubmitting(false)
+      }, 1000)
     } catch (error) {
       console.error("Error assigning student to classes:", error)
       toast({
@@ -238,7 +177,6 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
         description: "There was a problem assigning the student to classes. Please try again.",
         variant: "destructive",
       })
-    } finally {
       setIsSubmitting(false)
     }
   }
@@ -289,25 +227,25 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
                       ) : (
                         filteredClasses.map((cls) => (
                           <FormField
-                            key={cls.id}
+                            key={cls.class_id}
                             control={form.control}
                             name="classIds"
                             render={({ field }) => {
                               return (
                                 <FormItem
-                                  key={cls.id}
+                                  key={cls.class_id}
                                   className={cn(
                                     "flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4",
-                                    field.value?.includes(cls.id) ? "border-primary" : "border-input",
+                                    field.value?.includes(cls.class_id) ? "border-primary" : "border-input",
                                   )}
                                 >
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(cls.id)}
+                                      checked={field.value?.includes(cls.class_id)}
                                       onCheckedChange={(checked) => {
                                         return checked
-                                          ? field.onChange([...field.value, cls.id])
-                                          : field.onChange(field.value?.filter((value) => value !== cls.id))
+                                          ? field.onChange([...field.value, cls.class_id])
+                                          : field.onChange(field.value?.filter((value) => value !== cls.class_id))
                                       }}
                                     />
                                   </FormControl>
@@ -318,22 +256,22 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
                                         <p className="text-sm text-muted-foreground">{cls.subject}</p>
                                       </div>
                                       <Badge variant="outline" className="ml-2">
-                                        {cls.enrolled_students}/{cls.max_students} students
+                                        {studentCounts[cls.class_id] || 0} students
                                       </Badge>
                                     </div>
                                     <div className="flex items-center mt-2">
                                       <Avatar className="h-6 w-6 mr-2">
                                         <AvatarFallback className="text-xs">
-                                          {cls.teacher.first_name[0]}
-                                          {cls.teacher.last_name[0]}
+                                          {cls.teachers[0]?.first_name?.[0] || "?"}
+                                          {cls.teachers[0]?.last_name?.[0] || "?"}
                                         </AvatarFallback>
                                       </Avatar>
                                       <p className="text-sm">
-                                        {cls.teacher.first_name} {cls.teacher.last_name}
+                                        {cls.teachers[0]?.first_name || "Unknown"} {cls.teachers[0]?.last_name || "Teacher"}
                                       </p>
                                     </div>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-2 text-xs text-muted-foreground">
-                                      <div>{cls.schedule}</div>
+                                      <div>{cls.days_repeated?.join(", ") || "Schedule N/A"}</div>
                                       <div className="hidden sm:block">•</div>
                                       <div>
                                         {format(new Date(cls.start_date), "MMM d, yyyy")} -{" "}
@@ -357,7 +295,7 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline" asChild>
-            <Link href={`/admin/students/${student.id}`}>Cancel</Link>
+            <Link href={`/admin/students/${student?.student_id}`}>Cancel</Link>
           </Button>
           <Button type="submit" form="assign-to-class-form" disabled={isSubmitting || filteredClasses.length === 0}>
             {isSubmitting ? "Assigning..." : "Assign to Selected Classes"}

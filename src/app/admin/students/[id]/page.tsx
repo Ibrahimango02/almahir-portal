@@ -151,8 +151,8 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               <CardTitle>Class Schedule</CardTitle>
               <CardDescription>View {student.first_name}'s upcoming classes and attendance</CardDescription>
             </div>
-            <Link href={`/admin/students/${student.student_id}/assign-to-class`}>
-              <Button>
+            <Link href={`/admin/students/${student.student_id}/assign-class`}>
+              <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                 <Plus className="mr-2 h-4 w-4" />
                 Assign Class
               </Button>

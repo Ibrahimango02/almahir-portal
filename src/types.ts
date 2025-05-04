@@ -52,6 +52,7 @@ export type ClassType = {
     subject: string
     start_date: string
     end_date: string
+    status: string
     days_repeated: string[]
     sessions: SessionType[]
     class_link: string | null
