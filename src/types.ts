@@ -26,9 +26,9 @@ export type StudentType = {
     last_name: string
     email: string | null
     age: number
-    grade_level: number | null
+    grade_level: string | null
     status: string,
-    notes: string | ""
+    notes: string | null
     created_at: string
 }
 
@@ -48,7 +48,7 @@ export type TeacherType = {
 export type ClassType = {
     class_id: string
     title: string
-    description: string | ""
+    description: string | null
     subject: string
     start_date: string
     end_date: string
@@ -69,13 +69,11 @@ export type SessionType = {
     end_time: string
 }
 
-
-// one session for a class
 export type ClassSessionType = {
     class_id: string
     session_id: string
     title: string
-    description: string | ""
+    description: string | null
     subject: string
     date: string
     start_time: string

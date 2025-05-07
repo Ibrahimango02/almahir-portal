@@ -3,7 +3,7 @@ import { StudentType, TeacherType, ParentType, ClassType } from '@/types'
 import { calculateAge } from '@/lib/utils'
 
 export async function getStudents(): Promise<StudentType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get student profiles
     const { data: profile } = await supabase
@@ -111,8 +111,8 @@ export async function getStudents(): Promise<StudentType[]> {
 }
 
 export async function getStudentById(id: string): Promise<StudentType | null> {
-    const supabase = await createClient()
-    // Get the parent's profile data
+    const supabase = createClient()
+
     const { data: profile } = await supabase
         .from('profiles')
         .select('id, email, first_name, last_name, phone, status, created_at')
@@ -145,7 +145,7 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
 }
 
 export async function getStudentParents(id: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { data } = await supabase
         .from('parent_students')
@@ -165,7 +165,7 @@ export async function getStudentParents(id: string) {
 }
 
 export async function getStudentTeachers(id: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { data } = await supabase
         .from('teacher_students')
@@ -185,7 +185,7 @@ export async function getStudentTeachers(id: string) {
 }
 
 export async function getStudentsCount() {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { count, error } = await supabase
         .from('profiles')

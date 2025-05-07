@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -21,18 +21,22 @@ import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
 import { Checkbox } from "@/components/ui/checkbox"
 import { BackButton } from "@/components/back-button"
+import { getTeacherById } from "@/lib/get/get-teachers"
+import { TeacherType } from "@/types"
+import { createClass } from "@/lib/post/post-classes"
 
-// Update the form schema to include end date and days of week
+// Update the form schema to include per-day times and optional fields
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters" }),
-  description: z.string().min(10, { message: "Description must be at least 10 characters" }),
   subject: z.string().min(1, { message: "Please select a subject" }),
+  description: z.string().optional(),
   startDate: z.date({ required_error: "Please select a start date" }),
   endDate: z.date({ required_error: "Please select an end date" }),
-  daysOfWeek: z.array(z.string()).min(1, { message: "Please select at least one day" }),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
-  maxStudents: z.coerce.number().int().min(1, { message: "At least 1 student is required" }).max(50),
+  daysRepeated: z.array(z.string()).min(1, { message: "Please select at least one day" }),
+  times: z.record(z.object({
+    start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+    end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+  })),
   classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
 })
 
@@ -49,99 +53,64 @@ const daysOfWeek = [
 
 // Define the subjects available for selection
 const subjects = [
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "English",
-  "History",
-  "Geography",
-  "Computer Science",
-  "Art",
-  "Music",
-  "Physical Education",
-  "Spanish",
-  "French",
-  "Economics",
-  "Psychology",
+  "Quran",
+  "Arabic",
+  "Tafseer",
+  "Fiqh",
+  "Hadith",
+  "Imaan",
+  "Aqidah",
+  "Islamic Studies",
+  "Islamic History",
+  "Islamic Geography",
+  "Islamic Culture",
+  "Islamic Law",
+  "Islamic Ethics",
 ]
 
-// Mock data for teachers - in a real app, this would come from your database
-const teachers = [
-  {
-    id: "T001",
-    first_name: "Sarah",
-    last_name: "Johnson",
-    email: "sarah.johnson@almahir.edu",
-    subjects: ["Mathematics"],
-  },
-  {
-    id: "T002",
-    first_name: "Michael",
-    last_name: "Chen",
-    email: "michael.chen@almahir.edu",
-    subjects: ["Physics", "Computer Science"],
-  },
-  {
-    id: "T003",
-    first_name: "Emily",
-    last_name: "Davis",
-    email: "emily.davis@almahir.edu",
-    subjects: ["English", "Art"],
-  },
-  {
-    id: "T004",
-    first_name: "Robert",
-    last_name: "Wilson",
-    email: "robert.wilson@almahir.edu",
-    subjects: ["Chemistry"],
-  },
-  {
-    id: "T005",
-    first_name: "Jennifer",
-    last_name: "Lee",
-    email: "jennifer.lee@almahir.edu",
-    subjects: ["Biology", "Music"],
-  },
-  {
-    id: "T006",
-    first_name: "David",
-    last_name: "Brown",
-    email: "david.brown@almahir.edu",
-    subjects: ["History", "Physical Education"],
-  },
-  {
-    id: "T007",
-    first_name: "Maria",
-    last_name: "Rodriguez",
-    email: "maria.rodriguez@almahir.edu",
-    subjects: ["Spanish"],
-  },
-]
-
-export default function AssignClassPage({ params }: { params: { id: string } }) {
+export default function AssignClassPage() {
+  const params = useParams();
+  const id = (params as { id: string }).id;
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [teacher, setTeacher] = useState<TeacherType | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Find the teacher by ID
-  const teacher = teachers.find((t) => t.id === params.id)
+  // Fetch teacher data on mount
+  useEffect(() => {
+    async function fetchTeacher() {
+      const t = await getTeacherById(id)
+      setTeacher(t)
+      setLoading(false)
+    }
+    fetchTeacher()
+  }, [id])
 
   // Update the form initialization with new default values
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
-      description: "",
       subject: "",
+      description: "",
       startDate: undefined,
       endDate: undefined,
-      daysOfWeek: [],
-      startTime: "",
-      endTime: "",
-      maxStudents: 15,
+      daysRepeated: [],
+      times: {},
       classLink: "",
     },
   })
+
+  // Watch selected days
+  const selectedDays = form.watch("daysRepeated")
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p>Loading teacher information...</p>
+      </div>
+    )
+  }
 
   if (!teacher) {
     // Handle case where teacher is not found
@@ -161,32 +130,31 @@ export default function AssignClassPage({ params }: { params: { id: string } }) 
     setIsSubmitting(true)
 
     try {
-      // In a real application, this would send data to your backend
-      console.log({
-        ...values,
-        teacherId: teacher.id,
-        // Combine date and time for start and end times
-        startTime: new Date(`${format(values.startDate, "yyyy-MM-dd")}T${values.startTime}`),
-        endTime: new Date(`${format(values.startDate, "yyyy-MM-dd")}T${values.endTime}`),
-        // Include the recurring schedule information
-        recurrence: {
-          startDate: values.startDate,
-          endDate: values.endDate,
-          daysOfWeek: values.daysOfWeek,
-        },
-      })
+      // Transform form data to match ClassData type
+      const classData = {
+        title: values.title,
+        subject: values.subject,
+        description: values.description || null,
+        start_date: format(values.startDate, "yyyy-MM-dd"),
+        end_date: format(values.endDate, "yyyy-MM-dd"),
+        days_repeated: values.daysRepeated,
+        status: "active",
+        class_link: values.classLink || null,
+        times: values.times,
+        teacher_id: teacher!.teacher_id
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Create class and sessions in database
+      await createClass(classData)
 
       // Show success message
       toast({
         title: "Class assigned successfully",
-        description: `${values.title} has been assigned to ${teacher.first_name} ${teacher.last_name}`,
+        description: `${values.title} has been assigned to ${teacher!.first_name} ${teacher!.last_name}`,
       })
 
       // Navigate back to the teacher's page
-      router.push(`/teachers/${teacher.id}`)
+      router.push(`/admin/teachers/${teacher!.teacher_id}`)
     } catch (error) {
       console.error("Error assigning class:", error)
       toast({
@@ -202,7 +170,7 @@ export default function AssignClassPage({ params }: { params: { id: string } }) 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href={`/admin/teachers/${params.id}`} label="Back to Teacher" />
+        <BackButton href={`/admin/teachers/${id}`} label="Back to Teacher" />
       </div>
 
       <Card className="max-w-4xl mx-auto">
@@ -260,11 +228,11 @@ export default function AssignClassPage({ params }: { params: { id: string } }) 
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Brief description of the class content and objectives"
-                        className="min-h-[120px]"
+                        className="min-h-[80px]"
                         {...field}
                       />
                     </FormControl>
@@ -273,7 +241,7 @@ export default function AssignClassPage({ params }: { params: { id: string } }) 
                 )}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="startDate"
@@ -347,116 +315,113 @@ export default function AssignClassPage({ params }: { params: { id: string } }) 
                     </FormItem>
                   )}
                 />
-                <div className="md:col-span-3">
-                  <FormField
-                    control={form.control}
-                    name="daysOfWeek"
-                    render={() => (
-                      <FormItem>
-                        <div className="mb-4">
-                          <FormLabel>Days of Week</FormLabel>
-                          <FormDescription>Select the days when this class will occur</FormDescription>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {daysOfWeek.map((day) => (
-                            <FormField
-                              key={day.id}
-                              control={form.control}
-                              name="daysOfWeek"
-                              render={({ field }) => {
-                                return (
-                                  <FormItem key={day.id} className="flex flex-row items-start space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(day.id)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...field.value, day.id])
-                                            : field.onChange(field.value?.filter((value) => value !== day.id))
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">{day.label}</FormLabel>
-                                  </FormItem>
-                                )
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="daysRepeated"
+                render={() => (
+                  <FormItem>
+                    <div className="mb-4">
+                      <FormLabel>Days of Week</FormLabel>
+                      <FormDescription>Select the days when this class will occur</FormDescription>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {daysOfWeek.map((day) => (
+                        <FormField
+                          key={day.id}
+                          control={form.control}
+                          name="daysRepeated"
+                          render={({ field }) => {
+                            return (
+                              <FormItem key={day.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value?.includes(day.id)}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...field.value, day.id])
+                                        : field.onChange(field.value?.filter((value) => value !== day.id))
+                                    }}
+                                    style={{
+                                      backgroundColor: field.value?.includes(day.id) ? "#3d8f5b" : "white",
+                                      color: "white",
+                                      borderColor: "#3d8f5b"
+                                    }}
+                                  />
+                                </FormControl>
+                                <FormLabel className="font-normal">{day.label}</FormLabel>
+                              </FormItem>
+                            )
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Per-day time fields */}
+              {selectedDays && selectedDays.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {selectedDays.map((day: string) => (
+                    <div key={day} className="flex flex-col gap-2 border rounded-md p-4">
+                      <div className="font-semibold mb-2">{daysOfWeek.find((d) => d.id === day)?.label} Time</div>
+                      <FormField
+                        control={form.control}
+                        name={`times.${day}.start` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Start Time</FormLabel>
+                            <FormControl>
+                              <Input placeholder="HH:MM (24h)" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <FormDescription className="text-xs">Format: 14:30</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`times.${day}.end` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>End Time</FormLabel>
+                            <FormControl>
+                              <Input placeholder="HH:MM (24h)" {...field} value={field.value ?? ""} />
+                            </FormControl>
+                            <FormDescription className="text-xs">Format: 16:00</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Start Time</FormLabel>
-                      <FormControl>
-                        <Input placeholder="HH:MM (24h)" {...field} />
-                      </FormControl>
-                      <FormDescription className="text-xs">Format: 14:30</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>End Time</FormLabel>
-                      <FormControl>
-                        <Input placeholder="HH:MM (24h)" {...field} />
-                      </FormControl>
-                      <FormDescription className="text-xs">Format: 16:00</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="maxStudents"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Maximum Students</FormLabel>
-                      <FormControl>
-                        <Input type="number" min={1} max={50} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="classLink"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Class Link (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="https://meet.google.com/..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="classLink"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Class Link (Optional)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://meet.google.com/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </form>
           </Form>
         </CardContent>
         <CardFooter className="flex justify-between">
           <Button variant="outline" asChild>
-            <Link href={`/admin/teachers/${teacher.id}`}>Cancel</Link>
+            <Link href={`/admin/teachers/${teacher?.teacher_id}`}>Cancel</Link>
           </Button>
-          <Button type="submit" form="assign-class-form" disabled={isSubmitting}>
+          <Button type="submit" form="assign-class-form" disabled={isSubmitting} style={{ backgroundColor: "#3d8f5b", color: "white" }}>
             {isSubmitting ? "Assigning..." : "Assign Class"}
           </Button>
         </CardFooter>

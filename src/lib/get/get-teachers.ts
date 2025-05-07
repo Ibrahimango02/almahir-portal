@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/client'
 import { TeacherType } from '@/types'
 
 export async function getTeachers(): Promise<TeacherType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // select profiles of users who are teachers
     const { data: profile } = await supabase
@@ -57,7 +57,7 @@ export async function getTeachers(): Promise<TeacherType[]> {
 
 
 export async function getTeacherById(id: string): Promise<TeacherType | null> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get the teacher's profile data
     const { data: profile } = await supabase
@@ -93,7 +93,7 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
 }
 
 export async function getTeachersCount() {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { count, error } = await supabase
         .from('profiles')

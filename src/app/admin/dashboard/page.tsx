@@ -14,10 +14,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
-import { getClassesCountByStatus } from "@/lib/get-classes"
-import { getStudentsCount } from "@/lib/get-students"
-import { getTeachersCount } from "@/lib/get-teachers"
-import { getWeeklyClassesCount } from "@/lib/get-classes"
+import { getClassesCountByStatus } from "@/lib/get/get-classes"
+import { getStudentsCount } from "@/lib/get/get-students"
+import { getTeachersCount } from "@/lib/get/get-teachers"
+import { getWeeklyClassesCount } from "@/lib/get/get-classes"
 
 export default async function Dashboard() {
   // Fetch todaysClasses inside the component to ensure fresh data on each page load

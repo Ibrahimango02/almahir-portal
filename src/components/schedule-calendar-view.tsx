@@ -5,7 +5,7 @@ import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday, sta
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { getClasses } from "@/lib/get-classes"
+import { getClasses } from "@/lib/get/get-classes"
 import { WeeklyScheduleProps, ClassType } from "@/types"
 
 const classData: ClassType[] = await getClasses()

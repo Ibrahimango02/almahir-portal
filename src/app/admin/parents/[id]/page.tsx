@@ -4,7 +4,7 @@ import { Edit, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { BackButton } from "@/components/back-button"
-import { getParentById, getParentStudents } from "@/lib/get-parents"
+import { getParentById, getParentStudents } from "@/lib/get/get-parents"
 import { notFound } from "next/navigation"
 
 
@@ -31,12 +31,12 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
           <BackButton href="/admin/parents" label="Back to Parents" />
           <h1 className="text-3xl font-bold tracking-tight">{parent.first_name} {parent.last_name}</h1>
         </div>
-        <Link href={`/admin/parents/${id}/edit`}>
-          <Button>
+        <Button asChild>
+          <Link href={`/admin/parents/edit/${id}`}>
             <Edit className="mr-2 h-4 w-4" />
             Edit Parent
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -104,8 +104,14 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
             </div>
             <div>
               <p className="text-sm font-medium">Status</p>
-              <Badge variant="outline" className="mt-1">
-                Active
+              <Badge className={`capitalize px-2 py-1 ${parent.status === "active" ? "bg-green-500"
+                : parent.status === "inactive" ? "bg-amber-500"
+                  : parent.status === "pending" ? "bg-blue-500"
+                    : parent.status === "suspended" ? "bg-red-500"
+                      : parent.status === "archived" ? "bg-gray-500"
+                        : "bg-gray-500"
+                }`}>
+                {parent.status}
               </Badge>
             </div>
             <div>

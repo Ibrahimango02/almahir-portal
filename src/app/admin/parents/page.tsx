@@ -17,7 +17,7 @@ export default function ParentsPage() {
             <Input type="search" placeholder="Search parents..." className="w-full pl-8" />
           </div>
           <Link href="/admin/parents/add">
-            <Button>
+            <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
               <Plus className="mr-2 h-4 w-4" />
               Add Parent
             </Button>

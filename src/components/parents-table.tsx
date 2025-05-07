@@ -19,7 +19,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getParents, getParentStudents } from "@/lib/get-parents"
+import { getParents, getParentStudents } from "@/lib/get/get-parents"
 import { ParentType } from "@/types"
 
 // Define type for student data
@@ -159,7 +159,7 @@ export function ParentsTable() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/parents/${parent.parent_id}/edit`}>
+                        <Link href={`/admin/parents/edit/${parent.parent_id}`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>

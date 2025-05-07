@@ -1,14 +1,12 @@
-"use client"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Link, Plus, Search } from "lucide-react"
+import { Plus, Search } from "lucide-react"
 import { StudentsTable } from "@/components/students-table"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
+
 
 export default function StudentsPage() {
-  const router = useRouter()
 
   return (
     <div className="flex flex-col gap-6">
@@ -20,7 +18,7 @@ export default function StudentsPage() {
             <Input type="search" placeholder="Search students..." className="w-full pl-8" />
           </div>
           <Link href="/admin/students/add">
-            <Button>
+            <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
               <Plus className="mr-2 h-4 w-4" />
               Add Student
             </Button>

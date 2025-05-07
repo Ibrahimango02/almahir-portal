@@ -19,8 +19,8 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getTeachers } from "@/lib/get-teachers"
-import { getTeacherClassCount } from "@/lib/get-classes"
+import { getTeachers } from "@/lib/get/get-teachers"
+import { getTeacherClassCount } from "@/lib/get/get-classes"
 import { TeacherType } from "@/types"
 
 export function TeachersTable() {
@@ -156,13 +156,13 @@ export function TeachersTable() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/teachers/${teacher.teacher_id}/assign-class`}>
+                        <Link href={`/admin/teachers/assign-class/${teacher.teacher_id}`}>
                           <CalendarPlus className="mr-2 h-4 w-4" />
                           Assign Class
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/teachers/${teacher.teacher_id}/edit`}>
+                        <Link href={`/admin/teachers/edit/${teacher.teacher_id}`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>

@@ -19,7 +19,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getStudents, getStudentParents, getStudentTeachers } from "@/lib/get-students"
+import { getStudents, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 
 // Define types for related data
@@ -186,13 +186,13 @@ export function StudentsTable() {
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/students/${student.student_id}/assign-to-class`}>
+                        <Link href={`/admin/students/assign-class/${student.student_id}`}>
                           <GraduationCap className="mr-2 h-4 w-4" />
                           Assign to Class
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href={`/admin/students/${student.student_id}/edit`}>
+                        <Link href={`/admin/students/edit/${student.student_id}`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>

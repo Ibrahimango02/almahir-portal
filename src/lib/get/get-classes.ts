@@ -3,7 +3,7 @@ import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType } fr
 import { calculateAge } from '@/lib/utils'
 
 export async function getClasses(): Promise<ClassType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get all classes
     const { data: classes, error } = await supabase
@@ -147,7 +147,7 @@ export async function getClasses(): Promise<ClassType[]> {
 
 
 export async function getClassesToday(): Promise<ClassType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get today's date in YYYY-MM-DD format (using local timezone)
     const date = new Date()
@@ -293,7 +293,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
 }
 
 export async function getActiveClasses(): Promise<ClassType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { data: classes, error } = await supabase
         .from('classes')
@@ -432,7 +432,7 @@ export async function getActiveClasses(): Promise<ClassType[]> {
 }
 
 export async function getClassSessionById(sessionId: string): Promise<ClassSessionType | null> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get the session details
     const { data: sessionData } = await supabase
@@ -533,7 +533,7 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
 }
 
 export async function getClassesByTeacherId(teacherId: string): Promise<ClassSessionType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get class IDs for this teacher
     const { data: teacherClasses } = await supabase
@@ -656,7 +656,7 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassSes
 }
 
 export async function getClassesByStudentId(studentId: string): Promise<ClassSessionType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get class IDs for this student
     const { data: studentClasses } = await supabase
@@ -780,7 +780,7 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassSes
 
 
 export async function getTeacherClassCount(teacherId: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { data: teacherClasses } = await supabase
         .from('class_teachers')
@@ -803,7 +803,7 @@ export async function getTeacherClassCount(teacherId: string) {
 }
 
 export async function getWeeklyClassesCount() {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get current date
     const now = new Date()
@@ -838,7 +838,7 @@ export async function getWeeklyClassesCount() {
 }
 
 export async function getClassesCountByStatus(status: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { count, error } = await supabase
         .from('class_sessions')
@@ -854,7 +854,7 @@ export async function getClassesCountByStatus(status: string) {
 }
 
 export async function getClassStudentCount(classId: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { count, error } = await supabase
         .from('class_students')

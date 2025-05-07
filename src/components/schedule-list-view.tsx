@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getClasses } from "@/lib/get-classes"
+import { getClasses } from "@/lib/get/get-classes"
 import { ScheduleListViewProps, ClassType, ClassSessionType, StudentType, TeacherType, SessionType } from "@/types"
 
 

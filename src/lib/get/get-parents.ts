@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/client'
 import { ParentType } from '@/types'
 
 export async function getParents(): Promise<ParentType[]> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // select profiles of users who are parents
     const { data: profile } = await supabase
@@ -30,7 +30,7 @@ export async function getParents(): Promise<ParentType[]> {
 }
 
 export async function getParentById(id: string): Promise<ParentType | null> {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     // Get the parent's profile data
     const { data: profile } = await supabase
@@ -57,7 +57,7 @@ export async function getParentById(id: string): Promise<ParentType | null> {
 }
 
 export async function getParentStudents(id: string) {
-    const supabase = await createClient()
+    const supabase = createClient()
 
     const { data } = await supabase
         .from('parent_students')

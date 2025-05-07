@@ -8,8 +8,8 @@ import { Separator } from "@/components/ui/separator"
 import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
-import { getTeacherById } from "@/lib/get-teachers"
-import { getClassesByTeacherId } from "@/lib/get-classes"
+import { getTeacherById } from "@/lib/get/get-teachers"
+import { getClassesByTeacherId } from "@/lib/get/get-classes"
 
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
@@ -129,7 +129,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 asChild
                 className="w-full mt-6 bg-primary/90 hover:bg-primary text-white shadow-sm transition-all hover:shadow-md"
               >
-                <Link href={`/admin/teachers/${teacher.teacher_id}/edit`} className="flex items-center justify-center gap-2">
+                <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center justify-center gap-2">
                   <Edit className="h-4 w-4" />
                   Edit Teacher Information
                 </Link>
@@ -146,12 +146,12 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 <CardTitle>Class Schedule</CardTitle>
                 <CardDescription>View {teacher.first_name}'s upcoming classes and schedule</CardDescription>
               </div>
-              <Link href={`/admin/teachers/${teacher.teacher_id}/assign-class`}>
-                <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+              <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+                <Link href={`/admin/teachers/assign-class/${teacher.teacher_id}`}>
                   <Plus className="mr-2 h-4 w-4" />
                   Assign Class
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </CardHeader>
           <CardContent>

@@ -3,7 +3,7 @@ import { format, parseISO, differenceInMinutes, isValid, isBefore } from "date-f
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { StatusBadge } from "./status-badge"
-import { getClassesToday } from "@/lib/get-classes"
+import { getClassesToday } from "@/lib/get/get-classes"
 import { ClassType, ClassSessionType } from "@/types"
 // Helper function to format duration
 

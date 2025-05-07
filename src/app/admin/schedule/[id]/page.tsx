@@ -1,7 +1,7 @@
 import { ClassDetails } from "@/components/class-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
-import { getClassSessionById } from "@/lib/get-classes"
+import { getClassSessionById } from "@/lib/get/get-classes"
 
 export default async function ClassPage({ params }: { params: { id: string } }) {
   // Fetch the class data using the session ID

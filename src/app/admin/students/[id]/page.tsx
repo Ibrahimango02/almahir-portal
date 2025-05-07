@@ -9,15 +9,14 @@ import { Mail, User, Calendar, Edit, GraduationCap, BookOpen, Clock, Plus } from
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
-import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get-students"
-import { getClassesByStudentId } from "@/lib/get-classes"
+import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
+import { getClassesByStudentId } from "@/lib/get/get-classes"
 
 
 export default async function StudentDetailPage({ params }: { params: { id: string } }) {
   const { id } = await params
   const student = await getStudentById(id)
   const studentParents = await getStudentParents(id)
-  const studentTeachers = await getStudentTeachers(id)
 
   if (!student) {
     notFound()
@@ -51,14 +50,24 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                     {student.last_name[0]}
                   </AvatarFallback>
                 </Avatar>
-                <Badge className="absolute bottom-4 right-0 capitalize px-2 py-1 bg-green-500">{student.status}</Badge>
+                <Badge
+                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${student.status === "active" ? "bg-green-500"
+                    : student.status === "inactive" ? "bg-amber-500"
+                      : student.status === "pending" ? "bg-blue-500"
+                        : student.status === "suspended" ? "bg-red-500"
+                          : student.status === "archived" ? "bg-gray-500"
+                            : "bg-gray-500"
+                    }`}
+                >
+                  {student.status}
+                </Badge>
               </div>
               <CardTitle className="text-2xl font-bold text-center mt-2">
                 {student.first_name} {student.last_name}
               </CardTitle>
               <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
                 <Badge variant="secondary" className="font-medium">
-                  {10} Grade
+                  {student.grade_level} Grade
                 </Badge>
               </div>
             </div>
@@ -135,7 +144,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                 asChild
                 className="w-full mt-6 bg-primary/90 hover:bg-primary text-white shadow-sm transition-all hover:shadow-md"
               >
-                <Link href={`/admin/students/${student.student_id}/edit`} className="flex items-center justify-center gap-2">
+                <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center justify-center gap-2">
                   <Edit className="h-4 w-4" />
                   Edit Student Information
                 </Link>
@@ -151,12 +160,12 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               <CardTitle>Class Schedule</CardTitle>
               <CardDescription>View {student.first_name}'s upcoming classes and attendance</CardDescription>
             </div>
-            <Link href={`/admin/students/${student.student_id}/assign-class`}>
-              <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+            <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+              <Link href={`/admin/students/assign-class/${student.student_id}`}>
                 <Plus className="mr-2 h-4 w-4" />
                 Assign Class
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </CardHeader>
           <CardContent>
             <WeeklySchedule classes={studentClasses} />

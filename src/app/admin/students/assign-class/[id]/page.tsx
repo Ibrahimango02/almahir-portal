@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -21,8 +21,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BackButton } from "@/components/back-button"
 import { createClient } from "@/utils/supabase/client"
 import { StudentType, ClassType } from "@/types"
-import { getActiveClasses, getClassStudentCount } from "@/lib/get-classes"
-
+import { getActiveClasses, getClassStudentCount } from "@/lib/get/get-classes"
+import { getStudentById } from "@/lib/get/get-students"
+import { assignStudentToClasses } from "@/lib/post/post-student"
 
 // Define the form schema with validation
 const formSchema = z.object({
@@ -30,8 +31,9 @@ const formSchema = z.object({
 })
 
 
-export default function AssignToClassPage({ params }: { params: { id: string } }) {
-  const { id } = params
+export default function AssignToClassPage() {
+  const params = useParams()
+  const { id } = params as { id: string }
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -44,35 +46,8 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
   useEffect(() => {
     async function fetchData() {
       try {
-        const supabase = await createClient()
-
-        // Get the student's profile data
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email, first_name, last_name, phone, status, created_at')
-          .eq('id', id)
-          .eq('role', 'student')
-          .single()
-
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('profile_id, birth_date, grade_level, notes')
-          .eq('profile_id', id)
-          .single()
-
-        if (profile) {
-          setStudent({
-            student_id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            email: profile.email,
-            age: studentData?.birth_date ? calculateAge(studentData.birth_date) : 0,
-            grade_level: studentData?.grade_level || "",
-            notes: studentData?.notes || "",
-            status: profile.status,
-            created_at: profile.created_at
-          })
-        }
+        const student = await getStudentById(id)
+        setStudent(student)
 
         // Fetch active classes
         const activeClasses = await getActiveClasses()
@@ -94,17 +69,6 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
     fetchData()
   }, [id])
 
-  // Calculate age helper function
-  function calculateAge(birthDate: string) {
-    const today = new Date()
-    const birth = new Date(birthDate)
-    let age = today.getFullYear() - birth.getFullYear()
-    const monthDiff = today.getMonth() - birth.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--
-    }
-    return age
-  }
 
   // Filter classes based on search query
   const filteredClasses = classes.filter(
@@ -144,32 +108,28 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
   }
 
   // Handle form submission
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
 
     try {
-      // In a real application, this would send data to your backend
-      console.log({
-        studentId: student?.student_id,
-        classIds: values.classIds,
-      })
-
       // Get the class names for the toast message
       const selectedClasses = classes.filter((cls) => values.classIds.includes(cls.class_id))
       const classNames = selectedClasses.map((cls) => cls.title).join(", ")
 
-      // Simulate API call
-      setTimeout(() => {
-        // Show success message
-        toast({
-          title: "Student assigned to classes successfully",
-          description: `${student?.first_name} ${student?.last_name} has been assigned to: ${classNames}`,
-        })
+      // Assign student to classes and teachers
+      await assignStudentToClasses({
+        student_id: student!.student_id,
+        class_ids: values.classIds
+      })
 
-        // Navigate back to the student's page
-        router.push(`/admin/students/${student?.student_id}`)
-        setIsSubmitting(false)
-      }, 1000)
+      // Show success message
+      toast({
+        title: "Student assigned to classes successfully",
+        description: `${student?.first_name} ${student?.last_name} has been assigned to: ${classNames}`,
+      })
+
+      // Navigate back to the student's page
+      router.push(`/admin/students/${student?.student_id}`)
     } catch (error) {
       console.error("Error assigning student to classes:", error)
       toast({
@@ -177,6 +137,7 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
         description: "There was a problem assigning the student to classes. Please try again.",
         variant: "destructive",
       })
+    } finally {
       setIsSubmitting(false)
     }
   }
@@ -184,7 +145,7 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href={`/admin/students/${params.id}`} label="Back to Student" />
+        <BackButton href={`/admin/students/${id}`} label="Back to Student" />
       </div>
 
       <Card className="max-w-4xl mx-auto">
@@ -236,7 +197,7 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
                                   key={cls.class_id}
                                   className={cn(
                                     "flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4",
-                                    field.value?.includes(cls.class_id) ? "border-primary" : "border-input",
+                                    field.value?.includes(cls.class_id) ? "border-[#3d8f5b]" : "border-input",
                                   )}
                                 >
                                   <FormControl>
@@ -246,6 +207,11 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
                                         return checked
                                           ? field.onChange([...field.value, cls.class_id])
                                           : field.onChange(field.value?.filter((value) => value !== cls.class_id))
+                                      }}
+                                      style={{
+                                        backgroundColor: field.value?.includes(cls.class_id) ? "#3d8f5b" : "white",
+                                        color: "white",
+                                        borderColor: "#3d8f5b"
                                       }}
                                     />
                                   </FormControl>
@@ -297,7 +263,13 @@ export default function AssignToClassPage({ params }: { params: { id: string } }
           <Button variant="outline" asChild>
             <Link href={`/admin/students/${student?.student_id}`}>Cancel</Link>
           </Button>
-          <Button type="submit" form="assign-to-class-form" disabled={isSubmitting || filteredClasses.length === 0}>
+          <Button
+            variant="outline"
+            type="submit"
+            form="assign-to-class-form"
+            disabled={isSubmitting || filteredClasses.length === 0}
+            style={{ backgroundColor: "#3d8f5b", color: "white" }}
+          >
             {isSubmitting ? "Assigning..." : "Assign to Selected Classes"}
           </Button>
         </CardFooter>

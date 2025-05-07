@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-import { login, signup } from "../lib/auth-actions"
+import { login, signup } from "../lib/auth/auth-actions"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)

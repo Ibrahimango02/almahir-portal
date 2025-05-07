@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { logout } from "@/lib/auth-actions"
+import { logout } from "@/lib/auth/auth-actions"
 
 const routes = [
   {

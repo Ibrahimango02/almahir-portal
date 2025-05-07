@@ -16,7 +16,7 @@ import {
   isToday,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
+import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
 import { ClassSessionType } from "@/types"
@@ -62,7 +62,7 @@ const parseClassDateTime = (
   }
 }
 
-export function WeeklySchedule({ classes }: { classes: ClassSessionType[] }) {
+export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSessionType[], assignClassUrl?: string }) {
   const [view, setView] = useState<"list" | "calendar">("list")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(classes)
@@ -174,38 +174,42 @@ export function WeeklySchedule({ classes }: { classes: ClassSessionType[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center">
-          <h3 className="text-lg font-bold tracking-tight">Class Schedule</h3>
-        </div>
-
+      <div className="flex justify-between items-center w-full">
+        {/* Tabs on the left */}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setView(view === "list" ? "calendar" : "list")}>
-            {view === "calendar" ? (
-              <>
-                <List className="mr-2 h-4 w-4" />
-                View List
-              </>
-            ) : (
-              <>
-                <CalendarDays className="mr-2 h-4 w-4" />
-                View Calendar
-              </>
-            )}
-          </Button>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigateWeek("prev")}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-sm font-medium">
-              {format(currentWeekStart, "MMM d")} - {format(addDays(currentWeekStart, 6), "MMM d, yyyy")}
-            </span>
-            <Button variant="outline" size="sm" onClick={() => navigateWeek("next")}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Tabs value={view} onValueChange={(value) => setView(value as "list" | "calendar")}>
+            <TabsList className="bg-muted/80">
+              <TabsTrigger value="list" className={view === "list" ? "bg-[#3d8f5b] text-white" : ""}>
+                <List className="mr-2 h-4 w-4" /> List
+              </TabsTrigger>
+              <TabsTrigger value="calendar" className={view === "calendar" ? "bg-[#3d8f5b] text-white" : ""}>
+                <CalendarDays className="mr-2 h-4 w-4" /> Calendar
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
+
+        {/* Week navigation in the center/right */}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigateWeek("prev")}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium">
+            {format(currentWeekStart, "MMM d")} - {format(addDays(currentWeekStart, 6), "MMM d, yyyy")}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => navigateWeek("next")}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Assign Class button on the far right */}
+        {assignClassUrl && (
+          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+            <a href={assignClassUrl}>
+              <Plus className="mr-2 h-4 w-4" /> Assign Class
+            </a>
+          </Button>
+        )}
       </div>
 
       {view === "calendar" && (

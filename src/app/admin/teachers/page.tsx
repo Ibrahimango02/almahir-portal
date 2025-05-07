@@ -15,12 +15,12 @@ export default function TeachersPage() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input type="search" placeholder="Search teachers..." className="w-full pl-8" />
           </div>
-          <Link href="/admin/teachers/add">
-            <Button>
+          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+            <Link href="/admin/teachers/add">
               <Plus className="mr-2 h-4 w-4" />
               Add Teacher
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 

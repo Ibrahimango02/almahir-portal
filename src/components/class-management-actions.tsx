@@ -62,11 +62,11 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
     })
   }
 
-  const handleEndClassEarly = () => {
-    setClassStatus("ended_early")
+  const handleEndClass = () => {
+    setClassStatus("ended")
     toast({
-      title: "Class Ended Early",
-      description: "The class has been ended early",
+      title: "Class Ended",
+      description: "The class has been ended",
     })
   }
 
@@ -90,7 +90,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
 
   const handleRescheduleClass = () => {
     // Redirect to the reschedule page
-    router.push(`/admin/schedule/${classData.session_id}/reschedule`)
+    router.push(`/admin/schedule/reschedule/${classData.session_id}`)
   }
 
   // Check if rescheduling is allowed (only in "scheduled" status)
@@ -143,7 +143,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           </Button>
         ) : classStatus === "in_progress" ? (
           <Button
-            onClick={handleEndClassEarly}
+            onClick={handleEndClass}
             className="flex items-center gap-2"
             variant="destructive"
             style={{ backgroundColor: "#d14747", color: "white" }}
@@ -153,7 +153,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           </Button>
         ) : (
           <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
-            {classStatus === "ended_early" ? (
+            {classStatus === "ended" ? (
               <>
                 <StopCircle className="h-4 w-4" />
                 <span>Ended</span>
