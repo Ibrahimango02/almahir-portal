@@ -1,3 +1,5 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AttendanceTracker } from "@/components/attendance-tracker"
 import { ClassManagementActions } from "@/components/class-management-actions"
@@ -5,6 +7,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { formatDuration } from "@/lib/utils"
 import { differenceInMinutes, format, parseISO, isValid, parse } from "date-fns"
 import Link from "next/link"
+import { useState } from "react"
 
 // Helper function to safely format dates
 const safeFormat = (date: Date, formatStr: string, fallback = "N/A") => {
@@ -74,15 +77,24 @@ type ClassDetailsProps = {
 }
 
 export function ClassDetails({ classData }: ClassDetailsProps) {
-  // Parse dates safely
+  const [currentStatus, setCurrentStatus] = useState(classData.status)
 
+  // Parse dates safely
+  const classDate = safeParseISO(classData.date) || new Date();
   const startTime = parseTimeString(classData.start_time) || new Date();
   const endTime = parseTimeString(classData.end_time) || new Date(startTime.getTime() + 60 * 60 * 1000);
 
+  // Combine date with time
+  const startDateTime = new Date(classDate);
+  startDateTime.setHours(startTime.getHours(), startTime.getMinutes(), startTime.getSeconds());
+
+  const endDateTime = new Date(classDate);
+  endDateTime.setHours(endTime.getHours(), endTime.getMinutes(), endTime.getSeconds());
+
   // Calculate duration safely
   let durationMinutes = 60; // default to 1 hour
-  if (isValid(startTime) && isValid(endTime)) {
-    durationMinutes = Math.max(differenceInMinutes(endTime, startTime), 0);
+  if (isValid(startDateTime) && isValid(endDateTime)) {
+    durationMinutes = Math.max(differenceInMinutes(endDateTime, startDateTime), 0);
   }
 
   const duration = formatDuration(durationMinutes);
@@ -93,14 +105,18 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-2xl">{classData.title}</CardTitle>
-            <CardDescription>{safeFormat(startTime, "EEEE, MMMM d, yyyy")}</CardDescription>
+            <CardDescription>{safeFormat(startDateTime, "EEEE, MMMM d, yyyy")}</CardDescription>
           </div>
-          <StatusBadge status={classData.status} />
+          <StatusBadge status={currentStatus} />
         </div>
       </CardHeader>
       <CardContent className="space-y-8">
         {/* Class Management Actions */}
-        <ClassManagementActions classData={classData} />
+        <ClassManagementActions
+          classData={classData}
+          currentStatus={currentStatus}
+          onStatusChange={setCurrentStatus}
+        />
 
         {/* Class Info */}
         <div className="grid gap-4 md:grid-cols-2">
@@ -120,7 +136,7 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
           <div>
             <h3 className="text-sm font-medium text-muted-foreground">Time</h3>
             <p className="text-base font-medium mt-1">
-              {safeFormat(startTime, "h:mm a")} - {safeFormat(endTime, "h:mm a")} ({duration})
+              {safeFormat(startDateTime, "h:mm a")} - {safeFormat(endDateTime, "h:mm a")} ({duration})
             </p>
           </div>
           <div>
@@ -142,7 +158,8 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
               sessionId={classData.session_id}
               sessionDate={classData.date}
               students={classData.enrolled_students}
-              initialAttendance={classData.attendance || {}}
+              currentStatus={currentStatus}
+              onStatusChange={setCurrentStatus}
             />
           </div>
         </div>

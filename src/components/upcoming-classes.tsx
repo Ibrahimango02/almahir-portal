@@ -148,8 +148,11 @@ export async function UpcomingClasses() {
         const now = new Date();
         const endTime = new Date(session.end_time);
 
-        // Classes with date AND time greater than or equal to current date AND time
-        return !isBefore(endTime, now);
+        // Only show sessions that are:
+        // 1. Not past their end time AND
+        // 2. Don't have a status of complete, rescheduled, cancelled, or absence
+        return !isBefore(endTime, now) &&
+          !['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
       } catch (error) {
         return false;
       }

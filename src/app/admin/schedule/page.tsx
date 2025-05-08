@@ -137,8 +137,8 @@ export default function SchedulePage() {
           ) : (
             <Tabs defaultValue="upcoming" value={activeListTab} onValueChange={setActiveListTab}>
               <TabsList className="mb-4 bg-muted/80">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                 <TabsTrigger value="recent">Recent</TabsTrigger>
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming">
                 <ScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} />

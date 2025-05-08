@@ -63,8 +63,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60",
     complete:
       "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800/60",
-    rescheduled:
-      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60",
     cancelled:
       "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/60",
     absence:
@@ -105,8 +103,6 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         return <Play className="h-3.5 w-3.5 mr-1" />
       case "complete":
         return <CheckCircle className="h-3.5 w-3.5 mr-1" />
-      case "rescheduled":
-        return <CalendarClock className="h-3.5 w-3.5 mr-1" />
       case "cancelled":
         return <BookX className="h-3.5 w-3.5 mr-1" />
       case "absence":

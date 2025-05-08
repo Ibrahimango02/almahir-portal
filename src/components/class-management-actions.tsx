@@ -2,11 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Video, PlayCircle, Play, StopCircle, Calendar, LogOut, UserX } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { updateClassSession } from "@/lib/put/put-classes"
+import { updateClassSession, updateClassSessionAttendance } from "@/lib/put/put-classes"
 
 type ClassManagementActionsProps = {
   classData: {
@@ -30,18 +30,14 @@ type ClassManagementActionsProps = {
     }[]
     attendance?: Record<string, boolean>
   }
+  currentStatus: string
+  onStatusChange: (status: string) => void
 }
 
-export function ClassManagementActions({ classData }: ClassManagementActionsProps) {
-  const [classStatus, setClassStatus] = useState(classData.status)
+export function ClassManagementActions({ classData, currentStatus, onStatusChange }: ClassManagementActionsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-
-  useEffect(() => {
-    // Reload the page when classStatus changes
-    router.refresh()
-  }, [classStatus, router])
 
   const handleZoomCall = () => {
     window.open(classData.class_link, "_blank")
@@ -60,7 +56,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
       })
 
       if (result.success) {
-        setClassStatus("pending")
+        onStatusChange("pending")
         toast({
           title: "Class Initiated",
           description: "The class has been initiated and is ready to start",
@@ -88,7 +84,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
       })
 
       if (result.success) {
-        setClassStatus("running")
+        onStatusChange("running")
         toast({
           title: "Class Started",
           description: "The class has officially started",
@@ -116,7 +112,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
       })
 
       if (result.success) {
-        setClassStatus("complete")
+        onStatusChange("complete")
         toast({
           title: "Class Ended",
           description: "The class has been ended",
@@ -144,7 +140,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
       })
 
       if (result.success) {
-        setClassStatus("cancelled")
+        onStatusChange("cancelled")
         toast({
           title: "Class Cancelled",
           description: "You have left and cancelled the class session",
@@ -166,16 +162,32 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
   const handleAbsence = async () => {
     setIsLoading(true)
     try {
+      // First mark all students as absent
+      const allAbsent: Record<string, boolean> = {}
+      classData.enrolled_students.forEach(student => {
+        allAbsent[student.student_id] = false
+      })
+
+      const attendanceResult = await updateClassSessionAttendance({
+        sessionId: classData.session_id,
+        attendance: allAbsent
+      })
+
+      if (!attendanceResult.success) {
+        throw new Error("Failed to update attendance records")
+      }
+
+      // Then mark the class as absence
       const result = await updateClassSession({
         sessionId: classData.session_id,
         action: 'absence'
       })
 
       if (result.success) {
-        setClassStatus("absence")
+        onStatusChange("absence")
         toast({
           title: "Class Marked as Absence",
-          description: "The class has been marked as absence and ended",
+          description: "The class has been marked as absence and all students have been marked as absent",
         })
       } else {
         throw new Error("Failed to mark absence")
@@ -192,18 +204,17 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
   }
 
   const handleRescheduleClass = () => {
-    setClassStatus("rescheduled")
     router.push(`/admin/schedule/reschedule/${classData.session_id}`)
   }
 
   // Check if rescheduling is allowed (only in "scheduled" status)
-  const canReschedule = classStatus === "scheduled"
+  const canReschedule = currentStatus === "scheduled"
 
   // Check if leaving is allowed (only in "scheduled" status - before initiation)
-  const canLeave = classStatus === "scheduled"
+  const canLeave = currentStatus === "scheduled"
 
   // Check if absence button should be shown (after initiation but before ending)
-  const showAbsence = classStatus === "running"
+  const showAbsence = currentStatus === "running"
 
   return (
     <div className="space-y-4">
@@ -223,17 +234,17 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           onClick={handleInitiateClass}
           className={cn(
             "flex items-center gap-2 transition-colors duration-300",
-            classStatus === "scheduled" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
+            currentStatus === "scheduled" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
           )}
-          variant={classStatus === "scheduled" ? "default" : "outline"}
-          disabled={classStatus !== "scheduled" || isLoading}
-          style={classStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+          variant={currentStatus === "scheduled" ? "default" : "outline"}
+          disabled={currentStatus !== "scheduled" || isLoading}
+          style={currentStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
         >
           <PlayCircle className="h-4 w-4" />
-          <span>{classStatus === "scheduled" ? "Initiate" : "Initiated"}</span>
+          <span>{currentStatus === "scheduled" ? "Initiate" : "Initiated"}</span>
         </Button>
 
-        {classStatus === "pending" ? (
+        {currentStatus === "pending" ? (
           <Button
             onClick={handleStartClass}
             className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
@@ -244,7 +255,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
             <Play className="h-4 w-4" />
             <span>Start Class</span>
           </Button>
-        ) : classStatus === "running" ? (
+        ) : currentStatus === "running" ? (
           <Button
             onClick={handleEndClass}
             className="flex items-center gap-2"
@@ -257,7 +268,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           </Button>
         ) : (
           <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
-            {classStatus === "complete" ? (
+            {currentStatus === "complete" ? (
               <>
                 <StopCircle className="h-4 w-4" />
                 <span>Ended</span>
@@ -294,7 +305,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
             <UserX className="h-4 w-4" />
             <span>Absence</span>
-            {classStatus === "in_progress" && <span className="sr-only">(Disabled: Class in progress)</span>}
+            {currentStatus === "in_progress" && <span className="sr-only">(Disabled: Class in progress)</span>}
           </Button>
         )}
 
@@ -317,7 +328,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
         )}
       </div>
 
-      {!canReschedule && classStatus !== "in_progress" && classStatus !== "ended_early" && (
+      {!canReschedule && currentStatus !== "in_progress" && currentStatus !== "ended_early" && (
         <p className="text-xs text-muted-foreground mt-1">Note: Rescheduling is not available after class initiation</p>
       )}
 

@@ -139,6 +139,11 @@ export function StudentsTable() {
                 </TableCell>
                 <TableCell>
                   <Link href={`/admin/students/${student.student_id}`}>
+                    {student.email}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/students/${student.student_id}`}>
                     <div className="flex flex-wrap gap-1">
                       {parentData[student.student_id]?.map((parent) => (
                         <Badge key={parent.id} variant="outline">
@@ -157,11 +162,6 @@ export function StudentsTable() {
                         </Badge>
                       ))}
                     </div>
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.email}
                   </Link>
                 </TableCell>
                 <TableCell className="text-center">

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { format, parse, isAfter, startOfDay } from "date-fns"
 import { CalendarIcon, Clock } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { notFound } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -18,68 +18,10 @@ import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
-
-// Mock data based on the database schema
-const classes = [
-  {
-    id: 1,
-    teacher_id: 1,
-    title: "Mathematics 101",
-    description:
-      "Introduction to algebra and geometry. This course covers fundamental concepts in algebra including equations, inequalities, and functions, as well as basic geometric principles such as points, lines, angles, and polygons. Students will learn problem-solving techniques and develop critical thinking skills through mathematical reasoning.",
-    subject: "Mathematics",
-    start_time: "2023-04-17T08:00:00",
-    end_time: "2023-04-17T09:30:00",
-    status: "scheduled",
-    max_students: 15,
-    class_link: "https://meet.google.com/abc-defg-hij",
-    teacher: { id: 1, first_name: "Sarah", last_name: "Johnson" },
-    enrolled_students: [
-      { id: 1, first_name: "John", last_name: "Doe" },
-      { id: 2, first_name: "Jane", last_name: "Smith" },
-      { id: 3, first_name: "Alex", last_name: "Johnson" },
-    ],
-  },
-  {
-    id: 2,
-    teacher_id: 2,
-    title: "Physics Fundamentals",
-    description:
-      "Basic principles of physics including mechanics, energy, and motion. Students will explore Newton's laws, conservation of energy, and simple machines. The course includes both theoretical concepts and practical applications through demonstrations and problem-solving exercises.",
-    subject: "Physics",
-    start_time: "2023-04-17T11:00:00",
-    end_time: "2023-04-17T12:30:00",
-    status: "scheduled",
-    max_students: 12,
-    class_link: "https://meet.google.com/jkl-mnop-qrs",
-    teacher: { id: 2, first_name: "Michael", last_name: "Chen" },
-    enrolled_students: [
-      { id: 4, first_name: "Emily", last_name: "Wilson" },
-      { id: 5, first_name: "David", last_name: "Brown" },
-      { id: 6, first_name: "Sophia", last_name: "Garcia" },
-      { id: 7, first_name: "James", last_name: "Miller" },
-    ],
-  },
-  {
-    id: 3,
-    teacher_id: 3,
-    title: "English Literature",
-    description:
-      "Analysis of classic literature from various periods and genres. Students will read and discuss works by Shakespeare, Austen, Dickens, and other influential authors. The course focuses on literary analysis, critical thinking, and effective written and verbal communication.",
-    subject: "English",
-    start_time: "2023-04-17T14:30:00",
-    end_time: "2023-04-17T16:00:00",
-    status: "scheduled",
-    max_students: 20,
-    class_link: "https://meet.google.com/tuv-wxyz-123",
-    teacher: { id: 3, first_name: "Emily", last_name: "Davis" },
-    enrolled_students: [
-      { id: 8, first_name: "Olivia", last_name: "Martinez" },
-      { id: 9, first_name: "Ethan", last_name: "Taylor" },
-      { id: 10, first_name: "Ava", last_name: "Anderson" },
-    ],
-  },
-]
+import { getClassSessionById } from "@/lib/get/get-classes"
+import { useEffect, useState } from "react"
+import { ClassSessionType } from "@/types"
+import { updateClassSession } from "@/lib/put/put-classes"
 
 // Create a schema for form validation
 const formSchema = z
@@ -90,7 +32,8 @@ const formSchema = z
       })
       .refine(
         (date) => {
-          return isAfter(date, startOfDay(new Date()))
+          const today = startOfDay(new Date())
+          return isAfter(date, today) || date.getTime() === today.getTime()
         },
         {
           message: "Date cannot be in the past",
@@ -110,14 +53,6 @@ const formSchema = z
       .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
         message: "Please enter a valid time in 24-hour format (HH:MM)",
       }),
-    reason: z
-      .string({
-        required_error: "Please provide a reason for rescheduling",
-      })
-      .min(5, {
-        message: "Reason must be at least 5 characters",
-      }),
-    notify_participants: z.boolean().default(true),
   })
   .refine(
     (data) => {
@@ -130,64 +65,138 @@ const formSchema = z
       path: ["end_time"],
     },
   )
+  .refine(
+    (data) => {
+      const selectedDate = startOfDay(data.date)
+      const today = startOfDay(new Date())
+
+      // If the selected date is today, check if the start time is in the future
+      if (selectedDate.getTime() === today.getTime()) {
+        const currentTime = new Date()
+        const startTime = parse(data.start_time, "HH:mm", currentTime)
+        return isAfter(startTime, currentTime)
+      }
+      return true
+    },
+    {
+      message: "Start time must be in the future for today's date",
+      path: ["start_time"],
+    },
+  )
 
 type FormValues = z.infer<typeof formSchema>
 
-export default function ReschedulePage({ params }: { params: { id: string } }) {
-  const classId = Number.parseInt(params.id)
+// Helper to parse YYYY-MM-DD as local date
+function parseLocalDate(dateStr: string) {
+  const [year, month, day] = dateStr.split("-");
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+
+export default function ReschedulePage() {
+  const params = useParams()
+  const { id } = params as { id: string }
   const router = useRouter()
   const { toast } = useToast()
+  const [classData, setClassData] = useState<ClassSessionType | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Find the class with the matching ID
-  const classData = classes.find((c) => c.id === classId)
+  useEffect(() => {
+    async function fetchClassData() {
+      try {
+        const data = await getClassSessionById(id)
+        if (!data || data.status !== "scheduled") {
+          notFound()
+        }
+        setClassData(data)
+      } catch (error) {
+        console.error("Error fetching class data:", error)
+        notFound()
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  // If class not found or not in scheduled status, show 404 page
-  if (!classData || classData.status !== "scheduled") {
-    notFound()
-  }
-
-  const formattedDate = format(new Date(classData.start_time), "MMMM d, yyyy")
-  const formattedStartTime = format(new Date(classData.start_time), "HH:mm")
-  const formattedEndTime = format(new Date(classData.end_time), "HH:mm")
-
-  // Get current date and times for default values
-  const currentDate = new Date(classData.start_time)
-  const currentStartTime = format(new Date(classData.start_time), "HH:mm")
-  const currentEndTime = format(new Date(classData.end_time), "HH:mm")
+    fetchClassData()
+  }, [id])
 
   // Initialize form with default values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: currentDate,
-      start_time: currentStartTime,
-      end_time: currentEndTime,
-      reason: "",
-      notify_participants: true,
+      date: classData ? parseLocalDate(classData.date) : new Date(),
+      start_time: classData ? format(new Date(`${classData.date}T${classData.start_time}`), "HH:mm") : "",
+      end_time: classData ? format(new Date(`${classData.date}T${classData.end_time}`), "HH:mm") : "",
     },
   })
 
+  // Update form values when classData is loaded
+  useEffect(() => {
+    if (classData) {
+      const newDate = new Date(classData.date)
+      const startTime = new Date(`${classData.date}T${classData.start_time}`)
+      const endTime = new Date(`${classData.date}T${classData.end_time}`)
+
+      form.reset({
+        date: parseLocalDate(classData.date),
+        start_time: format(startTime, "HH:mm"),
+        end_time: format(endTime, "HH:mm"),
+      })
+    }
+  }, [classData, form])
+
   // Handle form submission
-  function onSubmit(data: FormValues) {
-    // In a real app, this would send data to an API
-    console.log("Form submitted:", data)
+  async function onSubmit(data: FormValues) {
+    try {
+      const result = await updateClassSession({
+        sessionId: id,
+        action: 'reschedule',
+        newDate: format(data.date, "yyyy-MM-dd"),
+        newStartTime: data.start_time,
+        newEndTime: data.end_time,
+      })
 
-    // Show success toast
-    toast({
-      title: "Class rescheduled",
-      description: `The class has been rescheduled to ${format(data.date, "MMMM d, yyyy")} at ${data.start_time}`,
-    })
+      if (!result.success) {
+        throw new Error('Failed to reschedule class')
+      }
 
-    // Redirect back to class details page
-    setTimeout(() => {
-      router.push(`/admin/schedule/${classId}`)
-    }, 1500)
+      // Show success toast
+      toast({
+        title: "Class rescheduled",
+        description: `The class has been rescheduled to ${format(data.date, "MMMM d, yyyy")} at ${data.start_time}`,
+      })
+
+      // Redirect back to class details page
+      setTimeout(() => {
+        router.push(`/admin/schedule/${id}`)
+      }, 1500)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reschedule class. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
+
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  if (!classData) {
+    return notFound()
+  }
+
+  const [year, month, day] = classData.date.split("-");
+  const localDate = new Date(Number(year), Number(month) - 1, Number(day));
+  const formattedDate = format(localDate, "MMMM d, yyyy");
+  const formattedStartTime = format(new Date(`${classData.date}T${classData.start_time}`), "HH:mm")
+  const formattedEndTime = format(new Date(`${classData.date}T${classData.end_time}`), "HH:mm")
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href={`/admin/schedule/${classId}`} label="Back to Class Details" />
+        <BackButton href={`/admin/schedule/${id}`} label="Back to Class Details" />
       </div>
 
       <Card>
@@ -203,7 +212,7 @@ export default function ReschedulePage({ params }: { params: { id: string } }) {
               Time: {formattedStartTime} - {formattedEndTime} (24-hour format)
             </p>
             <p className="text-sm">
-              Teacher: {classData.teacher.first_name} {classData.teacher.last_name}
+              Teacher: {classData.teachers[0]?.first_name} {classData.teachers[0]?.last_name}
             </p>
           </div>
 
@@ -234,7 +243,10 @@ export default function ReschedulePage({ params }: { params: { id: string } }) {
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) => {
+                            const today = startOfDay(new Date())
+                            return date < today
+                          }}
                           initialFocus
                         />
                       </PopoverContent>
@@ -285,52 +297,20 @@ export default function ReschedulePage({ params }: { params: { id: string } }) {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="reason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Reason for Rescheduling <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter the reason for rescheduling this class"
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      This information will be included in notifications to participants
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="notify_participants"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <input type="checkbox" className="h-4 w-4 mt-1" checked={field.value} onChange={field.onChange} />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Notify Participants</FormLabel>
-                      <FormDescription>
-                        Send notifications to all students and the teacher about this schedule change
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" type="button" asChild>
-                  <Link href={`/admin/schedule/${classId}`}>Cancel</Link>
+                  <Link href={`/admin/schedule/${id}`}>Cancel</Link>
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button
+                  type="submit"
+                  disabled={form.formState.isSubmitting}
+                  style={{
+                    backgroundColor: "#3d8f5b",
+                    color: "white",
+                  }}
+                >
+                  {form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
               </div>
             </form>
           </Form>

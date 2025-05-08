@@ -26,7 +26,6 @@ export default async function Dashboard() {
     running: await getClassesCountByStatus("running"),
     pending: await getClassesCountByStatus("pending"),
     complete: await getClassesCountByStatus("complete"),
-    rescheduled: await getClassesCountByStatus("rescheduled"),
     cancelled: await getClassesCountByStatus("cancelled"),
     absence: await getClassesCountByStatus("absence"),
   }
@@ -95,16 +94,6 @@ export default async function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-400/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rescheduled</CardTitle>
-            <CalendarClock className="h-4 w-4 text-amber-500/80" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todaysClasses.rescheduled}</div>
-          </CardContent>
-        </Card>
-
         <Card className="border-l-4 border-l-rose-400/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
@@ -135,8 +124,8 @@ export default async function Dashboard() {
           <CardContent>
             <Tabs defaultValue="upcoming" className="space-y-4">
               <TabsList className="bg-muted/80">
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                 <TabsTrigger value="recent">Recent</TabsTrigger>
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming" className="space-y-4">
                 <UpcomingClasses />

@@ -135,8 +135,11 @@ export async function RecentClasses() {
         const now = new Date();
         const endTime = new Date(session.end_time);
 
-        // Classes with date AND time less than current date AND time
-        return isBefore(endTime, now);
+        // Include sessions that are either:
+        // 1. Past their end time OR
+        // 2. Have a status of complete, rescheduled, cancelled, or absence
+        return isBefore(endTime, now) ||
+          ['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
       } catch (error) {
         return false;
       }

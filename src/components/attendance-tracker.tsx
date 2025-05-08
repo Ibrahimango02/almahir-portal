@@ -6,17 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { format, parseISO } from "date-fns"
-import { CheckCircle, Save, X } from "lucide-react"
+import { CheckCircle, Save, X, Clock } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
-import { StudentType } from "@/types"
-
-
-type AttendanceRecord = {
-  studentId: string
-  present: boolean
-  notes?: string
-}
+import { updateClassSessionAttendance } from "@/lib/put/put-classes"
 
 type AttendanceTrackerProps = {
   sessionId: string
@@ -26,33 +19,16 @@ type AttendanceTrackerProps = {
     first_name: string
     last_name: string
   }[]
-  initialAttendance?: Record<string, boolean>
+  currentStatus: string
+  onStatusChange: (status: string) => void
 }
 
-export function AttendanceTracker({ sessionId, sessionDate, students, initialAttendance = {} }: AttendanceTrackerProps) {
+export function AttendanceTracker({ sessionId, sessionDate, students, currentStatus }: AttendanceTrackerProps) {
   const { toast } = useToast()
   const [attendance, setAttendance] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [isAttendanceTaken, setIsAttendanceTaken] = useState(false)
-
-  // Initialize attendance from props or default all to absent
-  useEffect(() => {
-    const initialData: Record<string, boolean> = {}
-    students.forEach((student) => {
-      initialData[student.student_id] = initialAttendance[student.student_id] || false
-    })
-    setAttendance(initialData)
-
-    // Check if attendance was previously taken
-    const attendanceValues = Object.values(initialAttendance)
-    setIsAttendanceTaken(attendanceValues.length > 0)
-
-    // If attendance hasn't been taken yet, we should allow saving even with all absent
-    if (attendanceValues.length === 0) {
-      setHasChanges(true)
-    }
-  }, [students, initialAttendance])
 
   // Function to get initials from name
   const getInitials = (firstName: string, lastName: string) => {
@@ -61,6 +37,7 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
 
   // Handle checkbox change
   const handleAttendanceChange = (studentId: string, isPresent: boolean) => {
+    if (currentStatus !== "running") return;
     setAttendance((prev) => ({
       ...prev,
       [studentId]: isPresent,
@@ -70,6 +47,7 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
 
   // Mark all as present
   const markAllPresent = () => {
+    if (currentStatus !== "running") return;
     const updatedAttendance: Record<string, boolean> = {}
     students.forEach((student) => {
       updatedAttendance[student.student_id] = true
@@ -80,12 +58,18 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
 
   // Save attendance records
   const saveAttendance = async () => {
+    if (currentStatus !== "running") return;
     setSaving(true)
 
-    // Simulate API call to save attendance
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      const result = await updateClassSessionAttendance({
+        sessionId,
+        attendance
+      })
+
+      if (!result.success) {
+        throw new Error('Failed to save attendance')
+      }
 
       // Check if all students are absent
       const allAbsent = students.length > 0 && Object.values(attendance).every((status) => status === false)
@@ -118,42 +102,58 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
   // Count present students
   const presentCount = Object.values(attendance).filter(Boolean).length
 
+  const isAttendanceEnabled = currentStatus === "running"
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">Attendance Tracking</h3>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={markAllPresent} className="h-8">
-            <CheckCircle className="mr-1 h-3.5 w-3.5" />
-            Mark All Present
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const updatedAttendance: Record<string, boolean> = {}
-              students.forEach((student) => {
-                updatedAttendance[student.student_id] = false
-              })
-              setAttendance(updatedAttendance)
-              setHasChanges(true)
-            }}
-            className="h-8"
-          >
-            <X className="mr-1 h-3.5 w-3.5" />
-            Mark All Absent
-          </Button>
-          <Button size="sm" onClick={saveAttendance} disabled={!hasChanges || saving} className="h-8" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            {saving ? (
-              "Saving..."
-            ) : (
-              <>
-                <Save className="mr-1 h-3.5 w-3.5" />
-                Save Attendance
-              </>
-            )}
-          </Button>
-        </div>
+        {isAttendanceEnabled ? (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={markAllPresent} className="h-8">
+              <CheckCircle className="mr-1 h-3.5 w-3.5" />
+              Mark All Present
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const updatedAttendance: Record<string, boolean> = {}
+                students.forEach((student) => {
+                  updatedAttendance[student.student_id] = false
+                })
+                setAttendance(updatedAttendance)
+                setHasChanges(true)
+              }}
+              className="h-8"
+            >
+              <X className="mr-1 h-3.5 w-3.5" />
+              Mark All Absent
+            </Button>
+            <Button size="sm" onClick={saveAttendance} disabled={!hasChanges || saving} className="h-8" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+              {saving ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="mr-1 h-3.5 w-3.5" />
+                  Save Attendance
+                </>
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm">
+              {currentStatus === "scheduled" ? "Attendance tracking will be available when class starts" :
+                currentStatus === "pending" ? "Attendance tracking will be available when class starts" :
+                  currentStatus === "complete" ? "Class has ended - attendance tracking is no longer available" :
+                    currentStatus === "cancelled" ? "Class was cancelled - attendance tracking is not available" :
+                      currentStatus === "absence" ? "Class was marked as absence - attendance tracking is not available" :
+                        "Attendance tracking is not available"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -188,10 +188,12 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
                       onCheckedChange={(checked) => {
                         handleAttendanceChange(student.student_id, checked === true)
                       }}
+                      disabled={!isAttendanceEnabled}
                       style={{
                         backgroundColor: attendance[student.student_id] ? "#3d8f5b" : "white",
                         color: "white",
-                        borderColor: "#3d8f5b"
+                        borderColor: "#3d8f5b",
+                        opacity: isAttendanceEnabled ? 1 : 0.5
                       }}
                     />
                   </div>
@@ -203,17 +205,20 @@ export function AttendanceTracker({ sessionId, sessionDate, students, initialAtt
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {isAttendanceTaken ? (
-          presentCount === 0 ? (
-            <p className="text-amber-600 font-medium">No students were present for this class.</p>
+        {isAttendanceEnabled ? (
+          isAttendanceTaken ? (
+            presentCount === 0 ? (
+              <p className="text-amber-600 font-medium">No students were present for this class.</p>
+            ) : (
+              <p>
+                Attendance: {presentCount} of {students.length} students present
+              </p>
+            )
           ) : (
-            <p>
-              Attendance: {presentCount} of {students.length} students present (
-              {Math.round((presentCount / students.length) * 100)}%)
-            </p>
+            <p>Attendance not yet taken for this class.</p>
           )
         ) : (
-          <p>Attendance not yet taken for this class.</p>
+          <p></p>
         )}
       </div>
     </div>

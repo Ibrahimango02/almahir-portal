@@ -161,11 +161,17 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
           : now; // Current week or no week specified, use now
 
       if (filter === "recent") {
-        // Classes with date AND time less than current date AND time
-        return isBefore(sessionDateTime, referencePoint);
+        // Include sessions that are either:
+        // 1. Past their end time OR
+        // 2. Have a status of complete, rescheduled, cancelled, or absence
+        return isBefore(sessionDateTime, referencePoint) ||
+          ['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
       } else { // upcoming
-        // Classes with date AND time greater than or equal to current date AND time
-        return !isBefore(sessionDateTime, referencePoint);
+        // Only show sessions that are:
+        // 1. Not past their end time AND
+        // 2. Don't have a status of complete, rescheduled, cancelled, or absence
+        return !isBefore(sessionDateTime, referencePoint) &&
+          !['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
       }
     }
 

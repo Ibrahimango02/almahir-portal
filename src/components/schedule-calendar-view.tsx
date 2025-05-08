@@ -208,8 +208,6 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                 return "border-indigo-400/70 bg-indigo-50/80 dark:border-indigo-800/70 dark:bg-indigo-950/80"
             case "complete":
                 return "border-purple-400/70 bg-purple-50/80 dark:border-purple-800/70 dark:bg-purple-950/80"
-            case "rescheduled":
-                return "border-amber-400/70 bg-amber-50/80 dark:border-amber-800/70 dark:bg-amber-950/80"
             case "cancelled":
                 return "border-rose-400/70 bg-rose-50/80 dark:border-rose-800/70 dark:bg-rose-950/80"
             case "absent":
@@ -229,8 +227,6 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                 return "text-indigo-700 dark:text-indigo-400"
             case "complete":
                 return "text-purple-700 dark:text-purple-400"
-            case "rescheduled":
-                return "text-amber-700 dark:text-amber-400"
             case "cancelled":
                 return "text-rose-700 dark:text-rose-400"
             case "absent":
