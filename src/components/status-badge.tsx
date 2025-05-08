@@ -27,7 +27,7 @@ type StatusType =
   | "complete"
   | "rescheduled"
   | "cancelled"
-  | "absent"
+  | "absence"
   | string
 
 interface StatusBadgeProps {
@@ -67,7 +67,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60",
     cancelled:
       "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/60",
-    absent:
+    absence:
       "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800/60",
 
     // Fallback for any other status
@@ -109,7 +109,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         return <CalendarClock className="h-3.5 w-3.5 mr-1" />
       case "cancelled":
         return <BookX className="h-3.5 w-3.5 mr-1" />
-      case "absent":
+      case "absence":
         return <UserX className="h-3.5 w-3.5 mr-1" />
       default:
         return null

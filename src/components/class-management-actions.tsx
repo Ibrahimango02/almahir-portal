@@ -2,10 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Video, PlayCircle, Play, StopCircle, Calendar, LogOut, UserX } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { updateClassSession } from "@/lib/put/put-classes"
 
 type ClassManagementActionsProps = {
   classData: {
@@ -31,14 +32,18 @@ type ClassManagementActionsProps = {
   }
 }
 
-
 export function ClassManagementActions({ classData }: ClassManagementActionsProps) {
   const [classStatus, setClassStatus] = useState(classData.status)
+  const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
+  useEffect(() => {
+    // Reload the page when classStatus changes
+    router.refresh()
+  }, [classStatus, router])
+
   const handleZoomCall = () => {
-    // In a real app, this would open the Zoom call in a new tab
     window.open(classData.class_link, "_blank")
     toast({
       title: "Joining class video call",
@@ -46,50 +51,148 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
     })
   }
 
-  const handleInitiateClass = () => {
-    setClassStatus("initiating")
-    toast({
-      title: "Class Initiated",
-      description: "The class has been initiated and is ready to start",
-    })
+  const handleInitiateClass = async () => {
+    setIsLoading(true)
+    try {
+      const result = await updateClassSession({
+        sessionId: classData.session_id,
+        action: 'initiate'
+      })
+
+      if (result.success) {
+        setClassStatus("pending")
+        toast({
+          title: "Class Initiated",
+          description: "The class has been initiated and is ready to start",
+        })
+      } else {
+        throw new Error("Failed to initiate class")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to initiate class. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleStartClass = () => {
-    setClassStatus("in_progress")
-    toast({
-      title: "Class Started",
-      description: "The class has officially started",
-    })
+  const handleStartClass = async () => {
+    setIsLoading(true)
+    try {
+      const result = await updateClassSession({
+        sessionId: classData.session_id,
+        action: 'start'
+      })
+
+      if (result.success) {
+        setClassStatus("running")
+        toast({
+          title: "Class Started",
+          description: "The class has officially started",
+        })
+      } else {
+        throw new Error("Failed to start class")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start class. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleEndClass = () => {
-    setClassStatus("ended")
-    toast({
-      title: "Class Ended",
-      description: "The class has been ended",
-    })
+  const handleEndClass = async () => {
+    setIsLoading(true)
+    try {
+      const result = await updateClassSession({
+        sessionId: classData.session_id,
+        action: 'end'
+      })
+
+      if (result.success) {
+        setClassStatus("complete")
+        toast({
+          title: "Class Ended",
+          description: "The class has been ended",
+        })
+      } else {
+        throw new Error("Failed to end class")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to end class. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleLeaveClass = () => {
-    // Only available before initiation (when status is "scheduled")
-    setClassStatus("ended_early")
-    toast({
-      title: "Class Cancelled",
-      description: "You have left and cancelled the class session",
-    })
+  const handleLeaveClass = async () => {
+    setIsLoading(true)
+    try {
+      const result = await updateClassSession({
+        sessionId: classData.session_id,
+        action: 'leave'
+      })
+
+      if (result.success) {
+        setClassStatus("cancelled")
+        toast({
+          title: "Class Cancelled",
+          description: "You have left and cancelled the class session",
+        })
+      } else {
+        throw new Error("Failed to leave class")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to leave class. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleAbsence = () => {
-    // Available after initiation (when status is "initiating" or "in_progress")
-    setClassStatus("ended_early")
-    toast({
-      title: "Class Marked as Absence",
-      description: "The class has been marked as absence and ended",
-    })
+  const handleAbsence = async () => {
+    setIsLoading(true)
+    try {
+      const result = await updateClassSession({
+        sessionId: classData.session_id,
+        action: 'absence'
+      })
+
+      if (result.success) {
+        setClassStatus("absence")
+        toast({
+          title: "Class Marked as Absence",
+          description: "The class has been marked as absence and ended",
+        })
+      } else {
+        throw new Error("Failed to mark absence")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to mark absence. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleRescheduleClass = () => {
-    // Redirect to the reschedule page
+    setClassStatus("rescheduled")
     router.push(`/admin/schedule/reschedule/${classData.session_id}`)
   }
 
@@ -100,8 +203,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
   const canLeave = classStatus === "scheduled"
 
   // Check if absence button should be shown (after initiation but before ending)
-  // Modified to only allow absence in "initiating" state, not in "in_progress" state
-  const showAbsence = classStatus === "initiating"
+  const showAbsence = classStatus === "running"
 
   return (
     <div className="space-y-4">
@@ -124,28 +226,30 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
             classStatus === "scheduled" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
           )}
           variant={classStatus === "scheduled" ? "default" : "outline"}
-          disabled={classStatus !== "scheduled"}
+          disabled={classStatus !== "scheduled" || isLoading}
           style={classStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
         >
           <PlayCircle className="h-4 w-4" />
           <span>{classStatus === "scheduled" ? "Initiate" : "Initiated"}</span>
         </Button>
 
-        {classStatus === "initiating" ? (
+        {classStatus === "pending" ? (
           <Button
             onClick={handleStartClass}
             className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
             variant="default"
+            disabled={isLoading}
             style={{ backgroundColor: "#3d8f5b", color: "white" }}
           >
             <Play className="h-4 w-4" />
             <span>Start Class</span>
           </Button>
-        ) : classStatus === "in_progress" ? (
+        ) : classStatus === "running" ? (
           <Button
             onClick={handleEndClass}
             className="flex items-center gap-2"
             variant="destructive"
+            disabled={isLoading}
             style={{ backgroundColor: "#d14747", color: "white" }}
           >
             <StopCircle className="h-4 w-4" />
@@ -153,7 +257,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           </Button>
         ) : (
           <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
-            {classStatus === "ended" ? (
+            {classStatus === "complete" ? (
               <>
                 <StopCircle className="h-4 w-4" />
                 <span>Ended</span>
@@ -167,11 +271,11 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           </Button>
         )}
 
-        {/* Conditionally show Leave or Absence button based on class status */}
         {canLeave ? (
           <Button
             onClick={handleLeaveClass}
             className="flex items-center gap-2 hover:bg-red-700 text-white"
+            disabled={isLoading}
             style={{ backgroundColor: "#d14747", color: "white" }}
           >
             <LogOut className="h-4 w-4" />
@@ -181,6 +285,7 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
           <Button
             onClick={handleAbsence}
             className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            disabled={isLoading}
           >
             <UserX className="h-4 w-4" />
             <span>Absence</span>
@@ -194,7 +299,12 @@ export function ClassManagementActions({ classData }: ClassManagementActionsProp
         )}
 
         {canReschedule ? (
-          <Button onClick={handleRescheduleClass} className="flex items-center gap-2" variant="outline">
+          <Button
+            onClick={handleRescheduleClass}
+            className="flex items-center gap-2"
+            variant="outline"
+            disabled={isLoading}
+          >
             <Calendar className="h-4 w-4" />
             <span>Reschedule</span>
           </Button>

@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 
-export async function updateClass(params: { sessionId: string; action: string; teacherNotes?: string }) {
+export async function updateClassSession(params: { sessionId: string; action: string; teacherNotes?: string }) {
     const supabase = createClient()
     const { sessionId, action, teacherNotes } = params
 
@@ -82,6 +82,18 @@ export async function updateClass(params: { sessionId: string; action: string; t
             }
 
             case 'absence': {
+                const now = new Date().toISOString()
+                // Update class history with end time
+                const { error: historyError } = await supabase
+                    .from('class_history')
+                    .update({
+                        actual_end_time: now,
+                        teacher_notes: teacherNotes
+                    })
+                    .eq('session_id', sessionId)
+
+                if (historyError) throw historyError
+
                 const { error: sessionError } = await supabase
                     .from('class_sessions')
                     .update({ status: 'absence' })
@@ -101,3 +113,4 @@ export async function updateClass(params: { sessionId: string; action: string; t
         return { success: false, error }
     }
 }
+
