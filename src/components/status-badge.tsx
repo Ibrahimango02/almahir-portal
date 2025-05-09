@@ -54,7 +54,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 
     // Invoice statuses
     paid: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60",
-    overdue: "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/60",
+    overdue: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/60",
 
     // Class statuses
     scheduled:

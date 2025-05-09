@@ -41,6 +41,7 @@ export type TeacherType = {
     status: string
     specialization: string
     hourly_rate: number
+    notes: string | null
     created_at: string
 }
 

@@ -14,7 +14,7 @@ import { getClassesByStudentId } from "@/lib/get/get-classes"
 
 
 export default async function StudentDetailPage({ params }: { params: { id: string } }) {
-  const { id } = await params
+  const { id } = params
   const student = await getStudentById(id)
   const studentParents = await getStudentParents(id)
 
@@ -129,7 +129,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               <Separator />
 
               {/* Notes */}
-              {student.notes && (
+              {(
                 <div>
                   <h3 className="text-base font-semibold flex items-center mb-3">
                     <BookOpen className="h-4 w-4 mr-2 text-primary" />

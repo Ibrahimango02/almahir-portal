@@ -13,7 +13,7 @@ import { getClassesByTeacherId } from "@/lib/get/get-classes"
 
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
-  const { id } = await params
+  const { id } = params
   const teacher = await getTeacherById(id)
 
   if (!teacher) {
@@ -121,6 +121,19 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Notes */}
+              {(
+                <div>
+                  <h3 className="text-base font-semibold flex items-center mb-3">
+                    <BookOpen className="h-4 w-4 mr-2 text-primary" />
+                    Notes
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed pl-6">{teacher.notes}</p>
+                </div>
+              )}
 
               <Separator />
 

@@ -51,6 +51,8 @@ export default async function PrivatePage() {
 
     //console.log(parentss)
     //console.log(tteachers)
+    //console.log(parentss)
+    //console.log(tteachers)
     //console.log(students)
     //console.log(classes)
     //console.log("todayClasses", todayClasses)
@@ -63,6 +65,7 @@ export default async function PrivatePage() {
     //console.log("teacherClassCount", teacherClassCount)
     //console.log("activeClasses", activeClasses)
     //console.log("student", student)
+
 
     return <p>Hello {firstname} {lastname} you are a {user_role}</p>
 }

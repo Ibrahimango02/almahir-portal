@@ -16,7 +16,7 @@ export async function getTeachers(): Promise<TeacherType[]> {
     // After getting the profile    
     const { data: teacher } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', profileIds)
 
     // Get classes for all teachers
@@ -47,6 +47,7 @@ export async function getTeachers(): Promise<TeacherType[]> {
             created_at: profileData.created_at,
             specialization: teacherData?.specialization || "",
             hourly_rate: teacherData?.hourly_rate || 0,
+            notes: teacherData?.notes || "",
             classes: teacherClasses,
             students: teacherStudents
         }
@@ -74,7 +75,7 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
     // Get the teacher-specific data
     const { data: teacher } = await supabase
         .from('teachers')
-        .select('specialization, hourly_rate')
+        .select('specialization, hourly_rate, notes')
         .eq('profile_id', id)
         .single()
 
@@ -86,9 +87,10 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
         last_name: profile.last_name,
         phone: profile.phone,
         status: profile.status,
-        created_at: profile.created_at,
         specialization: teacher?.specialization || "",
-        hourly_rate: teacher?.hourly_rate || 0
+        hourly_rate: teacher?.hourly_rate || 0,
+        notes: teacher?.notes || "",
+        created_at: profile.created_at
     }
 }
 

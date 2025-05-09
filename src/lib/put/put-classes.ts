@@ -113,9 +113,20 @@ export async function updateClassSession(params: {
             }
 
             case 'leave': {
+                const { error: historyError } = await supabase
+                    .from('class_history')
+                    .upsert({
+                        session_id: sessionId,
+                        notes: 'Class cancelled'
+                    }, {
+                        onConflict: 'session_id'
+                    })
+
+                if (historyError) throw historyError
+
                 const { error: sessionError } = await supabase
                     .from('class_sessions')
-                    .update({ status: 'cancelled', notes: 'Class cancelled' })
+                    .update({ status: 'cancelled' })
                     .eq('id', sessionId)
 
                 if (sessionError) throw sessionError

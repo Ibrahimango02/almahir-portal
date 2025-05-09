@@ -54,7 +54,7 @@ export async function getClasses(): Promise<ClassType[]> {
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     // Get student profile information
@@ -86,6 +86,7 @@ export async function getClasses(): Promise<ClassType[]> {
                 status: teacher.status,
                 specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
                 created_at: teacher.created_at
             })) || []
 
@@ -199,7 +200,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     // Get student profile information
@@ -231,6 +232,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 status: teacher.status,
                 specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
                 created_at: teacher.created_at
             })) || []
 
@@ -340,7 +342,7 @@ export async function getActiveClasses(): Promise<ClassType[]> {
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     // Get student profiles and data
@@ -372,6 +374,7 @@ export async function getActiveClasses(): Promise<ClassType[]> {
                 status: teacher.status,
                 specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
                 created_at: teacher.created_at
             })) || []
 
@@ -471,7 +474,7 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     const teachers: TeacherType[] = teacherProfiles?.map(teacher => ({
@@ -483,6 +486,7 @@ export async function getClassSessionById(sessionId: string): Promise<ClassSessi
         status: teacher.status,
         specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
         hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+        notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
         created_at: teacher.created_at
     })) || []
 
@@ -570,7 +574,7 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassSes
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     // Get students for these classes
@@ -614,6 +618,7 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassSes
                 status: teacher.status,
                 specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
                 created_at: teacher.created_at
             })) || []
 
@@ -693,7 +698,7 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassSes
 
     const { data: teacherData } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate')
+        .select('profile_id, specialization, hourly_rate, notes')
         .in('profile_id', teacherIds)
 
     // Get students for these classes
@@ -737,6 +742,7 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassSes
                 status: teacher.status,
                 specialization: teacherData?.find(t => t.profile_id === teacher.id)?.specialization || "",
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || 0,
+                notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || "",
                 created_at: teacher.created_at
             })) || []
 

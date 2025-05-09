@@ -106,7 +106,8 @@ function getStatusBadgeVariant(status: string) {
 }
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  const invoice = await getInvoiceById(params.id)
+  const { id } = params
+  const invoice = await getInvoiceById(id)
 
   if (!invoice) {
     notFound()

@@ -10,7 +10,7 @@ import { notFound } from "next/navigation"
 
 
 export default async function ParentDetailPage({ params }: { params: { id: string } }) {
-  const { id } = await params
+  const { id } = params
   const parent = await getParentById(id)
   const parentStudents = await getParentStudents(id) ?? []
 
