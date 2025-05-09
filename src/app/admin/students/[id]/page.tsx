@@ -67,7 +67,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               </CardTitle>
               <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
                 <Badge variant="secondary" className="font-medium">
-                  {student.grade_level} Grade
+                  Student
                 </Badge>
               </div>
             </div>

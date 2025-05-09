@@ -66,7 +66,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
               <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
                 {teacher.specialization && (
                   <Badge variant="secondary" className="font-medium">
-                    {teacher.specialization}
+                    Teacher
                   </Badge>
                 )}
               </div>

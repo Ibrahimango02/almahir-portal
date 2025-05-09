@@ -14,6 +14,7 @@ import {
   Settings,
   Users,
   User,
+  UserPen,
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -36,22 +37,28 @@ const routes = [
     color: "text-violet-600",
   },
   {
-    label: "Teachers",
-    icon: Users,
-    href: "/admin/teachers",
-    color: "text-pink-600",
+    label: "Admins",
+    icon: User,
+    href: "/admin/admins",
+    color: "text-blue-600",
   },
   {
-    label: "Parents",
-    icon: Users,
-    href: "/admin/parents",
-    color: "text-orange-600",
+    label: "Teachers",
+    icon: UserPen,
+    href: "/admin/teachers",
+    color: "text-red-600",
   },
   {
     label: "Students",
     icon: Graduation,
     href: "/admin/students",
     color: "text-emerald-600",
+  },
+  {
+    label: "Parents",
+    icon: Users,
+    href: "/admin/parents",
+    color: "text-amber-600",
   },
   {
     label: "Invoices",

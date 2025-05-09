@@ -142,7 +142,7 @@ export default function AddStudentPage() {
             <Button variant="outline" type="button" onClick={() => router.push("/admin/students")}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} style={{ backgroundColor: "#3d8f5b", color: "white" }}>
               {isSubmitting ? "Sending Invitation..." : "Send Invitation"}
             </Button>
           </CardFooter>

@@ -10,6 +10,16 @@ export type WeeklyScheduleProps = {
     timeRangeEnd?: number
 }
 
+export type AdminType = {
+    id: string
+    first_name: string
+    last_name: string
+    email: string
+    phone: string | null
+    status: string
+    created_at: string
+}
+
 export type ParentType = {
     parent_id: string
     first_name: string

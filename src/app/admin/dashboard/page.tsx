@@ -18,8 +18,19 @@ import { getClassesCountByStatus } from "@/lib/get/get-classes"
 import { getStudentsCount } from "@/lib/get/get-students"
 import { getTeachersCount } from "@/lib/get/get-teachers"
 import { getWeeklyClassesCount } from "@/lib/get/get-classes"
+import { createClient } from "@/utils/supabase/server"
 
 export default async function Dashboard() {
+  const supabase = await createClient()
+
+  // Get user profile
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name')
+    .eq('id', user?.id)
+    .single()
+
   // Fetch todaysClasses inside the component to ensure fresh data on each page load
   const todaysClasses = {
     scheduled: await getClassesCountByStatus("scheduled"),
@@ -36,8 +47,22 @@ export default async function Dashboard() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Prominent Welcome Banner */}
+      <div className="w-full flex items-center bg-green-800 min-h-[110px] shadow-md" style={{ borderBottom: '4px solid #34d399' }}>
+        <div className="flex-1 flex justify-center items-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white text-center drop-shadow-lg">
+            Welcome {profile?.first_name} {profile?.last_name}
+          </h2>
+        </div>
+      </div>
+      {/* End Banner */}
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {profile?.first_name} {profile?.last_name}!
+          </p>
+        </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />

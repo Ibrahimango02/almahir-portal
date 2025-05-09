@@ -104,7 +104,7 @@ export function TablePagination({
         <div className="flex items-center">
           {getPageNumbers().map((page, index) =>
             page === "ellipsis" ? (
-              <span key={`ellipsis-${index}`} className="px-2">
+              <span key={`ellipsis-${index}-${currentPage}`} className="px-2">
                 ...
               </span>
             ) : (

@@ -176,9 +176,6 @@ export default function AssignToClassPage() {
                   <FormItem>
                     <div className="mb-4">
                       <FormLabel className="text-base">Available Classes</FormLabel>
-                      <FormDescription>
-                        Select the classes you want to assign to {student.first_name} {student.last_name}
-                      </FormDescription>
                     </div>
                     <div className="space-y-4">
                       {filteredClasses.length === 0 ? (
