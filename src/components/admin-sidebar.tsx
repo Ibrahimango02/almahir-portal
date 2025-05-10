@@ -108,10 +108,9 @@ export function Sidebar() {
       >
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
           <Link href="/admin/dashboard" className="flex flex-col items-center justify-center w-full">
-            <div className="relative w-12 h-12 overflow-hidden rounded-full bg-white dark:bg-gray-900">
-              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={48} height={48} className="object-cover" />
+            <div className="relative w-30 h-35 overflow-hidden rounded-full bg-white dark:bg-gray-900">
+              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={120} height={120} className="object-cover" />
             </div>
-            <h1 className="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-50">Al-Mahir</h1>
           </Link>
           <Button
             variant="ghost"

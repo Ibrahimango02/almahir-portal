@@ -16,6 +16,7 @@ import { Edit, MoreHorizontal } from "lucide-react"
 import { useState } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
+import { format } from "date-fns"
 
 const invoices = [
   {
@@ -221,8 +222,8 @@ export function InvoicesTable() {
                 <TableCell className="text-center">
                   <StatusBadge status={invoice.status} />
                 </TableCell>
-                <TableCell>{new Date(invoice.date).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(invoice.dueDate).toLocaleDateString()}</TableCell>
+                <TableCell>{format(new Date(invoice.date), "MM/dd/yyyy")}</TableCell>
+                <TableCell>{format(new Date(invoice.dueDate), "MM/dd/yyyy")}</TableCell>
                 <TableCell data-no-navigation>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

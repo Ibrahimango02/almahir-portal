@@ -63,11 +63,25 @@ const parseClassDateTime = (
 }
 
 export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSessionType[], assignClassUrl?: string }) {
-  const [view, setView] = useState<"list" | "calendar">("list")
+  const [view, setView] = useState<"list" | "calendar">("calendar")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(classes)
   const [timeFilter, setTimeFilter] = useState<"all" | "morning" | "afternoon" | "evening">("all")
   const [activeListTab, setActiveListTab] = useState<"upcoming" | "recent">("upcoming")
+
+  // Add check for past week
+  const isPastWeek = useMemo(() => {
+    const now = new Date()
+    const weekEnd = addDays(currentWeekStart, 6)
+    return weekEnd < now
+  }, [currentWeekStart])
+
+  // Update activeListTab when week changes
+  useEffect(() => {
+    if (isPastWeek && activeListTab === "upcoming") {
+      setActiveListTab("recent")
+    }
+  }, [isPastWeek, currentWeekStart])
 
   // Memoize sorted classes to prevent recreation on every render
   const sortedClasses = useMemo(() => {
@@ -125,12 +139,12 @@ export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSess
       if (activeListTab === "upcoming") {
         filtered = filtered.filter((cls) => {
           const endTime = parseClassDateTime(cls, "end_time")
-          return endTime && endTime <= now;
+          return endTime && endTime >= now;
         });
       } else if (activeListTab === "recent") {
         filtered = filtered.filter((cls) => {
           const endTime = parseClassDateTime(cls, "end_time")
-          return endTime && endTime > now;
+          return endTime && endTime <= now;
         });
       }
 
@@ -233,8 +247,14 @@ export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSess
           <div className="flex justify-end mb-4">
             <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as "upcoming" | "recent")}>
               <TabsList className="bg-muted/80">
-                <TabsTrigger value="upcoming">Recent</TabsTrigger>
-                <TabsTrigger value="recent">Upcoming</TabsTrigger>
+                <TabsTrigger value="recent">Recent</TabsTrigger>
+                <TabsTrigger
+                  value="upcoming"
+                  disabled={isPastWeek}
+                  className={cn(isPastWeek && "opacity-50 cursor-not-allowed")}
+                >
+                  Upcoming
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -284,15 +304,21 @@ function ListScheduleView({
 
     // Then filter based on the active tab
     return sorted.filter(cls => {
+      const startDateTime = parseClassDateTime(cls, "start_time")
       const endDateTime = parseClassDateTime(cls, "end_time")
-      if (!endDateTime) return false
+      if (!startDateTime || !endDateTime) return false
+
+      console.log("now", now)
+      console.log("startDateTime", startDateTime)
+      console.log("endDateTime", endDateTime)
+
 
       if (filter === "upcoming") {
-        // Show classes that have ended (end time <= now)
-        return endDateTime <= now
+        // Show classes that are ongoing or in the future
+        return startDateTime >= now || (startDateTime <= now && endDateTime > now)
       } else if (filter === "recent") {
-        // Show classes that haven't ended yet (end time > now)
-        return endDateTime > now
+        // Show classes that have ended
+        return endDateTime <= now
       }
 
       return true
@@ -322,13 +348,13 @@ function ListScheduleView({
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-medium">
-          {filter === "upcoming" ? "Completed Classes" : "Ongoing & Upcoming Classes"}
+          {filter === "upcoming" ? "Ongoing & Upcoming Classes" : "Completed Classes"}
         </h3>
       </div>
 
       {filteredSortedClasses.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          {filter === "upcoming" ? "No completed classes found" : "No ongoing or upcoming classes found"}
+          {filter === "upcoming" ? "No ongoing or upcoming classes found" : "No completed classes found"}
         </div>
       ) : (
         <>
