@@ -4,52 +4,42 @@ import { TeacherType } from '@/types'
 export async function getTeachers(): Promise<TeacherType[]> {
     const supabase = createClient()
 
-    // select profiles of users who are teachers
     const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, phone, status, created_at')
+        .select('*')
         .eq('role', 'teacher')
 
-    // select teacher-specific data
-    const profileIds = profile?.map(p => p.id) || []
+    if (!profile) return []
 
-    // After getting the profile    
-    const { data: teacher } = await supabase
+    const teacherIds = profile.map(teacher => teacher.id)
+
+    const { data: teachers } = await supabase
         .from('teachers')
-        .select('profile_id, specialization, hourly_rate, notes')
-        .in('profile_id', profileIds)
-
-    // Get classes for all teachers
-    const { data: classes } = await supabase
-        .from('classes')
         .select('*')
-        .in('teacher_id', profileIds)
-
-    // Get students assigned to teachers
-    const { data: students } = await supabase
-        .from('students')
-        .select('*')
-        .in('teacher_id', profileIds)
+        .in('profile_id', teacherIds)
 
     // Combine the data into a single array of objects
-    const combinedTeachers = profile?.map(profileData => {
-        const teacherData = teacher?.find(t => t.profile_id === profileData.id)
-        const teacherClasses = classes?.filter(c => c.teacher_id === profileData.id) || []
-        const teacherStudents = students?.filter(s => s.teacher_id === profileData.id) || []
+    const combinedTeachers = profile?.map(teacherProfile => {
+        const teacher = teachers?.find(t => t.profile_id === teacherProfile.id)
 
         return {
-            teacher_id: profileData.id,
-            email: profileData.email,
-            first_name: profileData.first_name,
-            last_name: profileData.last_name,
-            phone: profileData.phone,
-            status: profileData.status,
-            created_at: profileData.created_at,
-            specialization: teacherData?.specialization || "",
-            hourly_rate: teacherData?.hourly_rate || 0,
-            notes: teacherData?.notes || "",
-            classes: teacherClasses,
-            students: teacherStudents
+            teacher_id: teacherProfile.id,
+            first_name: teacherProfile.first_name,
+            last_name: teacherProfile.last_name,
+            gender: teacherProfile.gender,
+            country: teacherProfile.country,
+            language: teacherProfile.language,
+            email: teacherProfile.email,
+            phone: teacherProfile.phone || null,
+            timezone: teacherProfile.timezone,
+            status: teacherProfile.status,
+            role: teacherProfile.role,
+            avatar_url: teacherProfile.avatar_url,
+            specialization: teacher?.specialization || null,
+            hourly_rate: teacher?.hourly_rate || null,
+            notes: teacher?.notes || null,
+            created_at: teacherProfile.created_at,
+            updated_at: teacherProfile.updated_at || null,
         }
     }) || []
 
@@ -63,7 +53,7 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
     // Get the teacher's profile data
     const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, phone, status, created_at')
+        .select('*')
         .eq('id', id)
         .eq('role', 'teacher')
         .single()
@@ -75,23 +65,50 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
     // Get the teacher-specific data
     const { data: teacher } = await supabase
         .from('teachers')
-        .select('specialization, hourly_rate, notes')
+        .select('*')
         .eq('profile_id', id)
         .single()
 
     // Combine the profile and teacher data
     return {
         teacher_id: profile.id,
-        email: profile.email,
         first_name: profile.first_name,
         last_name: profile.last_name,
-        phone: profile.phone,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
+        email: profile.email,
+        phone: profile.phone || null,
+        timezone: profile.timezone,
         status: profile.status,
-        specialization: teacher?.specialization || "",
-        hourly_rate: teacher?.hourly_rate || 0,
-        notes: teacher?.notes || "",
-        created_at: profile.created_at
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        specialization: teacher?.specialization || null,
+        hourly_rate: teacher?.hourly_rate || null,
+        notes: teacher?.notes || null,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at || null
     }
+}
+
+export async function getTeacherStudents(id: string) {
+    const supabase = createClient()
+
+    const { data: teacherStudents } = await supabase
+        .from('teacher_students')
+        .select('student_id')
+        .eq('teacher_id', id)
+
+    if (!teacherStudents) return []
+
+    const studentIds = teacherStudents.map(student => student.student_id)
+
+    const { data: students } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', studentIds)
+
+    return students
 }
 
 export async function getTeachersCount() {

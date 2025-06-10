@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday, startOfWeek } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -8,10 +8,51 @@ import { useRouter } from "next/navigation"
 import { getClasses } from "@/lib/get/get-classes"
 import { WeeklyScheduleProps, ClassType } from "@/types"
 
-const classData: ClassType[] = await getClasses()
-
 export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd }: WeeklyScheduleProps) {
     const router = useRouter()
+    const [classData, setClassData] = useState<ClassType[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    // State to track current time for the indicator
+    const [currentTime, setCurrentTime] = useState<Date | null>(null)
+    const [showTimeIndicator, setShowTimeIndicator] = useState(false)
+
+    // Fetch class data
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const data = await getClasses()
+                setClassData(data)
+            } catch (error) {
+                console.error('Error fetching classes:', error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchClasses()
+    }, [])
+
+    // Update current time every 5 minutes
+    useEffect(() => {
+        const updateCurrentTime = () => {
+            setCurrentTime(new Date());
+        };
+
+        // Update immediately
+        updateCurrentTime();
+
+        // Set interval for 5 minutes (300000 ms)
+        const intervalId = setInterval(updateCurrentTime, 300000);
+
+        // Cleanup on unmount
+        return () => clearInterval(intervalId);
+    }, []);
+
+    useEffect(() => {
+        setShowTimeIndicator(true);
+    }, []);
+
     // Generate week days based on the currentWeekStart
     const weekDays = useMemo(() => {
         return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i))
@@ -19,6 +60,8 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
 
     // Dynamically filter classes based on the current week
     const filteredClasses = useMemo(() => {
+        if (isLoading) return [];
+
         // Get all valid sessions from all classes that fall within the current week
         const sessionsForWeek: any[] = [];
 
@@ -113,7 +156,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
         }
 
         return filtered;
-    }, [classData, currentWeekStart, weekDays, filter]);
+    }, [classData, currentWeekStart, weekDays, filter, isLoading]);
 
     // Find earliest and latest class times to determine time slots
     const timeRange = useMemo(() => {
@@ -267,6 +310,30 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
         return byDay
     }, [filteredClasses, weekDays])
 
+    // Calculate position for the current time indicator
+    const currentTimeIndicator = useMemo(() => {
+        if (!currentTime) return null;
+
+        const currentHour = currentTime.getHours();
+        const currentMinute = currentTime.getMinutes();
+
+        // Check if current time is within displayed range
+        if (currentHour < timeRange.earliestHour || currentHour >= timeRange.latestHour) {
+            return null;
+        }
+
+        // Calculate position on the timeline
+        const hourIndex = timeSlots.findIndex(hour => hour === currentHour);
+        if (hourIndex === -1) return null;
+
+        // Position within the hour (0-60 minutes)
+        const minutePercentage = (currentMinute / 60) * 100;
+        return {
+            hourIndex,
+            top: minutePercentage
+        };
+    }, [currentTime, timeSlots, timeRange]);
+
     return (
         <div className="overflow-x-auto border rounded-lg">
             <div className="min-w-[800px]">
@@ -290,7 +357,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                 </div>
 
                 {/* Time slots */}
-                {timeSlots.map((hour) => (
+                {timeSlots.map((hour, hourIndex) => (
                     <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
                         <div className="p-3 border-r bg-muted/20 text-sm flex items-center justify-end pr-4">
                             {formatHour(hour)}
@@ -307,8 +374,29 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                                 return classStartHour <= hour && classEndHour > hour
                             })
 
+                            const isTodayColumn = isToday(day);
+                            const showCurrentTimeIndicator = isTodayColumn &&
+                                currentTimeIndicator &&
+                                currentTimeIndicator.hourIndex === hourIndex;
+
                             return (
-                                <div key={day.toISOString()} className="p-0 border-r last:border-r-0 text-sm relative min-h-[60px]">
+                                <div
+                                    key={day.toISOString()}
+                                    className="p-0 border-r last:border-r-0 text-sm relative min-h-[60px]"
+                                >
+                                    {/* Current time indicator */}
+                                    {showCurrentTimeIndicator && showTimeIndicator && currentTime && (
+                                        <div
+                                            className="absolute w-full h-0.5 bg-red-500 z-30 flex items-center"
+                                            style={{
+                                                top: `${currentTimeIndicator.top}%`,
+                                            }}
+                                        >
+                                            <div className="absolute -left-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                            <div className="absolute -right-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                        </div>
+                                    )}
+
                                     {classesByDay[dayIndex].map((extendedClass) => {
                                         const startTime = parseISO(extendedClass.start_time)
                                         const endTime = parseISO(extendedClass.end_time)
@@ -377,6 +465,16 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                         })}
                     </div>
                 ))}
+
+                {/* Current time display at the bottom */}
+                <div className="grid grid-cols-8 border-t bg-muted/10 text-xs">
+                    <div className="p-2 border-r bg-muted/20 flex items-center justify-end pr-4">
+                        Last updated:
+                    </div>
+                    <div className="p-2 col-span-7 text-muted-foreground">
+                        {currentTime ? format(currentTime, "h:mm a") : "Loading..."}
+                    </div>
+                </div>
             </div>
         </div>
     )

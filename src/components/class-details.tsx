@@ -61,7 +61,7 @@ type ClassDetailsProps = {
     start_time: string
     end_time: string
     status: string
-    class_link: string
+    class_link: string | null
     teacher: {
       teacher_id: string
       first_name: string

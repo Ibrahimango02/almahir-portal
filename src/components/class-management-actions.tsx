@@ -17,7 +17,7 @@ type ClassManagementActionsProps = {
     start_time: string
     end_time: string
     status: string
-    class_link: string
+    class_link: string | null
     teacher: {
       teacher_id: string
       first_name: string
@@ -40,11 +40,18 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
   const router = useRouter()
 
   const handleZoomCall = () => {
-    window.open(classData.class_link, "_blank")
-    toast({
-      title: "Joining class video call",
-      description: "Opening video call link in a new tab",
-    })
+    if (classData.class_link) {
+      window.open(classData.class_link, "_blank")
+      toast({
+        title: "Joining class video call",
+        description: "Opening video call link in a new tab",
+      })
+    } else {
+      toast({
+        title: "No video call link available",
+        description: "Please check the class details",
+      })
+    }
   }
 
   const handleInitiateClass = async () => {
@@ -236,7 +243,7 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
             "flex items-center gap-2 transition-colors duration-300",
             currentStatus === "scheduled" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
           )}
-          variant={currentStatus === "scheduled" ? "default" : "outline"}
+          variant="default"
           disabled={currentStatus !== "scheduled" || isLoading}
           style={currentStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
         >
@@ -331,7 +338,6 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
       {!canReschedule && currentStatus !== "in_progress" && currentStatus !== "ended_early" && (
         <p className="text-xs text-muted-foreground mt-1">Note: Rescheduling is not available after class initiation</p>
       )}
-
     </div>
   )
 }

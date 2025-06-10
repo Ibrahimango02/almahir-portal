@@ -23,7 +23,7 @@ import { createClient } from "@/utils/supabase/client"
 import { StudentType, ClassType } from "@/types"
 import { getActiveClasses, getClassStudentCount } from "@/lib/get/get-classes"
 import { getStudentById } from "@/lib/get/get-students"
-import { assignStudentToClasses } from "@/lib/post/post-student"
+import { assignStudentToClasses } from "@/lib/post/post-students"
 
 // Define the form schema with validation
 const formSchema = z.object({

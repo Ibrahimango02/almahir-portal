@@ -4,29 +4,42 @@ import { ParentType } from '@/types'
 export async function getParents(): Promise<ParentType[]> {
     const supabase = createClient()
 
-    // select profiles of users who are parents
     const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, phone, status, created_at')
+        .select('*')
         .eq('role', 'parent')
 
     if (!profile) return []
 
-    // Map the profile data to match ParentType
-    const parents: ParentType[] = profile.map(parent => {
+    const parentIds = profile.map(parent => parent.id)
+
+    const { data: parents } = await supabase
+        .from('parents')
+        .select('*')
+        .in('profile_id', parentIds)
+
+    const combinedParents = profile?.map(parentProfile => {
+        const parent = parents?.find(p => p.profile_id === parentProfile.id)
 
         return {
-            parent_id: parent.id,
-            first_name: parent.first_name,
-            last_name: parent.last_name,
-            email: parent.email,
-            phone: parent.phone,
-            status: parent.status,
-            created_at: parent.created_at
+            parent_id: parentProfile.id,
+            first_name: parentProfile.first_name,
+            last_name: parentProfile.last_name,
+            gender: parentProfile.gender,
+            country: parentProfile.country,
+            language: parentProfile.language,
+            email: parentProfile.email,
+            phone: parentProfile.phone || null,
+            timezone: parentProfile.timezone,
+            status: parentProfile.status,
+            role: parentProfile.role,
+            avatar_url: parentProfile.avatar_url,
+            created_at: parentProfile.created_at,
+            updated_at: parentProfile.updated_at || null
         }
-    })
+    }) || []
 
-    return parents
+    return combinedParents
 }
 
 export async function getParentById(id: string): Promise<ParentType | null> {
@@ -35,7 +48,7 @@ export async function getParentById(id: string): Promise<ParentType | null> {
     // Get the parent's profile data
     const { data: profile } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, phone, status, created_at')
+        .select('*')
         .eq('id', id)
         .eq('role', 'parent')
         .single()
@@ -44,34 +57,47 @@ export async function getParentById(id: string): Promise<ParentType | null> {
         return null
     }
 
+    const { data: parent } = await supabase
+        .from('parents')
+        .select('*')
+        .eq('profile_id', id)
+        .single()
+
     // Return the parent with their students
     return {
         parent_id: profile.id,
         first_name: profile.first_name,
         last_name: profile.last_name,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
         email: profile.email,
-        phone: profile.phone,
+        phone: profile.phone || null,
+        timezone: profile.timezone,
         status: profile.status,
-        created_at: profile.created_at
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at || null
     }
 }
 
 export async function getParentStudents(id: string) {
     const supabase = createClient()
 
-    const { data } = await supabase
+    const { data: parentStudents } = await supabase
         .from('parent_students')
         .select('student_id')
         .eq('parent_id', id)
 
-    if (!data) return []
+    if (!parentStudents) return []
 
-    const studentIds = data.map(student => student.student_id)
+    const studentIds = parentStudents.map(student => student.student_id)
 
 
     const { data: students } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('*')
         .in('id', studentIds)
 
     return students

@@ -21,6 +21,7 @@ import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getParents, getParentStudents } from "@/lib/get/get-parents"
 import { ParentType } from "@/types"
+import AvatarIcon from "./avatar"
 
 // Define type for student data
 type StudentType = {
@@ -89,6 +90,8 @@ export function ParentsTable() {
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Gender</TableHead>
+              <TableHead>Country</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Students</TableHead>
@@ -104,16 +107,35 @@ export function ParentsTable() {
                 className="hover:bg-muted/50 transition-colors"
               >
                 <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`} className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>
-                        {parent.first_name[0]}
-                        {parent.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                  <Link
+                    href={`/admin/parents/${parent.parent_id}`}
+                    className="flex items-center gap-3"
+                  >
+                    {parent.avatar_url ? (
+                      <AvatarIcon url={parent.avatar_url} size="medium" />
+                    ) : (
+                      <Avatar>
+                        <AvatarFallback>
+                          {parent.first_name[0]}
+                          {parent.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div>
-                      <p className="font-medium">{parent.first_name} {parent.last_name}</p>
+                      <p className="font-medium">
+                        {parent.first_name} {parent.last_name}
+                      </p>
                     </div>
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/parents/${parent.parent_id}`}>
+                    {parent.gender}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/parents/${parent.parent_id}`}>
+                    {parent.country}
                   </Link>
                 </TableCell>
                 <TableCell>

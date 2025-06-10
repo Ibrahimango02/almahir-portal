@@ -5,6 +5,7 @@ type ProfileUpdateData = {
     last_name?: string
     email?: string
     phone?: string
+    avatar_url?: string
 }
 
 export async function updateProfile(userId: string, data: ProfileUpdateData) {

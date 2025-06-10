@@ -21,6 +21,7 @@ import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getStudents, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
+import AvatarIcon from "./avatar"
 
 // Define types for related data
 type ParentType = {
@@ -103,9 +104,12 @@ export function StudentsTable() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Age</TableHead>
+              <TableHead>Gender</TableHead>
+              <TableHead>Language</TableHead>
+              <TableHead>Country</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Parent</TableHead>
               <TableHead>Teacher</TableHead>
-              <TableHead>Email</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead>Join Date</TableHead>
               <TableHead className="w-[80px]">Actions</TableHead>
@@ -118,13 +122,20 @@ export function StudentsTable() {
                 className="hover:bg-muted/50 transition-colors"
               >
                 <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`} className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>
-                        {student.first_name[0]}
-                        {student.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                  <Link
+                    href={`/admin/students/${student.student_id}`}
+                    className="flex items-center gap-3"
+                  >
+                    {student.avatar_url ? (
+                      <AvatarIcon url={student.avatar_url} size="medium" />
+                    ) : (
+                      <Avatar>
+                        <AvatarFallback>
+                          {student.first_name[0]}
+                          {student.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div>
                       <p className="font-medium">
                         {student.first_name} {student.last_name}
@@ -135,6 +146,21 @@ export function StudentsTable() {
                 <TableCell>
                   <Link href={`/admin/students/${student.student_id}`}>
                     {student.age}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/students/${student.student_id}`}>
+                    {student.gender}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/students/${student.student_id}`}>
+                    {student.language}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/students/${student.student_id}`}>
+                    {student.country}
                   </Link>
                 </TableCell>
                 <TableCell>

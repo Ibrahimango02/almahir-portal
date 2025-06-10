@@ -9,11 +9,11 @@ import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
-import { getClassesByTeacherId } from "@/lib/get/get-classes"
+import { getSessionsByTeacherId } from "@/lib/get/get-classes"
 
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params
+  const { id } = await params
   const teacher = await getTeacherById(id)
 
   if (!teacher) {
@@ -26,7 +26,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
     )
   }
 
-  const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
+  const teacherSessions = await getSessionsByTeacherId(teacher.teacher_id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,8 +82,8 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                   <span className="text-xs text-muted-foreground">Hourly Rate</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{teacherClasses.length}</span>
-                  <span className="text-xs text-muted-foreground">Classes</span>
+                  <span className="text-2xl font-bold text-primary">{teacherSessions.length}</span>
+                  <span className="text-xs text-muted-foreground">Sessions</span>
                 </div>
               </div>
 
@@ -168,7 +168,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
             </div>
           </CardHeader>
           <CardContent>
-            <WeeklySchedule classes={teacherClasses} />
+            <WeeklySchedule sessions={teacherSessions} />
           </CardContent>
         </Card>
       </div>

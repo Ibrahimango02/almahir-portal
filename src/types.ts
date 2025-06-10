@@ -11,48 +11,77 @@ export type WeeklyScheduleProps = {
 }
 
 export type AdminType = {
-    id: string
+    admin_id: string
     first_name: string
     last_name: string
+    gender: string
+    country: string
+    language: string
     email: string
     phone: string | null
+    timezone: string
     status: string
+    role: string
+    avatar_url: string | null
     created_at: string
+    updated_at: string | null
 }
 
 export type ParentType = {
     parent_id: string
     first_name: string
     last_name: string
+    gender: string
+    country: string
+    language: string
     email: string
     phone: string | null
+    timezone: string
     status: string
+    role: string
+    avatar_url: string | null
     created_at: string
+    updated_at: string | null
 }
 
 export type StudentType = {
     student_id: string
     first_name: string
     last_name: string
+    gender: string
+    country: string
+    language: string
     email: string | null
+    phone: string | null
+    timezone: string
+    status: string
+    role: string
+    avatar_url: string | null
     age: number
     grade_level: string | null
-    status: string,
     notes: string | null
     created_at: string
+    updated_at: string | null
 }
 
 export type TeacherType = {
     teacher_id: string
     first_name: string
     last_name: string
+    gender: string
+    country: string
+    language: string
     email: string
     phone: string | null
+    timezone: string
     status: string
-    specialization: string
-    hourly_rate: number
+    role: string
+    avatar_url: string | null
+    specialization: string | null
+    hourly_rate: number | null
     notes: string | null
     created_at: string
+    updated_at: string | null
 }
 
 // all sessions for a class
@@ -70,14 +99,17 @@ export type ClassType = {
     teachers: TeacherType[]
     enrolled_students: StudentType[]
     created_at: string
+    updated_at: string | null
 }
 
 export type SessionType = {
     session_id: string
     date: string
-    status: string
     start_time: string
     end_time: string
+    status: string
+    created_at: string
+    updated_at: string | null
 }
 
 export type ClassSessionType = {
@@ -90,7 +122,25 @@ export type ClassSessionType = {
     start_time: string
     end_time: string
     status: string
-    class_link: string
+    class_link: string | null
     teachers: TeacherType[]
     enrolled_students: StudentType[]
+}
+
+export type InvoiceType = {
+    invoice_id: string
+    student: {
+        student_id: string
+        first_name: string
+        last_name: string
+    }
+    invoice_type: string
+    amount: number
+    currency: string
+    description: string
+    due_date: string
+    status: string
+    paid_at: string | null
+    created_at: string
+    updated_at: string | null
 }

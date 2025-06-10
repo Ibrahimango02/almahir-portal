@@ -5,16 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Calendar, Edit, GraduationCap, BookOpen, Clock, Plus } from "lucide-react"
+import { Mail, User, Users, Calendar, Edit, BookOpen, Clock, Plus } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
-import { getClassesByStudentId } from "@/lib/get/get-classes"
+import { getSessionsByStudentId } from "@/lib/get/get-classes"
+import React from "react"
 
 
 export default async function StudentDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params
+  const { id } = await params
   const student = await getStudentById(id)
   const studentParents = await getStudentParents(id)
 
@@ -28,7 +29,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
     )
   }
 
-  const studentClasses = await getClassesByStudentId(student.student_id)
+  const studentSessions = await getSessionsByStudentId(student.student_id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,8 +83,8 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                   <span className="text-xs text-muted-foreground">Age</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{studentClasses.length}</span>
-                  <span className="text-xs text-muted-foreground">Classes</span>
+                  <span className="text-2xl font-bold text-primary">{studentSessions.length}</span>
+                  <span className="text-xs text-muted-foreground">Sessions</span>
                 </div>
               </div>
 
@@ -99,8 +100,18 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                     <span className="text-sm break-all">{student.email}</span>
                   </div>
                   <div className="flex items-start">
-                    <GraduationCap className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Parent: {studentParents?.map(parent => `${parent.first_name} ${parent.last_name}`).join(", ")}</span>
+                    <Users className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">Parents: {studentParents?.map((parent, index) => (
+                      <React.Fragment key={parent.id}>
+                        <Link
+                          href={`/admin/parents/${parent.id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {parent.first_name} {parent.last_name}
+                        </Link>
+                        {index < studentParents.length - 1 ? ", " : ""}
+                      </React.Fragment>
+                    ))}</span>
                   </div>
                 </div>
               </div>
@@ -168,7 +179,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
             </Button>
           </CardHeader>
           <CardContent>
-            <WeeklySchedule classes={studentClasses} />
+            <WeeklySchedule sessions={studentSessions} />
           </CardContent>
         </Card>
       </div>

@@ -52,7 +52,7 @@ const routes = [
     label: "Students",
     icon: Graduation,
     href: "/admin/students",
-    color: "text-emerald-600",
+    color: "text-indigo-600",
   },
   {
     label: "Parents",
@@ -64,7 +64,7 @@ const routes = [
     label: "Invoices",
     icon: FileText,
     href: "/admin/invoices",
-    color: "text-red-600",
+    color: "text-green-600",
   },
   {
     label: "Settings",

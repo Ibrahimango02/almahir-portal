@@ -11,39 +11,55 @@ export async function getProfile() {
         throw new Error('User not found')
     }
 
-    const { data, error } = await supabase
+    const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id).single()
+        .eq('id', user.id)
+        .single()
 
     if (error) {
         throw error
     }
 
-    return data
+    return profile
 }
 
 export async function getAdmins(): Promise<AdminType[]> {
     const supabase = createClient()
 
-    const { data, error } = await supabase
+    const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, phone, status, created_at')
+        .select('*')
         .eq('role', 'admin')
 
     if (error) {
         throw error
     }
 
-    return data
+    return profiles.map(profile => ({
+        admin_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
+        email: profile.email,
+        phone: profile.phone,
+        timezone: profile.timezone,
+        status: profile.status,
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+    }))
 }
 
 export async function getAdminById(id: string): Promise<AdminType> {
     const supabase = createClient()
 
-    const { data, error } = await supabase
+    const { data: profile, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, phone, status, created_at')
+        .select('*')
         .eq('id', id)
         .single()
 
@@ -51,5 +67,20 @@ export async function getAdminById(id: string): Promise<AdminType> {
         throw error
     }
 
-    return data
+    return {
+        admin_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
+        email: profile.email,
+        phone: profile.phone,
+        timezone: profile.timezone,
+        status: profile.status,
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+    }
 }

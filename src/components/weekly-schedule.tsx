@@ -62,10 +62,10 @@ const parseClassDateTime = (
   }
 }
 
-export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSessionType[], assignClassUrl?: string }) {
+export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSessionType[], assignClassUrl?: string }) {
   const [view, setView] = useState<"list" | "calendar">("calendar")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
-  const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(classes)
+  const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(sessions)
   const [timeFilter, setTimeFilter] = useState<"all" | "morning" | "afternoon" | "evening">("all")
   const [activeListTab, setActiveListTab] = useState<"upcoming" | "recent">("upcoming")
 
@@ -85,8 +85,8 @@ export function WeeklySchedule({ classes, assignClassUrl }: { classes: ClassSess
 
   // Memoize sorted classes to prevent recreation on every render
   const sortedClasses = useMemo(() => {
-    return [...classes].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
-  }, [classes])
+    return [...sessions].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+  }, [sessions])
 
   // Update visible classes when week changes or view changes
   useEffect(() => {
@@ -434,10 +434,15 @@ function CalendarScheduleView({
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [scrollbarWidth, setScrollbarWidth] = useState(0)
+  const [mounted, setMounted] = useState(false)
+
+  // Set mounted state after hydration
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Create an array of the days of the week
   const weekDays = useMemo(() => {
-    // Start from Monday (index 0) to Sunday (index 6)
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   }, [weekStart])
 
@@ -516,6 +521,31 @@ function CalendarScheduleView({
       (_, i) => i + timeRange.earliestHour,
     )
   }, [timeRange, filter])
+
+  // Calculate position for the current time indicator
+  const currentTimeIndicator = useMemo(() => {
+    if (!mounted) return null
+
+    const now = new Date()
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Check if current time is within displayed range
+    if (currentHour < timeRange.earliestHour || currentHour >= timeRange.latestHour) {
+      return null;
+    }
+
+    // Calculate position on the timeline
+    const hourIndex = timeSlots.findIndex(hour => hour === currentHour);
+    if (hourIndex === -1) return null;
+
+    // Position within the hour (0-60 minutes)
+    const minutePercentage = (currentMinute / 60) * 100;
+    return {
+      hourIndex,
+      top: minutePercentage
+    };
+  }, [mounted, timeSlots, timeRange]);
 
   // Function to check if two classes overlap
   const doClassesOverlap = (class1: ClassSessionType, class2: ClassSessionType) => {
@@ -676,94 +706,113 @@ function CalendarScheduleView({
           ref={scrollContainerRef}
           className={cn(filter === "all" && "max-h-[600px] overflow-y-auto")}
         >
-          {timeSlots.map((hour) => (
+          {timeSlots.map((hour, hourIndex) => (
             <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
               <div className="p-2 border-r bg-muted/20 text-sm flex items-center justify-end pr-3">
                 {formatHour(hour)}
               </div>
 
-              {weekDays.map((day, dayIndex) => (
-                <div key={day.toISOString()} className="p-0 border-r last:border-r-0 text-sm relative min-h-[50px]">
-                  {classesByDay[dayIndex].map((extendedClass: any) => {
-                    try {
-                      const startTime = parseClassDateTime(extendedClass, "start_time")
-                      const endTime = parseClassDateTime(extendedClass, "end_time")
+              {weekDays.map((day, dayIndex) => {
+                const isTodayColumn = isToday(day);
+                const showCurrentTimeIndicator = mounted && isTodayColumn &&
+                  currentTimeIndicator &&
+                  currentTimeIndicator.hourIndex === hourIndex;
 
-                      if (!startTime || !endTime) return null
+                return (
+                  <div key={day.toISOString()} className="p-0 border-r last:border-r-0 text-sm relative min-h-[50px]">
+                    {/* Current time indicator - only rendered on client side */}
+                    {showCurrentTimeIndicator && (
+                      <div
+                        className="absolute w-full h-0.5 bg-red-500 z-30 flex items-center"
+                        style={{
+                          top: `${currentTimeIndicator.top}%`,
+                        }}
+                      >
+                        <div className="absolute -left-1 w-2 h-2 rounded-full bg-red-500"></div>
+                        <div className="absolute -right-1 w-2 h-2 rounded-full bg-red-500"></div>
+                      </div>
+                    )}
+                    {classesByDay[dayIndex].map((extendedClass: any) => {
+                      try {
+                        const startTime = parseClassDateTime(extendedClass, "start_time")
+                        const endTime = parseClassDateTime(extendedClass, "end_time")
 
-                      const classStartHour = startTime.getHours()
+                        if (!startTime || !endTime) return null
 
-                      // For the evening view, we need to handle classes that start or span this hour
-                      if (filter === "evening") {
-                        // For evening view, still only show classes starting at the current hour
-                        if (classStartHour !== hour) {
-                          return null
+                        const classStartHour = startTime.getHours()
+
+                        // For the evening view, we need to handle classes that start or span this hour
+                        if (filter === "evening") {
+                          // For evening view, still only show classes starting at the current hour
+                          if (classStartHour !== hour) {
+                            return null
+                          }
+                        } else {
+                          // For morning and afternoon views, only show classes that start in this hour
+                          if (classStartHour !== hour) {
+                            return null
+                          }
                         }
-                      } else {
-                        // For morning and afternoon views, only show classes that start in this hour
-                        if (classStartHour !== hour) {
-                          return null
-                        }
-                      }
 
-                      // Calculate duration in minutes and convert to pixels (50px per hour)
-                      const durationMinutes = differenceInMinutes(endTime, startTime)
-                      const heightPx = Math.max(50, Math.round((durationMinutes * 50) / 60))
+                        // Calculate duration in minutes and convert to pixels (50px per hour)
+                        const durationMinutes = differenceInMinutes(endTime, startTime)
+                        const heightPx = Math.max(50, Math.round((durationMinutes * 50) / 60))
 
-                      // Calculate width based on group size
-                      const width = 100 / extendedClass.groupSize
-                      // Calculate left offset based on index within group
-                      const left = extendedClass.classIndex * width
+                        // Calculate width based on group size
+                        const width = 100 / extendedClass.groupSize
+                        // Calculate left offset based on index within group
+                        const left = extendedClass.classIndex * width
 
-                      return (
-                        <div
-                          key={`${extendedClass.id}-${extendedClass.session_id}`}
-                          className={cn(
-                            "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
-                            getStatusStyles(extendedClass.status),
-                          )}
-                          style={{
-                            height: `${heightPx}px`,
-                            top: `${(startTime.getMinutes() / 60) * 50}px`,
-                            left: `${left}%`,
-                            width: `${width}%`,
-                            zIndex: 10,
-                          }}
-                          onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
-                        >
-                          <div>
-                            <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
-                            {heightPx >= 70 && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {extendedClass.subject}
-                              </p>
+                        return (
+                          <div
+                            key={`${extendedClass.id}-${extendedClass.session_id}`}
+                            className={cn(
+                              "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
+                              getStatusStyles(extendedClass.status),
                             )}
-                            {heightPx >= 90 && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
-                              </p>
-                            )}
-                          </div>
-                          {/* Always show status badge regardless of height */}
-                          <div className="flex justify-end items-center mt-auto">
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
-                                getStatusTextColor(extendedClass.status),
+                            style={{
+                              height: `${heightPx}px`,
+                              top: `${(startTime.getMinutes() / 60) * 50}px`,
+                              left: `${left}%`,
+                              width: `${width}%`,
+                              zIndex: 10,
+                            }}
+                            onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
+                          >
+                            <div>
+                              <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
+                              {heightPx >= 70 && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {extendedClass.subject}
+                                </p>
                               )}
-                            >
-                              {extendedClass.status}
-                            </Badge>
+                              {heightPx >= 90 && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                                </p>
+                              )}
+                            </div>
+                            {/* Always show status badge regardless of height */}
+                            <div className="flex justify-end items-center mt-auto">
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
+                                  getStatusTextColor(extendedClass.status),
+                                )}
+                              >
+                                {extendedClass.status}
+                              </Badge>
+                            </div>
                           </div>
-                        </div>
-                      )
-                    } catch (error) {
-                      return null
-                    }
-                  })}
-                </div>
-              ))}
+                        )
+                      } catch (error) {
+                        return null
+                      }
+                    })}
+                  </div>
+                )
+              })}
             </div>
           ))}
         </div>

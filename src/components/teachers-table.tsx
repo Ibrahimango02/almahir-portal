@@ -22,6 +22,7 @@ import { StatusBadge } from "./status-badge"
 import { getTeachers } from "@/lib/get/get-teachers"
 import { getTeacherClassCount } from "@/lib/get/get-classes"
 import { TeacherType } from "@/types"
+import AvatarIcon from "./avatar"
 
 export function TeachersTable() {
   const [teachers, setTeachers] = useState<TeacherType[]>([])
@@ -81,7 +82,10 @@ export function TeachersTable() {
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead>Name</TableHead>
+              <TableHead>Gender</TableHead>
               <TableHead>Subject</TableHead>
+              <TableHead>Language</TableHead>
+              <TableHead>Country</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Classes</TableHead>
@@ -101,12 +105,16 @@ export function TeachersTable() {
                     href={`/admin/teachers/${teacher.teacher_id}`}
                     className="flex items-center gap-3"
                   >
-                    <Avatar>
-                      <AvatarFallback>
-                        {teacher.first_name[0]}
-                        {teacher.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    {teacher.avatar_url ? (
+                      <AvatarIcon url={teacher.avatar_url} size="medium" />
+                    ) : (
+                      <Avatar>
+                        <AvatarFallback>
+                          {teacher.first_name[0]}
+                          {teacher.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div>
                       <p className="font-medium">
                         {teacher.first_name} {teacher.last_name}
@@ -116,7 +124,22 @@ export function TeachersTable() {
                 </TableCell>
                 <TableCell>
                   <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.gender}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
                     {teacher.specialization}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.language}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
+                    {teacher.country}
                   </Link>
                 </TableCell>
                 <TableCell>
@@ -129,7 +152,7 @@ export function TeachersTable() {
                     {teacher.phone}
                   </Link>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Link href={`/admin/teachers/${teacher.teacher_id}`}>
                     {classCount[teacher.teacher_id] || 0}
                   </Link>

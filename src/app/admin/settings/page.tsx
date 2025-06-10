@@ -10,12 +10,13 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useTheme } from "@/components/theme-provider"
-import { MoonIcon, SunIcon, LaptopIcon } from "lucide-react"
+import { MoonIcon, SunIcon, LaptopIcon, Upload } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getProfile } from "@/lib/get/get-profiles"
 import { updateProfile, updatePassword } from "@/lib/put/put-profiles"
 import { createClient } from "@/utils/supabase/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Image from "next/image"
 
 type ProfileData = {
   first_name: string
@@ -24,6 +25,7 @@ type ProfileData = {
   phone: string | null
   role: string
   status: string
+  avatar_url: string | null
 }
 
 export default function SettingsPage() {
@@ -42,6 +44,9 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [updatingPassword, setUpdatingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -53,6 +58,7 @@ export default function SettingsPage() {
         setLastName(data?.last_name || "");
         setEmail(data?.email || "");
         setPhone(data?.phone || "");
+        setAvatarUrl(data?.avatar_url || null);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
       } finally {
@@ -63,6 +69,59 @@ export default function SettingsPage() {
     fetchProfile();
     setIsMounted(true);
   }, []);
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      setUploading(true);
+      setUploadError(null);
+
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Please upload an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('File size must be less than 5MB');
+        return;
+      }
+
+      const supabase = createClient();
+
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `profiles/${userId}/avatar-${Math.random()}.${fileExt}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('profile-pictures')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profile-pictures')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar URL
+      if (userId) {
+        await updateProfile(userId, {
+          avatar_url: publicUrl
+        });
+        setAvatarUrl(publicUrl);
+      }
+
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      setUploadError('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!userId) return;
@@ -155,6 +214,55 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Picture</CardTitle>
+              <CardDescription>Update your profile picture</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100">
+                  {avatarUrl ? (
+                    <Image
+                      src={avatarUrl}
+                      alt="Profile picture"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      No image
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      <span>Upload new picture</span>
+                    </div>
+                  </Label>
+                  <Input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    disabled={uploading}
+                    className="hidden"
+                  />
+                  {uploadError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{uploadError}</AlertDescription>
+                    </Alert>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Recommended: Square image, max 5MB
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>User Information</CardTitle>

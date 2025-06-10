@@ -10,7 +10,7 @@ import { BackButton } from "@/components/back-button"
 import { getAdminById } from "@/lib/get/get-profiles"
 
 export default async function AdminDetailPage({ params }: { params: { id: string } }) {
-    const { id } = params
+    const { id } = await params
     const admin = await getAdminById(id)
 
     if (!admin) {

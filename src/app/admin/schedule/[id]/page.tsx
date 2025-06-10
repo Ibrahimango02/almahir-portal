@@ -1,12 +1,12 @@
 import { ClassDetails } from "@/components/class-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
-import { getClassSessionById } from "@/lib/get/get-classes"
+import { getSessionById } from "@/lib/get/get-classes"
 
 export default async function ClassPage({ params }: { params: { id: string } }) {
   // Fetch the class data using the session ID
   const { id } = await params
-  const classSessionData = await getClassSessionById(id)
+  const classSessionData = await getSessionById(id)
 
   // If class not found, show 404 page
   if (!classSessionData) {
