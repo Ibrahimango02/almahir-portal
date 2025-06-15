@@ -8,6 +8,7 @@ import { Mail, Phone, User, Calendar, Edit } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getAdminById } from "@/lib/get/get-profiles"
+import AvatarIcon from "@/components/avatar"
 
 export default async function AdminDetailPage({ params }: { params: { id: string } }) {
     const { id } = await params
@@ -37,12 +38,18 @@ export default async function AdminDetailPage({ params }: { params: { id: string
                         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-background z-0"></div>
                         <div className="relative z-10 flex flex-col items-center pt-4">
                             <div className="relative">
-                                <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
-                                        {admin.first_name[0]}
-                                        {admin.last_name[0]}
-                                    </AvatarFallback>
-                                </Avatar>
+                                {admin.avatar_url ? (
+                                    <div className="mb-4">
+                                        <AvatarIcon url={admin.avatar_url} size="large" />
+                                    </div>
+                                ) : (
+                                    <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
+                                        <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                                            {admin.first_name[0]}
+                                            {admin.last_name[0]}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                )}
                                 <Badge
                                     className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${admin.status === "active" ? "bg-green-500"
                                         : admin.status === "inactive" ? "bg-amber-500"

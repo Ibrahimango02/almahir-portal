@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +32,7 @@ type StudentType = {
 }
 
 export function ParentsTable() {
+  const router = useRouter()
   const [parents, setParents] = useState<ParentType[]>([])
   const [studentData, setStudentData] = useState<Record<string, StudentType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
@@ -104,13 +106,22 @@ export function ParentsTable() {
             {paginatedParents.map((parent) => (
               <TableRow
                 key={parent.parent_id}
-                className="hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  // Prevent navigation if clicking on actions, the parent ID link, or other interactive elements
+                  if (
+                    e.target instanceof HTMLElement &&
+                    (e.target.closest("button") ||
+                      e.target.closest("a") ||
+                      e.target.closest("[data-no-navigation]"))
+                  ) {
+                    return
+                  }
+                  router.push(`/admin/parents/${parent.parent_id}`)
+                }}
               >
                 <TableCell>
-                  <Link
-                    href={`/admin/parents/${parent.parent_id}`}
-                    className="flex items-center gap-3"
-                  >
+                  <div className="flex items-center gap-3">
                     {parent.avatar_url ? (
                       <AvatarIcon url={parent.avatar_url} size="medium" />
                     ) : (
@@ -126,50 +137,26 @@ export function ParentsTable() {
                         {parent.first_name} {parent.last_name}
                       </p>
                     </div>
-                  </Link>
+                  </div>
                 </TableCell>
+                <TableCell>{parent.gender}</TableCell>
+                <TableCell>{parent.country}</TableCell>
+                <TableCell>{parent.email}</TableCell>
+                <TableCell>{parent.phone}</TableCell>
                 <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    {parent.gender}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    {parent.country}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    {parent.email}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    {parent.phone}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    <div className="flex flex-wrap gap-1">
-                      {studentData[parent.parent_id]?.map((student) => (
-                        <Badge key={student.id} variant="outline">
-                          {student.first_name} {student.last_name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Link>
+                  <div className="flex flex-wrap gap-1">
+                    {studentData[parent.parent_id]?.map((student) => (
+                      <Badge key={student.id} variant="outline">
+                        {student.first_name} {student.last_name}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    <StatusBadge status={parent.status} />
-                  </Link>
+                  <StatusBadge status={parent.status} />
                 </TableCell>
-                <TableCell>
-                  <Link href={`/admin/parents/${parent.parent_id}`}>
-                    {new Date(parent.created_at).toLocaleDateString()}
-                  </Link>
-                </TableCell>
-                <TableCell>
+                <TableCell>{new Date(parent.created_at).toLocaleDateString()}</TableCell>
+                <TableCell data-no-navigation>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">

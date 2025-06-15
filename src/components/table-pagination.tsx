@@ -110,7 +110,7 @@ export function TablePagination({
             ) : (
               <Button
                 key={`page-${page}`}
-                variant={currentPage === page ? "default" : "outline"}
+                variant={currentPage === page ? "green" : "outline"}
                 size="sm"
                 onClick={() => onPageChange(page as number)}
                 className="h-8 w-8 p-0 font-medium"

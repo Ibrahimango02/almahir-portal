@@ -27,6 +27,7 @@ import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useRouter } from "next/navigation"
 
 
 interface AdminsTableProps {
@@ -34,6 +35,7 @@ interface AdminsTableProps {
 }
 
 export function AdminsTable({ admins }: AdminsTableProps) {
+    const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
@@ -61,13 +63,22 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                         {paginatedAdmins.map((admin) => (
                             <TableRow
                                 key={admin.admin_id}
-                                className="hover:bg-muted/50 transition-colors"
+                                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                    // Prevent navigation if clicking on actions, the admin ID link, or other interactive elements
+                                    if (
+                                        e.target instanceof HTMLElement &&
+                                        (e.target.closest("button") ||
+                                            e.target.closest("a") ||
+                                            e.target.closest("[data-no-navigation]"))
+                                    ) {
+                                        return
+                                    }
+                                    router.push(`/admin/admins/${admin.admin_id}`)
+                                }}
                             >
                                 <TableCell>
-                                    <Link
-                                        href={`/admin/admins/${admin.admin_id}`}
-                                        className="flex items-center gap-3"
-                                    >
+                                    <div className="flex items-center gap-3">
                                         {admin.avatar_url ? (
                                             <AvatarIcon url={admin.avatar_url} size="medium" />
                                         ) : (
@@ -83,34 +94,16 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                                 {admin.first_name} {admin.last_name}
                                             </p>
                                         </div>
-                                    </Link>
+                                    </div>
                                 </TableCell>
-                                <TableCell>
-                                    <Link href={`/admin/admins/${admin.admin_id}`}>
-                                        {admin.gender}
-                                    </Link>
-                                </TableCell>
-                                <TableCell>
-                                    <Link href={`/admin/admins/${admin.admin_id}`}>
-                                        {admin.email}
-                                    </Link>
-                                </TableCell>
-                                <TableCell>
-                                    <Link href={`/admin/admins/${admin.admin_id}`}>
-                                        {admin.phone}
-                                    </Link>
-                                </TableCell>
+                                <TableCell>{admin.gender}</TableCell>
+                                <TableCell>{admin.email}</TableCell>
+                                <TableCell>{admin.phone}</TableCell>
                                 <TableCell className="text-center">
-                                    <Link href={`/admin/admins/${admin.admin_id}`}>
-                                        <StatusBadge status={admin.status} />
-                                    </Link>
+                                    <StatusBadge status={admin.status} />
                                 </TableCell>
-                                <TableCell>
-                                    <Link href={`/admin/admins/${admin.admin_id}`}>
-                                        {format(parseISO(admin.created_at), "yyyy-MM-dd")}
-                                    </Link>
-                                </TableCell>
-                                <TableCell>
+                                <TableCell>{format(parseISO(admin.created_at), "yyyy-MM-dd")}</TableCell>
+                                <TableCell data-no-navigation>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon">

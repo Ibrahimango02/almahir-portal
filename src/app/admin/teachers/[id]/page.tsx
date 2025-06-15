@@ -10,6 +10,7 @@ import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
 import { getSessionsByTeacherId } from "@/lib/get/get-classes"
+import AvatarIcon from "@/components/avatar"
 
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
@@ -42,12 +43,18 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
             <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-background z-0"></div>
             <div className="relative z-10 flex flex-col items-center pt-4">
               <div className="relative">
-                <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                  <AvatarFallback className="text-3xl bg-primary/10 text-primary">
-                    {teacher.first_name[0]}
-                    {teacher.last_name[0]}
-                  </AvatarFallback>
-                </Avatar>
+                {teacher.avatar_url ? (
+                  <div className="mb-4">
+                    <AvatarIcon url={teacher.avatar_url} size="large" />
+                  </div>
+                ) : (
+                  <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
+                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                      {teacher.first_name[0]}
+                      {teacher.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <Badge
                   className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${teacher.status === "active" ? "bg-green-500"
                     : teacher.status === "inactive" ? "bg-amber-500"

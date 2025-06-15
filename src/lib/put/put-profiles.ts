@@ -3,9 +3,15 @@ import { createClient } from "@/utils/supabase/client"
 type ProfileUpdateData = {
     first_name?: string
     last_name?: string
+    gender?: string
+    country?: string
+    language?: string
     email?: string
-    phone?: string
-    avatar_url?: string
+    phone?: string | null
+    timezone?: string
+    status?: string
+    role?: string
+    avatar_url?: string | null
 }
 
 export async function updateProfile(userId: string, data: ProfileUpdateData) {

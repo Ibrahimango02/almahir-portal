@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -15,141 +15,135 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { InvoiceLineItems } from "@/components/invoice-line-items"
 import { InvoicePreview } from "@/components/invoice-preview"
+import { getStudents } from "@/lib/get/get-students"
+import { getParents } from "@/lib/get/get-parents"
+import { StudentType } from "@/types"
+import { ParentType } from "@/types"
+import { InvoiceType } from "@/types"
+import { updateInvoice } from "@/lib/put/put-invoices"
+import { Textarea } from "@/components/ui/textarea"
 
 // Form validation schema
 const formSchema = z.object({
-  parentId: z.string().min(1, { message: "Parent is required" }),
-  invoiceNumber: z.string().min(1, { message: "Invoice number is required" }),
-  invoiceDate: z.date({
-    required_error: "Invoice date is required",
-  }),
-  dueDate: z.date({
+  invoice_id: z.string(),
+  student_id: z.string().min(1, { message: "Student is required" }),
+  parent_id: z.string().optional(),
+  invoice_type: z.string().min(1, { message: "Invoice type is required" }),
+  amount: z.coerce.number().min(0, { message: "Amount must be greater than 0" }),
+  currency: z.string(),
+  description: z.string().min(1, { message: "Description is required" }),
+  due_date: z.date({
     required_error: "Due date is required",
   }),
-  taxRate: z.coerce.number().min(0).max(100).default(0),
-  discount: z.coerce.number().min(0).default(0),
-  notes: z.string().optional(),
+  status: z.string(),
 })
 
-// Mock parent data
-const parents = [
-  { id: "1", name: "Ahmed Ali" },
-  { id: "2", name: "Fatima Khan" },
-  { id: "3", name: "Mohammad Rahman" },
-  { id: "4", name: "Aisha Abdullah" },
+type FormValues = {
+  invoice_id: string
+  student_id: string
+  parent_id?: string
+  invoice_type: string
+  amount: number
+  currency: string
+  description: string
+  due_date: Date
+  status: string
+}
+
+const invoiceTypes = [
+  { id: "hour", name: "per hour" },
+  { id: "month", name: "per month" },
+  { id: "class", name: "per class" },
 ]
 
-interface LineItem {
-  id: number
-  description: string
-  quantity: number
-  price: number
-}
-
-interface Invoice {
-  id: string
-  parentId: string
-  amount: number
-  status: string
-  date: string
-  dueDate: string
-  taxRate: number
-  discount: number
-  notes: string
-  lineItems: LineItem[]
-}
-
 interface EditInvoiceFormProps {
-  invoice: Invoice
+  invoice: InvoiceType
 }
 
 export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
   const router = useRouter()
-  const [lineItems, setLineItems] = useState<LineItem[]>(invoice.lineItems)
   const [activeTab, setActiveTab] = useState("form")
   const [submitting, setSubmitting] = useState(false)
+  const [students, setStudents] = useState<StudentType[]>([])
+  const [parents, setParents] = useState<ParentType[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [studentsData, parentsData] = await Promise.all([
+          getStudents(),
+          getParents()
+        ])
+        setStudents(studentsData)
+        setParents(parentsData)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      parentId: invoice.parentId,
-      invoiceNumber: invoice.id,
-      invoiceDate: new Date(invoice.date),
-      dueDate: new Date(invoice.dueDate),
-      taxRate: invoice.taxRate,
-      discount: invoice.discount,
-      notes: invoice.notes,
+      invoice_id: invoice.invoice_id,
+      student_id: invoice.student.student_id,
+      parent_id: invoice.parent.parent_id || "",
+      invoice_type: invoice.invoice_type,
+      amount: invoice.amount,
+      currency: invoice.currency,
+      description: invoice.description,
+      due_date: new Date(invoice.due_date),
+      status: invoice.status,
     },
   })
 
-  // Calculate subtotal
-  const calculateSubtotal = () => {
-    return lineItems.reduce((sum, item) => sum + item.quantity * item.price, 0)
-  }
-
-  // Calculate tax
-  const calculateTax = () => {
-    const taxRate = form.getValues().taxRate || 0
-    return calculateSubtotal() * (taxRate / 100)
-  }
-
-  // Calculate discount
-  const calculateDiscount = () => {
-    const discount = form.getValues().discount || 0
-    return discount
-  }
-
-  // Calculate total
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax() - calculateDiscount()
-  }
-
-  // Add a new line item
-  const addLineItem = () => {
-    const newId = lineItems.length > 0 ? Math.max(...lineItems.map((item) => item.id)) + 1 : 1
-    setLineItems([...lineItems, { id: newId, description: "", quantity: 1, price: 0 }])
-  }
-
-  // Remove a line item
-  const removeLineItem = (id: number) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((item) => item.id !== id))
-    }
-  }
-
-  // Update a line item
-  const updateLineItem = (id: number, field: string, value: any) => {
-    setLineItems(lineItems.map((item) => (item.id === id ? { ...item, [field]: value } : item)))
-  }
-
   // Form submission
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     setSubmitting(true)
 
     try {
-      // In a real app, you would send this data to your API
-      console.log("Form values:", values)
-      console.log("Line items:", lineItems)
+      const invoiceData = {
+        invoice_id: values.invoice_id,
+        student_id: values.student_id,
+        parent_id: values.parent_id === "none" || values.parent_id === "" ? undefined : values.parent_id,
+        invoice_type: values.invoice_type,
+        amount: values.amount,
+        currency: values.currency,
+        description: values.description,
+        due_date: values.due_date,
+        status: values.status,
+      }
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      await updateInvoice(invoiceData)
 
       // Redirect to invoices list
       router.push("/admin/invoices")
       router.refresh()
     } catch (error) {
-      console.error("Error submitting form:", error)
+      console.error("Error updating invoice:", error)
     } finally {
       setSubmitting(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
+
   return (
     <div>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList>
           <TabsTrigger value="form">Invoice Details</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
         </TabsList>
@@ -162,24 +156,97 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
                   <CardHeader>
                     <CardTitle>Invoice Information</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="space-y-6">
+                    {/* Invoice ID and Student Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="parentId"
+                        name="invoice_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Parent</FormLabel>
+                            <FormLabel>Invoice ID</FormLabel>
+                            <FormControl>
+                              <Input value={invoice.invoice_id} disabled />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="student_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Student</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select a parent" />
+                                  <SelectValue placeholder="Select a student" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
+                                {students.map((student) => (
+                                  <SelectItem key={student.student_id} value={student.student_id}>
+                                    {`${student.first_name} ${student.last_name}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Parent Section */}
+                    <div className="grid grid-cols-1 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="parent_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Parent (Optional)</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value || "none"}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a parent (optional)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
                                 {parents.map((parent) => (
-                                  <SelectItem key={parent.id} value={parent.id}>
-                                    {parent.name}
+                                  <SelectItem key={parent.parent_id} value={parent.parent_id}>
+                                    {`${parent.first_name} ${parent.last_name}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormDescription>
+                              You can leave this empty if no parent is associated
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Invoice Details Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="invoice_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Invoice Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select invoice type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {invoiceTypes.map((type) => (
+                                  <SelectItem key={type.id} value={type.id}>
+                                    {type.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -191,12 +258,12 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
 
                       <FormField
                         control={form.control}
-                        name="invoiceNumber"
+                        name="amount"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Invoice Number</FormLabel>
+                            <FormLabel>Amount</FormLabel>
                             <FormControl>
-                              <Input {...field} disabled className="bg-muted" />
+                              <Input type="number" min="0" step="0.01" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -204,24 +271,20 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    {/* Currency and Description Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         control={form.control}
-                        name="invoiceDate"
+                        name="currency"
                         render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Invoice Date</FormLabel>
+                          <FormItem>
+                            <FormLabel>Currency</FormLabel>
                             <FormControl>
-                              <Button
-                                type="button"
-                                variant={"outline"}
-                                className="w-full pl-3 text-left font-normal bg-muted"
-                                disabled
-                              >
-                                {field.value ? format(field.value, "PPP") : <span>Select date</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
+                              <Input {...field} placeholder="e.g. USD, EUR, GBP" />
                             </FormControl>
+                            <FormDescription>
+                              Enter the currency code (e.g. USD, EUR, GBP)
+                            </FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -229,7 +292,29 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
 
                       <FormField
                         control={form.control}
-                        name="dueDate"
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                value={field.value ?? ""}
+                                className="min-h-[100px]"
+                                placeholder="Enter invoice description..."
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Due Date and Status Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="due_date"
                         render={({ field }) => (
                           <FormItem className="flex flex-col">
                             <FormLabel>Due Date</FormLabel>
@@ -253,108 +338,31 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
                           </FormItem>
                         )}
                       />
+
+                      <FormField
+                        control={form.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="paid">Paid</SelectItem>
+                                <SelectItem value="overdue">Overdue</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Line Items</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <InvoiceLineItems
-                      lineItems={lineItems}
-                      addLineItem={addLineItem}
-                      removeLineItem={removeLineItem}
-                      updateLineItem={updateLineItem}
-                    />
-
-                    <div className="mt-6 space-y-4">
-                      <div className="flex justify-end">
-                        <div className="w-full md:w-1/2 lg:w-1/3 space-y-2">
-                          <div className="flex justify-between">
-                            <span>Subtotal:</span>
-                            <span>${calculateSubtotal().toFixed(2)}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span>Tax Rate:</span>
-                            <div className="w-24">
-                              <FormField
-                                control={form.control}
-                                name="taxRate"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <div className="flex items-center">
-                                        <Input type="number" min="0" max="100" {...field} className="h-8" />
-                                        <span className="ml-2">%</span>
-                                      </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between">
-                            <span>Tax:</span>
-                            <span>${calculateTax().toFixed(2)}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <span>Discount:</span>
-                            <div className="w-24">
-                              <FormField
-                                control={form.control}
-                                name="discount"
-                                render={({ field }) => (
-                                  <FormItem>
-                                    <FormControl>
-                                      <div className="flex items-center">
-                                        <Input type="number" min="0" {...field} className="h-8" />
-                                        <span className="ml-2">$</span>
-                                      </div>
-                                    </FormControl>
-                                    <FormMessage />
-                                  </FormItem>
-                                )}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between font-bold pt-2 border-t">
-                            <span>Total:</span>
-                            <span>${calculateTotal().toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Additional Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="notes"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Notes</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Add any additional information that should appear on the invoice
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                   </CardContent>
                 </Card>
               </div>
@@ -363,7 +371,11 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
                 <Button type="button" variant="outline" onClick={() => router.push("/admin/invoices")}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting}>
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  style={{ backgroundColor: "#3d8f5b", color: "white" }}
+                >
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -383,16 +395,15 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
 
         <TabsContent value="preview">
           <InvoicePreview
-            formData={{
-              ...form.getValues(),
-              status: invoice.status,
-            }}
-            lineItems={lineItems}
-            subtotal={calculateSubtotal()}
-            tax={calculateTax()}
-            discount={calculateDiscount()}
-            total={calculateTotal()}
+            formData={form.getValues()}
+            lineItems={[]}
+            subtotal={form.getValues().amount}
+            tax={0}
+            discount={0}
+            total={form.getValues().amount}
             onBack={() => setActiveTab("form")}
+            students={students}
+            parents={parents}
           />
         </TabsContent>
       </Tabs>

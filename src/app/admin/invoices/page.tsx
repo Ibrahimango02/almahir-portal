@@ -17,7 +17,7 @@ export default function InvoicesPage() {
             <Input type="search" placeholder="Search invoices..." className="w-full pl-8" />
           </div>
           <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            <Link href="/admin/invoices/create">
+            <Link href="/admin/invoices/add">
               <Plus className="mr-2 h-4 w-4" />
               Create Invoice
             </Link>

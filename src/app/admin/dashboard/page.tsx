@@ -51,7 +51,7 @@ export default async function Dashboard() {
       <div className="w-full flex items-center bg-green-800 min-h-[110px] shadow-md" style={{ borderBottom: '4px solid #34d399' }}>
         <div className="flex-1 flex justify-center items-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white text-center drop-shadow-lg">
-            Welcome {profile?.first_name} {profile?.last_name}
+            Welcome, {profile?.first_name} {profile?.last_name}!
           </h2>
         </div>
       </div>

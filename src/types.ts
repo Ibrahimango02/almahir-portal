@@ -134,6 +134,11 @@ export type InvoiceType = {
         first_name: string
         last_name: string
     }
+    parent: {
+        parent_id: string
+        first_name: string
+        last_name: string
+    }
     invoice_type: string
     amount: number
     currency: string

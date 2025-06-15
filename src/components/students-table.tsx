@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -37,6 +38,7 @@ type TeacherType = {
 }
 
 export function StudentsTable() {
+  const router = useRouter()
   const [students, setStudents] = useState<StudentType[]>([])
   const [parentData, setParentData] = useState<Record<string, ParentType[]>>({})
   const [teacherData, setTeacherData] = useState<Record<string, TeacherType[]>>({})
@@ -119,13 +121,22 @@ export function StudentsTable() {
             {paginatedStudents.map((student) => (
               <TableRow
                 key={student.student_id}
-                className="hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  // Prevent navigation if clicking on actions, the student ID link, or other interactive elements
+                  if (
+                    e.target instanceof HTMLElement &&
+                    (e.target.closest("button") ||
+                      e.target.closest("a") ||
+                      e.target.closest("[data-no-navigation]"))
+                  ) {
+                    return
+                  }
+                  router.push(`/admin/students/${student.student_id}`)
+                }}
               >
                 <TableCell>
-                  <Link
-                    href={`/admin/students/${student.student_id}`}
-                    className="flex items-center gap-3"
-                  >
+                  <div className="flex items-center gap-3">
                     {student.avatar_url ? (
                       <AvatarIcon url={student.avatar_url} size="medium" />
                     ) : (
@@ -141,66 +152,36 @@ export function StudentsTable() {
                         {student.first_name} {student.last_name}
                       </p>
                     </div>
-                  </Link>
+                  </div>
+                </TableCell>
+                <TableCell>{student.age}</TableCell>
+                <TableCell>{student.gender}</TableCell>
+                <TableCell>{student.language}</TableCell>
+                <TableCell>{student.country}</TableCell>
+                <TableCell>{student.email}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {parentData[student.student_id]?.map((parent) => (
+                      <Badge key={parent.id} variant="outline">
+                        {parent.first_name} {parent.last_name}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.age}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.gender}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.language}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.country}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {student.email}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    <div className="flex flex-wrap gap-1">
-                      {parentData[student.student_id]?.map((parent) => (
-                        <Badge key={parent.id} variant="outline">
-                          {parent.first_name} {parent.last_name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    <div className="flex flex-wrap gap-1">
-                      {teacherData[student.student_id]?.map((teacher) => (
-                        <Badge key={teacher.id} variant="outline">
-                          {teacher.first_name} {teacher.last_name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Link>
+                  <div className="flex flex-wrap gap-1">
+                    {teacherData[student.student_id]?.map((teacher) => (
+                      <Badge key={teacher.id} variant="outline">
+                        {teacher.first_name} {teacher.last_name}
+                      </Badge>
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    <StatusBadge status={student.status} />
-                  </Link>
+                  <StatusBadge status={student.status} />
                 </TableCell>
-                <TableCell>
-                  <Link href={`/admin/students/${student.student_id}`}>
-                    {new Date(student.created_at).toLocaleDateString()}
-                  </Link>
-                </TableCell>
-                <TableCell>
+                <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
+                <TableCell data-no-navigation>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">

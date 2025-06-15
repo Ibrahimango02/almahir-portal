@@ -230,34 +230,39 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Button
           onClick={handleZoomCall}
-          className="flex items-center gap-2 border-2 border-blue-600 shadow-sm"
-          style={{ backgroundColor: "#3b82f6", color: "white" }}
+          className="flex items-center gap-2 border-2 border-blue-600 shadow-sm bg-blue-500 text-white hover:bg-blue-600"
         >
           <Video className="h-4 w-4" />
           <span>Join Call</span>
         </Button>
 
-        <Button
-          onClick={handleInitiateClass}
-          className={cn(
-            "flex items-center gap-2 transition-colors duration-300",
-            currentStatus === "scheduled" ? "bg-primary text-primary-foreground hover:bg-primary/90" : "",
-          )}
-          variant="default"
-          disabled={currentStatus !== "scheduled" || isLoading}
-          style={currentStatus === "scheduled" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
-        >
-          <PlayCircle className="h-4 w-4" />
-          <span>{currentStatus === "scheduled" ? "Initiate" : "Initiated"}</span>
-        </Button>
+        {currentStatus === "scheduled" ? (
+          <Button
+            onClick={handleInitiateClass}
+            className="flex items-center gap-2 bg-green-700 text-white hover:bg-green-800"
+            variant="default"
+            disabled={isLoading}
+          >
+            <PlayCircle className="h-4 w-4" />
+            <span>Initiate</span>
+          </Button>
+        ) : (
+          <Button
+            className="flex items-center gap-2 opacity-50 cursor-not-allowed"
+            variant="outline"
+            disabled
+          >
+            <PlayCircle className="h-4 w-4" />
+            <span>Initiated</span>
+          </Button>
+        )}
 
         {currentStatus === "pending" ? (
           <Button
             onClick={handleStartClass}
-            className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="flex items-center gap-2 bg-green-700 text-white hover:bg-green-800"
             variant="default"
             disabled={isLoading}
-            style={{ backgroundColor: "#3d8f5b", color: "white" }}
           >
             <Play className="h-4 w-4" />
             <span>Start Class</span>
@@ -265,10 +270,9 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
         ) : currentStatus === "running" ? (
           <Button
             onClick={handleEndClass}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-red-500 text-white hover:bg-red-700"
             variant="destructive"
             disabled={isLoading}
-            style={{ backgroundColor: "#d14747", color: "white" }}
           >
             <StopCircle className="h-4 w-4" />
             <span>End Class</span>
@@ -292,9 +296,8 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
         {canLeave ? (
           <Button
             onClick={handleLeaveClass}
-            className="flex items-center gap-2 hover:bg-red-700 text-white"
+            className="flex items-center gap-2 bg-red-500 text-white hover:bg-red-700"
             disabled={isLoading}
-            style={{ backgroundColor: "#d14747", color: "white" }}
           >
             <LogOut className="h-4 w-4" />
             <span>Leave</span>

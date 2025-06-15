@@ -949,10 +949,15 @@ export async function getWeeklyClassesCount() {
 export async function getClassesCountByStatus(status: string) {
     const supabase = createClient()
 
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+
     const { count, error } = await supabase
         .from('class_sessions')
         .select('*', { count: 'exact', head: true })
         .eq('status', status)
+        .eq('date', todayStr)
 
     if (error) {
         console.error('Error fetching class sessions count by status:', error)

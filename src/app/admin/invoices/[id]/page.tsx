@@ -1,137 +1,58 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Edit } from "lucide-react"
+import { Edit, Calendar, User, Receipt, Clock, DollarSign, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { BackButton } from "@/components/back-button"
+import { getInvoiceById } from "@/lib/get/get-invoices"
+import { InvoiceType } from "@/types"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "Invoice Details | Al-Mahir Academy",
   description: "View invoice details",
 }
 
-// Mock function to get invoice by ID
-async function getInvoiceById(id: string) {
-  // In a real application, this would fetch data from your API or database
-  const invoices = [
-    {
-      id: "INV-001",
-      parent: "John Smith",
-      parentEmail: "john.smith@example.com",
-      amount: 250.0,
-      status: "paid",
-      date: "2023-03-15",
-      dueDate: "2023-04-15",
-      taxRate: 5,
-      discount: 0,
-      notes: "Monthly tuition fees",
-      lineItems: [
-        { id: 1, description: "Mathematics Tuition", quantity: 1, price: 150 },
-        { id: 2, description: "Physics Tuition", quantity: 1, price: 100 },
-      ],
-    },
-    {
-      id: "INV-002",
-      parent: "Maria Garcia",
-      parentEmail: "maria.garcia@example.com",
-      amount: 175.0,
-      status: "pending",
-      date: "2023-03-20",
-      dueDate: "2023-04-20",
-      taxRate: 5,
-      discount: 0,
-      notes: "",
-      lineItems: [
-        { id: 1, description: "Chemistry Tuition", quantity: 1, price: 100 },
-        { id: 2, description: "Spanish Tuition", quantity: 1, price: 75 },
-      ],
-    },
-    {
-      id: "INV-003",
-      parent: "James Johnson",
-      parentEmail: "james.johnson@example.com",
-      amount: 300.0,
-      status: "paid",
-      date: "2023-03-10",
-      dueDate: "2023-04-10",
-      taxRate: 5,
-      discount: 0,
-      notes: "Quarterly payment",
-      lineItems: [
-        { id: 1, description: "Physics Tuition", quantity: 1, price: 100 },
-        { id: 2, description: "Computer Science Tuition", quantity: 1, price: 125 },
-        { id: 3, description: "English Tuition", quantity: 1, price: 75 },
-      ],
-    },
-    {
-      id: "INV-004",
-      parent: "Patricia Brown",
-      parentEmail: "patricia.brown@example.com",
-      amount: 200.0,
-      status: "overdue",
-      date: "2023-02-15",
-      dueDate: "2023-03-15",
-      taxRate: 5,
-      discount: 0,
-      notes: "Please pay immediately",
-      lineItems: [
-        { id: 1, description: "Biology Tuition", quantity: 1, price: 100 },
-        { id: 2, description: "English Tuition", quantity: 1, price: 100 },
-      ],
-    },
-  ]
-
-  const invoice = invoices.find((invoice) => invoice.id === id)
-
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  return invoice
-}
-
-// Function to get status badge variant
+// Function to get status badge variant and color
 function getStatusBadgeVariant(status: string) {
   switch (status) {
     case "paid":
-      return "default"
+      return "bg-green-500 hover:bg-green-600 text-white"
     case "pending":
-      return "outline"
+      return "bg-blue-500 hover:bg-blue-600 text-white"
     case "overdue":
-      return "destructive"
+      return "bg-red-500 hover:bg-red-600 text-white"
     default:
-      return "secondary"
+      return "bg-gray-500 hover:bg-gray-600 text-white"
   }
 }
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params
+  const { id } = await params
   const invoice = await getInvoiceById(id)
 
   if (!invoice) {
     notFound()
   }
 
-  // Calculate subtotal
-  const subtotal = invoice.lineItems.reduce((sum, item) => sum + item.quantity * item.price, 0)
-
-  // Calculate tax
-  const tax = subtotal * (invoice.taxRate / 100)
-
-  // Calculate total
-  const total = subtotal + tax - invoice.discount
-
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-6">
+    <div className="container max-w-7xl mx-auto py-8 space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <BackButton href="/admin/invoices" label="Back to Invoices" />
+        </div>
+
         <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-2">
-            <BackButton href="/admin/invoices" label="Back to Invoices" />
-            <h1 className="text-3xl font-bold tracking-tight">Invoice {invoice.id}</h1>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Invoice Details</h1>
+            <p className="text-muted-foreground">View and manage invoice information</p>
           </div>
-          <Link href={`/admin/invoices/${params.id}/edit`}>
-            <Button>
+          <Link href={`/admin/invoices/edit/${id}`}>
+            <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Invoice
             </Button>
@@ -139,108 +60,119 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Invoice Details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Status</dt>
-                <dd>
-                  <Badge variant={getStatusBadgeVariant(invoice.status)}>
-                    {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                  </Badge>
-                </dd>
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Invoice Details */}
+        <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Invoice Information</CardTitle>
+                <Badge className={cn("text-sm", getStatusBadgeVariant(invoice.status))}>
+                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                </Badge>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Invoice Number</dt>
-                <dd className="font-medium">{invoice.id}</dd>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Invoice Number</p>
+                      <p className="font-medium">{invoice.invoice_id}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Due Date</p>
+                      <p className="font-medium">{format(new Date(invoice.due_date + 'T00:00:00'), "MMMM d, yyyy")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Created At</p>
+                      <p className="font-medium">{format(new Date(invoice.created_at), "MMMM d, yyyy")}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Student</p>
+                      <p className="font-medium">{invoice.student.first_name} {invoice.student.last_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Parent</p>
+                      <p className="font-medium">{invoice.parent.parent_id === null ? "None" : invoice.parent.first_name} {invoice.parent.last_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Invoice Type</p>
+                      <p className="font-medium">{invoice.invoice_type === "hour" ? "Per Hour" : invoice.invoice_type === "month" ? "Per Month" : "Per Class"}</p>
+                    </div>
+                  </div>
+                  {invoice.paid_at && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Paid At</p>
+                        <p className="font-medium">{format(new Date(invoice.paid_at), "MMMM d, yyyy")}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Invoice Date</dt>
-                <dd className="font-medium">{new Date(invoice.date).toLocaleDateString()}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Due Date</dt>
-                <dd className="font-medium">{new Date(invoice.dueDate).toLocaleDateString()}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Parent</dt>
-                <dd className="font-medium">{invoice.parent}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-muted-foreground">Email</dt>
-                <dd className="font-medium">{invoice.parentEmail}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="space-y-2">
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-muted-foreground">Subtotal</dt>
-                <dd className="font-medium">${subtotal.toFixed(2)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-muted-foreground">Tax ({invoice.taxRate}%)</dt>
-                <dd className="font-medium">${tax.toFixed(2)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-sm font-medium text-muted-foreground">Discount</dt>
-                <dd className="font-medium">${invoice.discount.toFixed(2)}</dd>
-              </div>
-              <div className="flex justify-between border-t pt-2 mt-2">
-                <dt className="text-base font-bold">Total</dt>
-                <dd className="text-base font-bold">${total.toFixed(2)}</dd>
-              </div>
-            </dl>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Description</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground whitespace-pre-wrap">{invoice.description || "No description provided"}</p>
+            </CardContent>
+          </Card>
+        </div>
 
-            {invoice.notes && (
-              <div className="mt-4 pt-4 border-t">
-                <h3 className="text-sm font-medium text-muted-foreground mb-1">Notes</h3>
-                <p>{invoice.notes}</p>
+        {/* Right Column - Payment Summary */}
+        <div className="lg:col-span-1">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Payment Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-muted-foreground">Amount</p>
+                    <p className="text-2xl font-bold">{invoice.currency} {invoice.amount.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    {invoice.status === "paid"
+                      ? "This invoice has been paid"
+                      : invoice.status === "pending"
+                        ? "This invoice is pending payment"
+                        : "This invoice is overdue"}
+                  </p>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Line Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-2">Description</th>
-                  <th className="text-center py-3 px-2">Quantity</th>
-                  <th className="text-right py-3 px-2">Price</th>
-                  <th className="text-right py-3 px-2">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoice.lineItems.map((item) => (
-                  <tr key={item.id} className="border-b">
-                    <td className="py-3 px-2">{item.description}</td>
-                    <td className="text-center py-3 px-2">{item.quantity}</td>
-                    <td className="text-right py-3 px-2">${item.price.toFixed(2)}</td>
-                    <td className="text-right py-3 px-2">${(item.quantity * item.price).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

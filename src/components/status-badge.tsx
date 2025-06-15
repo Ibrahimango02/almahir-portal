@@ -36,8 +36,6 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  // Normalize status - replace "finished" with "completed"
-  const normalizedStatus = status.toLowerCase() === "finished" ? "completed" : status.toLowerCase()
 
   // Define status-specific styles
   const statusStyles: Record<string, string> = {
@@ -50,11 +48,14 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/60",
     suspended:
       "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/60",
-    archived: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-950/50 dark:text-slate-400 dark:border-slate-800/60",
+    archived:
+      "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-950/50 dark:text-slate-400 dark:border-slate-800/60",
 
     // Invoice statuses
-    paid: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60",
-    overdue: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/60",
+    paid:
+      "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60",
+    overdue:
+      "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800/60",
 
     // Class statuses
     scheduled:
@@ -73,11 +74,11 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
   }
 
   // Get the appropriate style based on status
-  const statusStyle = statusStyles[normalizedStatus] || statusStyles.default
+  const statusStyle = statusStyles[status] || statusStyles.default
 
   // Define status icons
   const StatusIcon = () => {
-    switch (normalizedStatus) {
+    switch (status) {
       // User status icons
       case "active":
         return <CheckCircle className="h-3.5 w-3.5 mr-1" />
@@ -112,20 +113,17 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     }
   }
 
-  // Display the original status text (not the normalized one)
-  const displayStatus = status === "finished" ? "completed" : status
-
   return (
     <Badge
       className={cn(
-        "font-medium border px-2.5 py-1 capitalize flex items-center justify-center",
+        "font-medium border px-1.5 py-1 capitalize flex items-center justify-center",
         statusStyle,
         className,
       )}
       variant="outline"
     >
       <StatusIcon />
-      {displayStatus}
+      {status}
     </Badge>
   )
 }

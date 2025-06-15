@@ -1,6 +1,7 @@
 "use client"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type React from "react"
+import { useRouter } from "next/navigation"
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
@@ -25,6 +26,7 @@ import { TeacherType } from "@/types"
 import AvatarIcon from "./avatar"
 
 export function TeachersTable() {
+  const router = useRouter()
   const [teachers, setTeachers] = useState<TeacherType[]>([])
   const [classCount, setClassCount] = useState<Record<string, number>>({})
   const [currentPage, setCurrentPage] = useState(1)
@@ -98,13 +100,22 @@ export function TeachersTable() {
             {paginatedTeachers.map((teacher) => (
               <TableRow
                 key={teacher.teacher_id}
-                className="hover:bg-muted/50 transition-colors"
+                className="hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  // Prevent navigation if clicking on actions, the teacher ID link, or other interactive elements
+                  if (
+                    e.target instanceof HTMLElement &&
+                    (e.target.closest("button") ||
+                      e.target.closest("a") ||
+                      e.target.closest("[data-no-navigation]"))
+                  ) {
+                    return
+                  }
+                  router.push(`/admin/teachers/${teacher.teacher_id}`)
+                }}
               >
                 <TableCell>
-                  <Link
-                    href={`/admin/teachers/${teacher.teacher_id}`}
-                    className="flex items-center gap-3"
-                  >
+                  <div className="flex items-center gap-3">
                     {teacher.avatar_url ? (
                       <AvatarIcon url={teacher.avatar_url} size="medium" />
                     ) : (
@@ -120,54 +131,20 @@ export function TeachersTable() {
                         {teacher.first_name} {teacher.last_name}
                       </p>
                     </div>
-                  </Link>
+                  </div>
                 </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.gender}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.specialization}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.language}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.country}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.email}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {teacher.phone}
-                  </Link>
-                </TableCell>
+                <TableCell>{teacher.gender}</TableCell>
+                <TableCell>{teacher.specialization}</TableCell>
+                <TableCell>{teacher.language}</TableCell>
+                <TableCell>{teacher.country}</TableCell>
+                <TableCell>{teacher.email}</TableCell>
+                <TableCell>{teacher.phone}</TableCell>
+                <TableCell className="text-center">{classCount[teacher.teacher_id] || 0}</TableCell>
                 <TableCell className="text-center">
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {classCount[teacher.teacher_id] || 0}
-                  </Link>
+                  <StatusBadge status={teacher.status} />
                 </TableCell>
-                <TableCell className="text-center">
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    <StatusBadge status={teacher.status} />
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <Link href={`/admin/teachers/${teacher.teacher_id}`}>
-                    {new Date(teacher.created_at).toLocaleDateString()}
-                  </Link>
-                </TableCell>
-                <TableCell>
+                <TableCell>{new Date(teacher.created_at).toLocaleDateString()}</TableCell>
+                <TableCell data-no-navigation>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">

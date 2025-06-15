@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { useTheme } from "@/components/theme-provider"
-import { MoonIcon, SunIcon, LaptopIcon, Upload } from "lucide-react"
+import { MoonIcon, SunIcon, LaptopIcon, Upload, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getProfile } from "@/lib/get/get-profiles"
 import { updateProfile, updatePassword } from "@/lib/put/put-profiles"
@@ -120,6 +120,19 @@ export default function SettingsPage() {
       setUploadError('Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!userId) return;
+    try {
+      await updateProfile(userId, {
+        avatar_url: null
+      });
+      setAvatarUrl(null);
+    } catch (error) {
+      console.error('Error removing avatar:', error);
+      setUploadError('Failed to remove profile picture. Please try again.');
     }
   };
 
@@ -236,12 +249,25 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="avatar-upload" className="cursor-pointer">
-                    <div className="flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      <span>Upload new picture</span>
-                    </div>
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="avatar-upload" className="cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        <span>Upload new picture</span>
+                      </div>
+                    </Label>
+                    {avatarUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveAvatar}
+                        className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
                   <Input
                     id="avatar-upload"
                     type="file"
@@ -250,11 +276,6 @@ export default function SettingsPage() {
                     disabled={uploading}
                     className="hidden"
                   />
-                  {uploadError && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{uploadError}</AlertDescription>
-                    </Alert>
-                  )}
                   <p className="text-sm text-muted-foreground">
                     Recommended: Square image, max 5MB
                   </p>

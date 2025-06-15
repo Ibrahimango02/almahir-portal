@@ -12,6 +12,7 @@ import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
 import { getSessionsByStudentId } from "@/lib/get/get-classes"
 import React from "react"
+import AvatarIcon from "@/components/avatar"
 
 
 export default async function StudentDetailPage({ params }: { params: { id: string } }) {
@@ -45,12 +46,18 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
             <div className="absolute inset-0 bg-gradient-to-b from-primary/10 to-background z-0"></div>
             <div className="relative z-10 flex flex-col items-center pt-4">
               <div className="relative">
-                <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                  <AvatarFallback className="text-3xl bg-primary/10 text-primary">
-                    {student.first_name[0]}
-                    {student.last_name[0]}
-                  </AvatarFallback>
-                </Avatar>
+                {student.avatar_url ? (
+                  <div className="mb-4">
+                    <AvatarIcon url={student.avatar_url} size="large" />
+                  </div>
+                ) : (
+                  <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
+                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                      {student.first_name[0]}
+                      {student.last_name[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <Badge
                   className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${student.status === "active" ? "bg-green-500"
                     : student.status === "inactive" ? "bg-amber-500"
