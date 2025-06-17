@@ -20,33 +20,19 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getTeachers } from "@/lib/get/get-teachers"
 import { getTeacherClassCount } from "@/lib/get/get-classes"
 import { TeacherType } from "@/types"
 import AvatarIcon from "./avatar"
 
-export function TeachersTable() {
+interface TeachersTableProps {
+  teachers: TeacherType[]
+}
+
+export function TeachersTable({ teachers }: TeachersTableProps) {
   const router = useRouter()
-  const [teachers, setTeachers] = useState<TeacherType[]>([])
   const [classCount, setClassCount] = useState<Record<string, number>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchTeachers = async () => {
-      try {
-        const data = await getTeachers()
-        setTeachers(data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Failed to fetch teachers:", error)
-        setLoading(false)
-      }
-    }
-
-    fetchTeachers()
-  }, [])
 
   useEffect(() => {
     const fetchClassCounts = async () => {
@@ -72,10 +58,6 @@ export function TeachersTable() {
   const totalItems = teachers.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedTeachers = teachers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-  if (loading) {
-    return <div>Loading teachers...</div>
-  }
 
   return (
     <div>
@@ -143,7 +125,7 @@ export function TeachersTable() {
                 <TableCell className="text-center">
                   <StatusBadge status={teacher.status} />
                 </TableCell>
-                <TableCell>{new Date(teacher.created_at).toLocaleDateString()}</TableCell>
+                <TableCell>{format(parseISO(teacher.created_at), "yyyy-MM-dd")}</TableCell>
                 <TableCell data-no-navigation>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

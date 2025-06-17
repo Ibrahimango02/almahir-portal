@@ -158,6 +158,17 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                 </div>
               </div>
             </div>
+            {/* Edit Button */}
+            <Button
+              asChild
+              className="mt-6 shadow-sm transition-all hover:shadow-md"
+              style={{ backgroundColor: "#3d8f5b", color: "white" }}
+            >
+              <Link href={`/admin/parents/edit/${parent.parent_id}`} className="flex items-center justify-center gap-2">
+                <Edit className="h-4 w-4" />
+                Edit Parent Information
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </div>

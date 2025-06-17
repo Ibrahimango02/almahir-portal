@@ -1,12 +1,12 @@
-import { ClassDetails } from "@/components/class-details"
+import { ClassSessionDetails } from "@/components/class-session-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
 
-export default async function ClassPage({ params }: { params: { id: string } }) {
+export default async function ClassSessionPage({ params }: { params: { classId: string, sessionId: string } }) {
   // Fetch the class data using the session ID
-  const { id } = await params
-  const classSessionData = await getSessionById(id)
+  const { classId, sessionId } = await params
+  const classSessionData = await getSessionById(sessionId)
 
   // If class not found, show 404 page
   if (!classSessionData) {
@@ -34,7 +34,7 @@ export default async function ClassPage({ params }: { params: { id: string } }) 
         <BackButton href="/admin/schedule" label="Back to Schedule" />
       </div>
 
-      <ClassDetails classData={classData} />
+      <ClassSessionDetails classData={classData} />
     </div>
   )
 }

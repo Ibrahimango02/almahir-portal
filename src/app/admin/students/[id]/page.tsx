@@ -160,7 +160,8 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               {/* Edit Button */}
               <Button
                 asChild
-                className="w-full mt-6 bg-primary/90 hover:bg-primary text-white shadow-sm transition-all hover:shadow-md"
+                className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
+                style={{ backgroundColor: "#3d8f5b", color: "white" }}
               >
                 <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center justify-center gap-2">
                   <Edit className="h-4 w-4" />

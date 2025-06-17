@@ -20,7 +20,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getParents, getParentStudents } from "@/lib/get/get-parents"
+import { getParentStudents } from "@/lib/get/get-parents"
 import { ParentType } from "@/types"
 import AvatarIcon from "./avatar"
 
@@ -31,44 +31,29 @@ type StudentType = {
   last_name: string;
 }
 
-export function ParentsTable() {
+interface ParentsTableProps {
+  parents: ParentType[]
+}
+
+export function ParentsTable({ parents }: ParentsTableProps) {
   const router = useRouter()
-  const [parents, setParents] = useState<ParentType[]>([])
   const [studentData, setStudentData] = useState<Record<string, StudentType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchParents = async () => {
-      try {
-        const data = await getParents()
-        setParents(data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Failed to fetch parents:", error)
-        setLoading(false)
-      }
-    }
-
-    fetchParents()
-  }, [])
 
   useEffect(() => {
     const fetchStudentData = async () => {
-      const studentResults: Record<string, StudentType[]> = {}
-
+      const results: Record<string, StudentType[]> = {}
       for (const parent of parents) {
         try {
           const students = await getParentStudents(parent.parent_id)
-          studentResults[parent.parent_id] = students || []
+          results[parent.parent_id] = students || []
         } catch (error) {
           console.error(`Failed to fetch students for parent ${parent.parent_id}:`, error)
-          studentResults[parent.parent_id] = []
+          results[parent.parent_id] = []
         }
       }
-
-      setStudentData(studentResults)
+      setStudentData(results)
     }
 
     if (parents.length > 0) {
@@ -80,10 +65,6 @@ export function ParentsTable() {
   const totalItems = parents.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedParents = parents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-  if (loading) {
-    return <div>Loading parents...</div>
-  }
 
   return (
     <div>

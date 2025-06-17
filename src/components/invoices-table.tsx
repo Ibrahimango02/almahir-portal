@@ -13,67 +13,94 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, MoreHorizontal, CheckCircle, Clock, AlertCircle, XCircle, ArrowUpDown } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { format } from "date-fns"
-import { getInvoices } from "@/lib/get/get-invoices"
 import { InvoiceType } from "@/types"
 import { updateInvoice } from "@/lib/put/put-invoices"
 
-export function InvoicesTable() {
+interface InvoicesTableProps {
+  invoices: InvoiceType[]
+}
+
+type SortDirection = 'asc' | 'desc' | 'none'
+
+type SortConfig = {
+  key: string
+  direction: SortDirection
+}
+
+export function InvoicesTable({ invoices }: InvoicesTableProps) {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [invoices, setInvoices] = useState<InvoiceType[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-
-  const checkAndUpdateOverdueInvoices = async (invoices: InvoiceType[]) => {
-    const currentDate = new Date()
-    const overdueInvoices = invoices.filter(invoice => {
-      const dueDate = new Date(invoice.due_date + 'T00:00:00')
-      return invoice.status === 'pending' && dueDate < currentDate
-    })
-
-    // Update each overdue invoice
-    for (const invoice of overdueInvoices) {
-      await handleStatusUpdate(invoice.invoice_id, 'overdue')
-    }
-  }
-
-  useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        setIsLoading(true)
-        const data = await getInvoices()
-        // Sort invoices by due date
-        const sortedData = data.sort((a, b) => {
-          const dateA = new Date(a.due_date + 'T00:00:00').getTime()
-          const dateB = new Date(b.due_date + 'T00:00:00').getTime()
-          return sortOrder === 'asc' ? dateA - dateB : dateB - dateA
-        })
-        setInvoices(sortedData)
-        // Check and update overdue invoices
-        await checkAndUpdateOverdueInvoices(sortedData)
-        setError(null)
-      } catch (err) {
-        setError('Failed to fetch invoices')
-        console.error('Error fetching invoices:', err)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchInvoices()
-  }, [sortOrder])
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'none' })
 
   // Calculate pagination
   const totalItems = invoices.length
   const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedInvoices = invoices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  // Sort invoices
+  const sortedInvoices = [...invoices].sort((a, b) => {
+    if (sortConfig.direction === 'none') {
+      return 0 // No sorting
+    }
+
+    if (sortConfig.key === 'student') {
+      const aName = `${a.student.first_name} ${a.student.last_name}`
+      const bName = `${b.student.first_name} ${b.student.last_name}`
+      return sortConfig.direction === 'asc'
+        ? aName.localeCompare(bName)
+        : bName.localeCompare(aName)
+    }
+
+    if (sortConfig.key === 'created_at' || sortConfig.key === 'due_date') {
+      const aDate = new Date(a[sortConfig.key])
+      const bDate = new Date(b[sortConfig.key])
+      return sortConfig.direction === 'asc'
+        ? aDate.getTime() - bDate.getTime()
+        : bDate.getTime() - aDate.getTime()
+    }
+
+    if (sortConfig.key === 'amount') {
+      return sortConfig.direction === 'asc'
+        ? a.amount - b.amount
+        : b.amount - a.amount
+    }
+
+    // Default string comparison for other fields
+    const aValue = String(a[sortConfig.key as keyof InvoiceType])
+    const bValue = String(b[sortConfig.key as keyof InvoiceType])
+    return sortConfig.direction === 'asc'
+      ? aValue.localeCompare(bValue)
+      : bValue.localeCompare(aValue)
+  })
+
+  const paginatedInvoices = sortedInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const handleSort = (key: string) => {
+    setSortConfig(current => {
+      if (current.key !== key) {
+        return { key, direction: 'asc' }
+      }
+
+      // Cycle through sort directions: asc -> desc -> none -> asc
+      const directions: SortDirection[] = ['asc', 'desc', 'none']
+      const currentIndex = directions.indexOf(current.direction)
+      const nextIndex = (currentIndex + 1) % directions.length
+
+      return {
+        key,
+        direction: directions[nextIndex]
+      }
+    })
+  }
+
+  const clearSorting = () => {
+    setSortConfig({ key: 'created_at', direction: 'none' })
+  }
 
   const handleStatusUpdate = async (invoiceId: string, newStatus: string) => {
     try {
@@ -95,49 +122,54 @@ export function InvoicesTable() {
 
       await updateInvoice(invoiceData)
 
-      // Update the local state
-      setInvoices(invoices.map(inv =>
-        inv.invoice_id === invoiceId
-          ? { ...inv, status: newStatus }
-          : inv
-      ))
+      // Refresh the page to get updated data
+      router.refresh()
     } catch (err) {
       console.error('Error updating invoice status:', err)
-      setError('Failed to update invoice status')
     } finally {
       setUpdatingStatus(null)
     }
   }
 
-  if (isLoading) {
-    return <div className="text-center py-4">Loading invoices...</div>
-  }
-
-  if (error) {
-    return <div className="text-center py-4 text-red-500">{error}</div>
-  }
+  const SortableHeader = ({ label, sortKey }: { label: string, sortKey: string }) => (
+    <TableHead
+      className="cursor-pointer hover:bg-muted/50"
+      onClick={() => handleSort(sortKey)}
+    >
+      <div className="flex items-center gap-1">
+        {label}
+        <ArrowUpDown className="h-4 w-4" />
+        {sortConfig.key === sortKey && sortConfig.direction !== 'none' && (
+          <span className="text-xs text-muted-foreground">
+            ({sortConfig.direction === 'asc' ? '↑' : '↓'})
+          </span>
+        )}
+      </div>
+    </TableHead>
+  )
 
   return (
     <div>
       <div className="rounded-md border">
+        <div className="flex justify-end p-2 border-b">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearSorting}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Clear Sorting
+          </Button>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Invoice</TableHead>
-              <TableHead>Student</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="w-[120px] text-left">
-                <Button
-                  variant="ghost"
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center gap-1 h-8 px-2 justify-start"
-                >
-                  Due Date
-                  <ArrowUpDown className="h-4 w-4" />
-                </Button>
-              </TableHead>
-              <TableHead className="text-center">Status</TableHead>
+              <SortableHeader label="Invoice" sortKey="invoice_id" />
+              <SortableHeader label="Student" sortKey="student" />
+              <SortableHeader label="Amount" sortKey="amount" />
+              <SortableHeader label="Date" sortKey="created_at" />
+              <SortableHeader label="Due Date" sortKey="due_date" />
+              <SortableHeader label="Status" sortKey="status" />
               <TableHead className="w-[80px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -243,15 +275,16 @@ export function InvoicesTable() {
           </TableBody>
         </Table>
       </div>
-
-      <TablePagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        pageSize={pageSize}
-        totalItems={totalItems}
-        onPageChange={setCurrentPage}
-        onPageSizeChange={setPageSize}
-      />
+      <div className="mt-4">
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          onPageSizeChange={setPageSize}
+          totalItems={totalItems}
+        />
+      </div>
     </div>
   )
 }

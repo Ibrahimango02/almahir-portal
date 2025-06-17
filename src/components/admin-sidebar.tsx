@@ -16,6 +16,7 @@ import {
   User,
   UserPen,
   X,
+  BookOpen,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -35,6 +36,12 @@ const routes = [
     icon: CalendarDays,
     href: "/admin/schedule",
     color: "text-violet-600",
+  },
+  {
+    label: "Classes",
+    icon: BookOpen,
+    href: "/admin/classes",
+    color: "text-purple-600",
   },
   {
     label: "Admins",

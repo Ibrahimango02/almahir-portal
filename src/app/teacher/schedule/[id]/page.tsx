@@ -1,4 +1,4 @@
-import { ClassDetails } from "@/components/class-details"
+import { ClassDetails } from "@/components/class-session-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 

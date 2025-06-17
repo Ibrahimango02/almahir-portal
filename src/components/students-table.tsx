@@ -20,7 +20,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getStudents, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
+import { getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
 
@@ -37,29 +37,16 @@ type TeacherType = {
   last_name: string;
 }
 
-export function StudentsTable() {
+interface StudentsTableProps {
+  students: StudentType[]
+}
+
+export function StudentsTable({ students }: StudentsTableProps) {
   const router = useRouter()
-  const [students, setStudents] = useState<StudentType[]>([])
   const [parentData, setParentData] = useState<Record<string, ParentType[]>>({})
   const [teacherData, setTeacherData] = useState<Record<string, TeacherType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const data = await getStudents()
-        setStudents(data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Failed to fetch students:", error)
-        setLoading(false)
-      }
-    }
-
-    fetchStudents()
-  }, [])
 
   useEffect(() => {
     const fetchRelatedData = async () => {
@@ -93,10 +80,6 @@ export function StudentsTable() {
   const totalItems = students.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-
-  if (loading) {
-    return <div>Loading students...</div>
-  }
 
   return (
     <div>

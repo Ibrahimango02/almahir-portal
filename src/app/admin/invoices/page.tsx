@@ -1,11 +1,44 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Plus, Search } from "lucide-react"
 import { InvoicesTable } from "@/components/invoices-table"
 import Link from "next/link"
+import { useState, useEffect } from "react"
+import { InvoiceType } from "@/types"
+import { getInvoices } from "@/lib/get/get-invoices"
 
 export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<InvoiceType[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filteredInvoices, setFilteredInvoices] = useState<InvoiceType[]>([])
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      const data = await getInvoices()
+      setInvoices(data)
+      setFilteredInvoices(data)
+    }
+    fetchInvoices()
+  }, [])
+
+  useEffect(() => {
+    const filtered = invoices.filter(invoice => {
+      const searchLower = searchQuery.toLowerCase()
+      const studentName = `${invoice.student.first_name} ${invoice.student.last_name}`.toLowerCase()
+      const parentName = invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}`.toLowerCase() : ""
+      return (
+        invoice.invoice_id.toLowerCase().includes(searchLower) ||
+        studentName.includes(searchLower) ||
+        parentName.includes(searchLower) ||
+        invoice.status.toLowerCase().includes(searchLower) ||
+        invoice.amount === parseInt(searchLower)
+      )
+    })
+    setFilteredInvoices(filtered)
+  }, [searchQuery, invoices])
 
   return (
     <div className="flex flex-col gap-6">
@@ -14,7 +47,13 @@ export default function InvoicesPage() {
         <div className="flex items-center gap-2">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search invoices..." className="w-full pl-8" />
+            <Input
+              type="search"
+              placeholder="Search invoices..."
+              className="w-full pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
             <Link href="/admin/invoices/add">
@@ -31,7 +70,7 @@ export default function InvoicesPage() {
           <CardDescription>Manage invoices and payment information</CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoicesTable />
+          <InvoicesTable invoices={filteredInvoices} />
         </CardContent>
       </Card>
     </div>

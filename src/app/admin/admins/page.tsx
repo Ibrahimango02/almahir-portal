@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -5,9 +7,37 @@ import { Plus, Search } from "lucide-react"
 import { getAdmins } from "@/lib/get/get-profiles"
 import Link from "next/link"
 import { AdminsTable } from "@/components/admins-table"
+import { useState, useEffect } from "react"
+import { AdminType } from "@/types"
 
-export default async function AdminsPage() {
-    const admins = await getAdmins()
+export default function AdminsPage() {
+    const [admins, setAdmins] = useState<AdminType[]>([])
+    const [searchQuery, setSearchQuery] = useState("")
+    const [filteredAdmins, setFilteredAdmins] = useState<AdminType[]>([])
+
+    useEffect(() => {
+        const fetchAdmins = async () => {
+            const data = await getAdmins()
+            setAdmins(data)
+            setFilteredAdmins(data)
+        }
+        fetchAdmins()
+    }, [])
+
+    useEffect(() => {
+        const filtered = admins.filter(admin => {
+            const searchLower = searchQuery.toLowerCase()
+            const fullName = `${admin.first_name} ${admin.last_name}`.toLowerCase()
+            return (
+                fullName.includes(searchLower) ||
+                admin.first_name.toLowerCase().includes(searchLower) ||
+                admin.last_name.toLowerCase().includes(searchLower) ||
+                admin.email.toLowerCase().includes(searchLower) ||
+                (admin.phone?.toLowerCase().includes(searchLower) ?? false)
+            )
+        })
+        setFilteredAdmins(filtered)
+    }, [searchQuery, admins])
 
     return (
         <div className="flex flex-col gap-6">
@@ -16,7 +46,13 @@ export default async function AdminsPage() {
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input type="search" placeholder="Search admins..." className="w-full pl-8" />
+                        <Input
+                            type="search"
+                            placeholder="Search admins..."
+                            className="w-full pl-8"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
                     <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                         <Link href="/admin/admins/add">
@@ -33,7 +69,7 @@ export default async function AdminsPage() {
                     <CardDescription>Manage your administrative staff and their information</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AdminsTable admins={admins} />
+                    <AdminsTable admins={filteredAdmins} />
                 </CardContent>
             </Card>
         </div>

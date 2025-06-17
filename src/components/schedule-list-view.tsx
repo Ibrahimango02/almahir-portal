@@ -194,14 +194,14 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
   );
 
   // Handle row click to navigate to class details
-  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, classId: string) => {
+  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, classId: string, sessionId: string) => {
     // Check if the click was on a link or other interactive element
     const target = e.target as HTMLElement
     const isLink = target.tagName === "A" || target.closest("a")
 
     // Only navigate if the click wasn't on a link
     if (!isLink) {
-      router.push(`/admin/schedule/${classId}`)
+      router.push(`/admin/classes/${classId}/${sessionId}`)
     }
   }
 
@@ -235,7 +235,7 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
                     <tr
                       key={session.session_id}
                       className="border-t hover:bg-muted/20 cursor-pointer transition-colors"
-                      onClick={(e) => handleRowClick(e, session.session_id)}
+                      onClick={(e) => handleRowClick(e, session.class_id, session.session_id)}
                     >
                       <td className="p-3">
                         <div className="font-medium">{session.title}</div>

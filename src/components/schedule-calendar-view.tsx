@@ -430,7 +430,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                                                     width: `${width}%`,
                                                     zIndex: 10,
                                                 }}
-                                                onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
+                                                onClick={() => router.push(`/admin/classes/${extendedClass.id}/${extendedClass.session_id}`)}
                                             >
                                                 <div>
                                                     <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>

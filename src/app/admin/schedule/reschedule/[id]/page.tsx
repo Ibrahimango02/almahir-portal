@@ -18,7 +18,7 @@ import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
-import { getClassSessionById } from "@/lib/get/get-classes"
+import { getSessionById } from "@/lib/get/get-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { updateClassSession } from "@/lib/put/put-classes"
@@ -104,7 +104,7 @@ export default function ReschedulePage() {
   useEffect(() => {
     async function fetchClassData() {
       try {
-        const data = await getClassSessionById(id)
+        const data = await getSessionById(id)
         if (!data || data.status !== "scheduled") {
           notFound()
         }
