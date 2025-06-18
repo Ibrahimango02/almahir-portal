@@ -101,7 +101,7 @@ export function InvoiceForm() {
       parent_id: "",
       invoice_type: "",
       amount: 0,
-      currency: "USD",
+      currency: "",
       description: "",
       due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
       status: "pending",
@@ -239,6 +239,40 @@ export function InvoiceForm() {
                       />
                     </div>
 
+                    {/* Amount and Currency Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                      <FormField
+                        control={form.control}
+                        name="amount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amount</FormLabel>
+                            <FormControl>
+                              <Input type="number" min="0" step="0.01" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="currency"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Currency</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. USD, EUR, GBP" />
+                            </FormControl>
+                            <FormDescription>
+                              Enter the currency code (e.g. USD, EUR, GBP)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
                     {/* Invoice Details Section */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
@@ -266,40 +300,7 @@ export function InvoiceForm() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="amount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Amount</FormLabel>
-                            <FormControl>
-                              <Input type="number" min="0" step="0.01" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Currency and Description Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="currency"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Currency</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder="e.g. USD, EUR, GBP" />
-                            </FormControl>
-                            <FormDescription>
-                              Enter the currency code (e.g. USD, EUR, GBP)
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
+                      {/* Description Section */}
                       <FormField
                         control={form.control}
                         name="description"

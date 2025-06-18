@@ -1,5 +1,113 @@
 import { createClient } from "@/utils/supabase/client"
 
+export async function updateClass(params: {
+    classId: string;
+    title?: string;
+    description?: string | null;
+    subject?: string;
+    start_date?: string;
+    end_date?: string;
+    status?: string;
+    days_repeated?: string[];
+    class_link?: string | null;
+    teacher_ids?: string[];
+    student_ids?: string[];
+}): Promise<{ success: boolean; error?: any }> {
+    const supabase = createClient()
+    const {
+        classId,
+        title,
+        description,
+        subject,
+        start_date,
+        end_date,
+        status,
+        days_repeated,
+        class_link,
+        teacher_ids,
+        student_ids
+    } = params
+
+    try {
+        // Update class basic information
+        const classUpdateData: any = {}
+        if (title !== undefined) classUpdateData.title = title
+        if (description !== undefined) classUpdateData.description = description
+        if (subject !== undefined) classUpdateData.subject = subject
+        if (start_date !== undefined) classUpdateData.start_date = start_date
+        if (end_date !== undefined) classUpdateData.end_date = end_date
+        if (status !== undefined) classUpdateData.status = status
+        if (days_repeated !== undefined) classUpdateData.days_repeated = days_repeated
+        if (class_link !== undefined) classUpdateData.class_link = class_link
+        classUpdateData.updated_at = new Date().toISOString()
+
+        // Only update if there are fields to update
+        if (Object.keys(classUpdateData).length > 0) {
+            const { error: classError } = await supabase
+                .from('classes')
+                .update(classUpdateData)
+                .eq('id', classId)
+
+            if (classError) throw classError
+        }
+
+        // Update teacher assignments if provided
+        if (teacher_ids !== undefined) {
+            // First, remove all existing teacher assignments for this class
+            const { error: deleteTeacherError } = await supabase
+                .from('class_teachers')
+                .delete()
+                .eq('class_id', classId)
+
+            if (deleteTeacherError) throw deleteTeacherError
+
+            // Then, add new teacher assignments
+            if (teacher_ids.length > 0) {
+                const teacherAssignments = teacher_ids.map(teacherId => ({
+                    class_id: classId,
+                    teacher_id: teacherId
+                }))
+
+                const { error: insertTeacherError } = await supabase
+                    .from('class_teachers')
+                    .insert(teacherAssignments)
+
+                if (insertTeacherError) throw insertTeacherError
+            }
+        }
+
+        // Update student enrollments if provided
+        if (student_ids !== undefined) {
+            // First, remove all existing student enrollments for this class
+            const { error: deleteStudentError } = await supabase
+                .from('class_students')
+                .delete()
+                .eq('class_id', classId)
+
+            if (deleteStudentError) throw deleteStudentError
+
+            // Then, add new student enrollments
+            if (student_ids.length > 0) {
+                const studentEnrollments = student_ids.map(studentId => ({
+                    class_id: classId,
+                    student_id: studentId
+                }))
+
+                const { error: insertStudentError } = await supabase
+                    .from('class_students')
+                    .insert(studentEnrollments)
+
+                if (insertStudentError) throw insertStudentError
+            }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating class:', error)
+        return { success: false, error }
+    }
+}
+
 export async function updateClassSession(params: {
     sessionId: string;
     action: string;
@@ -7,29 +115,44 @@ export async function updateClassSession(params: {
     newDate?: string;
     newStartTime?: string;
     newEndTime?: string;
+    newStartDate?: string;
+    newEndDate?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, teacherNotes, newDate, newStartTime, newEndTime } = params
+    const { sessionId, action, teacherNotes, newDate, newStartTime, newEndTime, newStartDate, newEndDate } = params
 
     try {
         switch (action.toLowerCase()) {
             case 'reschedule': {
-                if (!newDate || !newStartTime || !newEndTime) {
-                    throw new Error('New date, start time, and end time are required for rescheduling')
+                // Support both old and new schema for backward compatibility
+                if (newStartDate && newEndDate) {
+                    // New schema: use start_date and end_date
+                    const { error: sessionError } = await supabase
+                        .from('class_sessions')
+                        .update({
+                            start_date: newStartDate,
+                            end_date: newEndDate,
+                            status: 'scheduled'
+                        })
+                        .eq('id', sessionId)
+
+                    if (sessionError) throw sessionError
+                } else if (newDate && newStartTime && newEndTime) {
+                    // Old schema: use date, start_time, and end_time
+                    const { error: sessionError } = await supabase
+                        .from('class_sessions')
+                        .update({
+                            date: newDate,
+                            start_time: newStartTime,
+                            end_time: newEndTime,
+                            status: 'scheduled'
+                        })
+                        .eq('id', sessionId)
+
+                    if (sessionError) throw sessionError
+                } else {
+                    throw new Error('New start date and end date are required for rescheduling')
                 }
-
-                // Update class session with new schedule
-                const { error: sessionError } = await supabase
-                    .from('class_sessions')
-                    .update({
-                        date: newDate,
-                        start_time: newStartTime,
-                        end_time: newEndTime,
-                        status: 'scheduled'
-                    })
-                    .eq('id', sessionId)
-
-                if (sessionError) throw sessionError
 
                 // Create a record in class history for the reschedule
                 const { error: historyError } = await supabase

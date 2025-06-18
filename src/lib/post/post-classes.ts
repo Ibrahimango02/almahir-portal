@@ -13,7 +13,7 @@ type ClassData = {
     status: string
     class_link: string | null
     times: Record<string, { start: string; end: string }>
-    teacher_id: string
+    teacher_id: string[]
 }
 
 export async function createClass(classData: ClassData) {
@@ -41,20 +41,17 @@ export async function createClass(classData: ClassData) {
         }
 
         // Assign teacher to class
-        const { error: teacherError } = await supabase
-            .from('class_teachers')
-            .insert({
-                class_id: classRecord.id,
-                teacher_id: classData.teacher_id
-            })
+        for (const teacherId of classData.teacher_id) {
+            const { error: teacherError } = await supabase
+                .from('class_teachers')
+                .insert({
+                    class_id: classRecord.id,
+                    teacher_id: teacherId
+                })
 
-        if (teacherError) {
-            // If teacher assignment fails, delete the class to maintain consistency
-            await supabase
-                .from('classes')
-                .delete()
-                .eq('id', classRecord.id)
-            throw new Error(`Failed to assign teacher: ${teacherError.message}`)
+            if (teacherError) {
+                throw new Error(`Failed to assign teacher: ${teacherError.message}`)
+            }
         }
 
         // Generate class sessions for each day between start and end date
@@ -62,9 +59,11 @@ export async function createClass(classData: ClassData) {
         const endDate = new Date(classData.end_date)
         const sessions = []
 
-        // Helper function to get day name
+        // Helper function to get day name with capital first letter
         const getDayName = (date: Date) => {
-            return format(date, 'EEEE').toLowerCase()
+            const dayName = format(date, 'EEEE').toLowerCase()
+            // Convert to capital first letter (e.g., "monday" -> "Monday")
+            return dayName.charAt(0).toUpperCase() + dayName.slice(1)
         }
 
         // Generate sessions for each day in the date range
@@ -76,13 +75,40 @@ export async function createClass(classData: ClassData) {
             if (classData.days_repeated.includes(dayName)) {
                 const timeSlot = classData.times[dayName]
                 if (timeSlot) {
-                    sessions.push({
-                        class_id: classRecord.id,
-                        date: format(currentDate, 'yyyy-MM-dd'),
-                        start_time: timeSlot.start,
-                        end_time: timeSlot.end,
-                        status: 'scheduled'
-                    })
+                    try {
+                        // The times are already in ISO format, so we can use them directly
+                        const startDateTime = new Date(timeSlot.start)
+                        const endDateTime = new Date(timeSlot.end)
+
+                        // Validate the dates
+                        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+                            throw new Error(`Invalid datetime format for ${dayName}: ${timeSlot.start} - ${timeSlot.end}`)
+                        }
+
+                        // Update the date part to match the current iteration date
+                        const sessionStartDate = new Date(currentDate)
+                        const sessionEndDate = new Date(currentDate)
+
+                        // Extract time components from the ISO strings
+                        const startTime = startDateTime.toTimeString().split(' ')[0]
+                        const endTime = endDateTime.toTimeString().split(' ')[0]
+
+                        const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
+                        const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
+
+                        sessionStartDate.setHours(startHours, startMinutes, startSeconds, 0)
+                        sessionEndDate.setHours(endHours, endMinutes, endSeconds, 0)
+
+                        sessions.push({
+                            class_id: classRecord.id,
+                            start_date: sessionStartDate.toISOString(),
+                            end_date: sessionEndDate.toISOString(),
+                            status: 'scheduled'
+                        })
+                    } catch (error) {
+                        console.error(`Error creating session for ${dayName}:`, error)
+                        throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                    }
                 }
             }
 

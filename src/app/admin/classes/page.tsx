@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Search } from "lucide-react"
-import { format } from "date-fns"
-import Image from "next/image"
-
+import Link from "next/link"
+import { format, parseISO } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,12 +12,15 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getClasses } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
+import { formatDateTime } from "@/lib/utils/timezone"
+import { useTimezone } from "@/contexts/TimezoneContext"
 
 export default function ClassesPage() {
     const router = useRouter()
     const [classes, setClasses] = useState<ClassType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
+    const { timezone } = useTimezone()
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -64,9 +66,11 @@ export default function ClassesPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
                     <p className="text-muted-foreground">Manage and view all classes</p>
                 </div>
-                <Button onClick={() => router.push("/admin/classes/new")}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Class
+                <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+                    <Link href="/admin/classes/new">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Class
+                    </Link>
                 </Button>
             </div>
 
@@ -98,43 +102,42 @@ export default function ClassesPage() {
                             <p className="text-muted-foreground">No classes found</p>
                         </div>
                     ) : (
-                        <div className="grid gap-4">
+                        <div className="grid gap-2">
                             {filteredClasses.map((classItem) => (
                                 <Card key={classItem.class_id}>
-                                    <CardContent className="p-6">
-                                        <div className="flex items-start justify-between">
-                                            <div className="space-y-1">
+                                    <CardContent className="p-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="space-y-0.5">
                                                 <div className="flex items-center gap-2">
-                                                    <h3 className="font-semibold text-lg">{classItem.title}</h3>
+                                                    <h3 className="font-medium text-base">{classItem.title}</h3>
                                                     <Badge
                                                         className={`${classItem.status === "active" ? "bg-green-600" : "bg-gray-500"}`}
                                                     >
                                                         {classItem.status}
                                                     </Badge>
                                                 </div>
-                                                <p className="text-sm text-muted-foreground">{classItem.description}</p>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span>Subject: {classItem.subject}</span>
+                                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                                    <span>{classItem.subject}</span>
                                                     <span>•</span>
                                                     <span>
-                                                        {format(new Date(classItem.start_date), "MMM d, yyyy")} -{" "}
-                                                        {format(new Date(classItem.end_date), "MMM d, yyyy")}
+                                                        {formatDateTime(classItem.start_date, "MMM d", timezone)} -{" "}
+                                                        {formatDateTime(classItem.end_date, "MMM d", timezone)}
                                                     </span>
                                                     <span>•</span>
                                                     <span>{classItem.enrolled_students.length} Students</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3">
                                                 <div className="flex -space-x-2">
                                                     {classItem.teachers.map((teacher) => (
-                                                        <Avatar key={teacher.teacher_id} className="border-2 border-background">
+                                                        <Avatar key={teacher.teacher_id} className="border-2 border-background h-6 w-6">
                                                             {teacher.avatar_url ? (
                                                                 <AvatarImage
                                                                     src={teacher.avatar_url}
                                                                     alt={`${teacher.first_name} ${teacher.last_name}`}
                                                                 />
                                                             ) : null}
-                                                            <AvatarFallback>
+                                                            <AvatarFallback className="text-xs">
                                                                 {teacher.first_name[0]}
                                                                 {teacher.last_name[0]}
                                                             </AvatarFallback>
@@ -143,6 +146,7 @@ export default function ClassesPage() {
                                                 </div>
                                                 <Button
                                                     variant="outline"
+                                                    size="sm"
                                                     onClick={() => router.push(`/admin/classes/${classItem.class_id}`)}
                                                 >
                                                     View Details

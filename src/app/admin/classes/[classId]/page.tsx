@@ -5,9 +5,8 @@ import { getClassById } from "@/lib/get/get-classes"
 
 export default async function ClassPage({ params }: { params: { classId: string } }) {
     // Fetch the class data using the class ID
-    const { classId } = params
+    const { classId } = await params
 
-    console.log(classId)
     const classData = await getClassById(classId)
 
     // If class not found, show 404 page

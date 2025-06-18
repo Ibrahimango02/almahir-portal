@@ -13,18 +13,17 @@ export default async function ClassSessionPage({ params }: { params: { classId: 
     notFound()
   }
 
-  // Transform the data to match the expected structure for ClassDetails
+  // Transform the data to match the expected structure for ClassSessionDetails
   const classData = {
     session_id: classSessionData.session_id,
     title: classSessionData.title,
     description: classSessionData.description || "",
     subject: classSessionData.subject,
-    date: classSessionData.date,
-    start_time: classSessionData.start_time,
-    end_time: classSessionData.end_time,
+    start_date: classSessionData.start_date,
+    end_date: classSessionData.end_date,
     status: classSessionData.status,
     class_link: classSessionData.class_link,
-    teacher: classSessionData.teachers[0],
+    teachers: classSessionData.teachers || [],
     enrolled_students: classSessionData.enrolled_students || []
   }
 

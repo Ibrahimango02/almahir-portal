@@ -1,10 +1,18 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { format, parseISO, differenceInMinutes, isPast, isValid, isBefore } from "date-fns"
+import { differenceInMinutes, isPast, isValid, isBefore } from "date-fns"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { StatusBadge } from "./status-badge"
 import { getClassesToday } from "@/lib/get/get-classes"
 import { ClassType, ClassSessionType } from "@/types"
+import {
+  formatDateTime,
+  formatTime,
+  utcToLocal,
+  isTodayInTimezone
+} from "@/lib/utils/timezone"
+import { useTimezone } from "@/contexts/TimezoneContext"
+
 // Helper function to format duration
 const formatDuration = (minutes: number) => {
   if (minutes < 0) {
@@ -23,7 +31,7 @@ const formatDuration = (minutes: number) => {
 const safeFormat = (date: Date | null, formatStr: string, fallback: string = "–") => {
   if (!date || !isValid(date)) return fallback;
   try {
-    return format(date, formatStr);
+    return formatDateTime(date, formatStr);
   } catch (error) {
     console.error("Error formatting date:", error);
     return fallback;
@@ -33,8 +41,7 @@ const safeFormat = (date: Date | null, formatStr: string, fallback: string = "�
 // Helper function to safely parse ISO dates
 const safeParseISO = (dateStr: string): Date | null => {
   try {
-    const date = parseISO(dateStr);
-    return isValid(date) ? date : null;
+    return utcToLocal(dateStr);
   } catch (error) {
     console.error("Error parsing date:", dateStr, error);
     return null;
@@ -56,10 +63,9 @@ export async function RecentClasses() {
       if (!session) return null;
 
       try {
-        // Times now come directly from the session
-        // Parse with error handling
-        let startDateTime = safeParseISO(session.start_time);
-        let endDateTime = safeParseISO(session.end_time);
+        // Convert UTC times to local timezone for display
+        let startDateTime = utcToLocal(session.start_date);
+        let endDateTime = utcToLocal(session.end_date);
 
         // If direct parsing fails, try parsing as time strings
         if (!startDateTime || !endDateTime) {
@@ -75,13 +81,13 @@ export async function RecentClasses() {
               };
             };
 
-            const sessionDate = safeParseISO(session.date) || new Date();
+            const sessionDate = safeParseISO(session.start_date) || new Date();
 
-            const startTime = parseTimeString(session.start_time);
+            const startTime = parseTimeString(session.start_date);
             startDateTime = new Date(sessionDate);
             startDateTime.setHours(startTime.hours, startTime.minutes, startTime.seconds);
 
-            const endTime = parseTimeString(session.end_time);
+            const endTime = parseTimeString(session.end_date);
             endDateTime = new Date(sessionDate);
             endDateTime.setHours(endTime.hours, endTime.minutes, endTime.seconds);
 
@@ -105,117 +111,99 @@ export async function RecentClasses() {
           }
         }
 
+        // Calculate duration
+        let durationMinutes = 60; // default to 1 hour
+        if (isValid(startDateTime) && isValid(endDateTime)) {
+          durationMinutes = Math.max(differenceInMinutes(endDateTime, startDateTime), 0);
+        }
+
         return {
-          class_id: cls.class_id,
           session_id: session.session_id,
+          class_id: cls.class_id,
           title: cls.title,
-          description: cls.description || "",
+          description: cls.description,
           subject: cls.subject,
-          date: session.date,
-          start_time: startDateTime.toISOString(),
-          end_time: endDateTime.toISOString(),
+          start_date: session.start_date,
+          end_date: session.end_date,
           status: session.status,
-          class_link: cls.class_link || "",
-          teachers: cls.teachers || [],
-          enrolled_students: cls.enrolled_students || []
-        } as ClassSessionType;
+          class_link: cls.class_link,
+          teachers: cls.teachers,
+          enrolled_students: cls.enrolled_students,
+          startDateTime,
+          endDateTime,
+          duration: formatDuration(durationMinutes)
+        };
       } catch (error) {
         console.error("Error processing session:", error);
         return null;
       }
-    }).filter(Boolean); // Filter out null values
+    }).filter(Boolean);
   });
 
-  // Filter to get only past sessions or those with completed/cancelled status
-  const recentSessions = todaySessions
-    .filter(session => {
-      if (!session || !session.end_time || !session.status) return false;
+  // Filter for recent classes (classes that have ended)
+  const recentSessions = todaySessions.filter(session => {
+    if (!session) return false;
+    return isPast(session.endDateTime);
+  });
 
-      try {
-        const now = new Date();
-        const endTime = new Date(session.end_time);
+  // Sort by end time (most recent first)
+  recentSessions.sort((a, b) => {
+    if (!a || !b) return 0;
+    return b.endDateTime.getTime() - a.endDateTime.getTime();
+  });
 
-        // Include sessions that are either:
-        // 1. Past their end time OR
-        // 2. Have a status of complete, rescheduled, cancelled, or absence
-        return isBefore(endTime, now) ||
-          ['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
-      } catch (error) {
-        return false;
-      }
-    });
-
-  // Sort by most recent first
-  const sortedSessions = recentSessions
-    .sort((a, b) => {
-      try {
-        if (!a || !b || !a.end_time || !b.end_time) return 0;
-        return new Date(b.end_time).getTime() - new Date(a.end_time).getTime();
-      } catch (error) {
-        return 0;
-      }
-    });
+  if (recentSessions.length === 0) {
+    return (
+      <Card className="p-6">
+        <div className="text-center text-muted-foreground">
+          <p>No recent classes today</p>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {sortedSessions.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">No recent classes for today</div>
-      ) : (
-        sortedSessions
-          .filter(cls => cls !== null)
-          .map((cls) => {
-            if (!cls) return null;
+      {recentSessions.map((session) => {
+        if (!session) return null;
 
-            try {
-              const startTime = safeParseISO(cls.start_time);
-              const endTime = safeParseISO(cls.end_time);
-
-              // Skip if we couldn't parse the dates
-              if (!startTime || !endTime) {
-                console.error("Invalid dates in class session:", cls.session_id);
-                return null;
-              }
-
-              const durationMinutes = differenceInMinutes(endTime, startTime);
-              const durationText = formatDuration(durationMinutes);
-
-              // Extract the original class ID from the session ID (format: classId-sessionId)
-              //const sessionId = cls.id.split('-')[1];
-
-              return (
-                <Link href={`/admin/schedule/${cls.session_id}`} key={cls.session_id}>
-                  <Card className="p-4 cursor-pointer hover:shadow-md transition-shadow">
-                    <div className="flex flex-col space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <Avatar>
-                            <AvatarFallback>
-                              {cls.teachers?.[0]?.first_name?.[0] || '?'}
-                              {cls.teachers?.[0]?.last_name?.[0] || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium leading-none">{cls.title}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {cls.teachers?.[0]?.first_name || 'No'} {cls.teachers?.[0]?.last_name || 'Teacher'}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {safeFormat(startTime, "MMM d, yyyy")} • {safeFormat(startTime, "h:mm a")} - {safeFormat(endTime, "h:mm a")} ({durationText})
-                            </p>
-                          </div>
-                        </div>
-                        <StatusBadge status={cls.status} />
-                      </div>
-                    </div>
-                  </Card>
+        return (
+          <Card key={session.session_id} className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="font-semibold text-lg">{session.title}</h3>
+                  <StatusBadge status={session.status} />
+                </div>
+                <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">
+                    {formatDateTime(session.startDateTime, 'h:mm a')} - {formatTime(session.endDateTime, 'h:mm a')}
+                  </span>
+                  <span className="text-muted-foreground">•</span>
+                  <span className="text-muted-foreground">{session.duration}</span>
+                </div>
+                {session.teachers.length > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs text-muted-foreground">Teacher:</span>
+                    <span className="text-sm font-medium">
+                      {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
+                >
+                  View
                 </Link>
-              );
-            } catch (error) {
-              console.error("Error rendering class card:", error);
-              return null;
-            }
-          }).filter(Boolean) // Filter out any null elements
-      )}
+              </div>
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }

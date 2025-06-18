@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { BackButton } from "@/components/back-button"
 import { createClient } from "@/utils/supabase/client"
 import { StudentType, ClassType } from "@/types"
-import { getActiveClasses, getClassStudentCount } from "@/lib/get/get-classes"
+import { getActiveClasses, getClassStudentCount, getClassesByStudentId } from "@/lib/get/get-classes"
 import { getStudentById } from "@/lib/get/get-students"
 import { assignStudentToClasses } from "@/lib/post/post-students"
 
@@ -49,13 +49,22 @@ export default function AssignToClassPage() {
         const student = await getStudentById(id)
         setStudent(student)
 
-        // Fetch active classes
-        const activeClasses = await getActiveClasses()
-        setClasses(activeClasses)
+        // Fetch active classes and student's current classes
+        const [activeClasses, studentClasses] = await Promise.all([
+          getActiveClasses(),
+          getClassesByStudentId(id)
+        ])
+
+        // Get IDs of classes student is already enrolled in
+        const enrolledClassIds = new Set(studentClasses.map(cls => cls.class_id))
+
+        // Filter out classes student is already enrolled in
+        const availableClasses = activeClasses.filter(cls => !enrolledClassIds.has(cls.class_id))
+        setClasses(availableClasses)
 
         // Fetch student counts for each class
         const counts: Record<string, number> = {}
-        for (const cls of activeClasses) {
+        for (const cls of availableClasses) {
           counts[cls.class_id] = await getClassStudentCount(cls.class_id) || 0
         }
         setStudentCounts(counts)
@@ -153,7 +162,7 @@ export default function AssignToClassPage() {
           <CardTitle>
             Assign {student.first_name} {student.last_name} to Classes
           </CardTitle>
-          <CardDescription>Select one or more classes to assign this student to.</CardDescription>
+          <CardDescription>Select one or more classes to assign to this student.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -180,7 +189,7 @@ export default function AssignToClassPage() {
                     <div className="space-y-4">
                       {filteredClasses.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                          No classes found matching your search criteria
+                          No classes Available
                         </div>
                       ) : (
                         filteredClasses.map((cls) => (
@@ -224,10 +233,18 @@ export default function AssignToClassPage() {
                                     </div>
                                     <div className="flex items-center mt-2">
                                       <Avatar className="h-6 w-6 mr-2">
-                                        <AvatarFallback className="text-xs">
-                                          {cls.teachers[0]?.first_name?.[0] || "?"}
-                                          {cls.teachers[0]?.last_name?.[0] || "?"}
-                                        </AvatarFallback>
+                                        {cls.teachers[0]?.avatar_url ? (
+                                          <img
+                                            src={cls.teachers[0].avatar_url}
+                                            alt={`${cls.teachers[0].first_name} ${cls.teachers[0].last_name}`}
+                                            className="h-full w-full object-cover"
+                                          />
+                                        ) : (
+                                          <AvatarFallback className="text-xs">
+                                            {cls.teachers[0]?.first_name?.[0] || "?"}
+                                            {cls.teachers[0]?.last_name?.[0] || "?"}
+                                          </AvatarFallback>
+                                        )}
                                       </Avatar>
                                       <p className="text-sm">
                                         {cls.teachers[0]?.first_name || "Unknown"} {cls.teachers[0]?.last_name || "Teacher"}

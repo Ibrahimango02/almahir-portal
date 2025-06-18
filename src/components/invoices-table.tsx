@@ -22,6 +22,7 @@ import { updateInvoice } from "@/lib/put/put-invoices"
 
 interface InvoicesTableProps {
   invoices: InvoiceType[]
+  onStatusUpdate: () => void
 }
 
 type SortDirection = 'asc' | 'desc' | 'none'
@@ -31,7 +32,7 @@ type SortConfig = {
   direction: SortDirection
 }
 
-export function InvoicesTable({ invoices }: InvoicesTableProps) {
+export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -121,6 +122,9 @@ export function InvoicesTable({ invoices }: InvoicesTableProps) {
       }
 
       await updateInvoice(invoiceData)
+
+      // Notify parent component to refresh data
+      onStatusUpdate()
 
       // Refresh the page to get updated data
       router.refresh()

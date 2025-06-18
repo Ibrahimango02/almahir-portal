@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { TimezoneProvider } from "@/contexts/TimezoneContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,8 +22,10 @@ export default function RootLayout({
     <html lang="en" className="light">
       <body className={inter.className}>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <TimezoneProvider>
+            {children}
+            <Toaster />
+          </TimezoneProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { getClasses } from "@/lib/get/get-classes"
 import { WeeklyScheduleProps, ClassType } from "@/types"
+import { Card } from "@/components/ui/card"
+import { getClassesToday } from "@/lib/get/get-classes"
+import { formatDateTime } from "@/lib/utils/timezone"
 
 export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd }: WeeklyScheduleProps) {
     const router = useRouter()
@@ -71,11 +74,11 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
 
             // Find sessions that fall within the current week's view
             cls.sessions.forEach(session => {
-                if (!session || !session.date) return;
+                if (!session || !session.start_date) return;
 
                 try {
                     // Check if session date is within current week
-                    const sessionDate = parseISO(session.date);
+                    const sessionDate = parseISO(session.start_date);
                     const isInCurrentWeek = weekDays.some(weekDay => isSameDay(weekDay, sessionDate));
 
                     if (!isInCurrentWeek) return;
@@ -84,9 +87,9 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                     let startDateTime, endDateTime;
 
                     try {
-                        // Try direct parsing first
-                        startDateTime = parseISO(session.start_time);
-                        endDateTime = parseISO(session.end_time);
+                        // Try direct parsing first - now using start_date and end_date
+                        startDateTime = parseISO(session.start_date);
+                        endDateTime = parseISO(session.end_date);
 
                         // Validate the parsed dates
                         if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
@@ -105,11 +108,11 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                             };
                         };
 
-                        const startTime = parseTimeString(session.start_time);
+                        const startTime = parseTimeString(session.start_date);
                         startDateTime = new Date(sessionDate);
                         startDateTime.setHours(startTime.hours, startTime.minutes, startTime.seconds);
 
-                        const endTime = parseTimeString(session.end_time);
+                        const endTime = parseTimeString(session.end_date);
                         endDateTime = new Date(sessionDate);
                         endDateTime.setHours(endTime.hours, endTime.minutes, endTime.seconds);
                     }
@@ -130,13 +133,13 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                         end_time: endDateTime.toISOString(),
                         status: session.status,
                         session_id: session.session_id,
-                        session_date: session.date
+                        session_date: formatDateTime(startDateTime, 'yyyy-MM-dd')
                     });
                 } catch (error) {
                     console.error("Error processing session:", {
                         class_id: cls.class_id,
                         session_id: session.session_id,
-                        date: session.date
+                        start_date: session.start_date
                     }, error);
                 }
             });

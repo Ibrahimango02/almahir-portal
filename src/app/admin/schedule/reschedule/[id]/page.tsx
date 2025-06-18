@@ -19,9 +19,11 @@ import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
+import { updateClassSession } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
-import { updateClassSession } from "@/lib/put/put-classes"
+import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
+import { useTimezone } from "@/contexts/TimezoneContext"
 
 // Create a schema for form validation
 const formSchema = z
@@ -92,12 +94,12 @@ function parseLocalDate(dateStr: string) {
   return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
-
 export default function ReschedulePage() {
   const params = useParams()
   const { id } = params as { id: string }
   const router = useRouter()
   const { toast } = useToast()
+  const { timezone } = useTimezone()
   const [classData, setClassData] = useState<ClassSessionType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -124,36 +126,46 @@ export default function ReschedulePage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      date: classData ? parseLocalDate(classData.date) : new Date(),
-      start_time: classData ? format(new Date(`${classData.date}T${classData.start_time}`), "HH:mm") : "",
-      end_time: classData ? format(new Date(`${classData.date}T${classData.end_time}`), "HH:mm") : "",
+      date: classData ? parseLocalDate(formatDateTime(utcToLocal(classData.start_date, timezone), 'yyyy-MM-dd', timezone)) : new Date(),
+      start_time: classData ? format(utcToLocal(classData.start_date, timezone), "HH:mm") : "",
+      end_time: classData ? format(utcToLocal(classData.end_date, timezone), "HH:mm") : "",
     },
   })
 
   // Update form values when classData is loaded
   useEffect(() => {
     if (classData) {
-      const newDate = new Date(classData.date)
-      const startTime = new Date(`${classData.date}T${classData.start_time}`)
-      const endTime = new Date(`${classData.date}T${classData.end_time}`)
+      const startDateTime = utcToLocal(classData.start_date, timezone)
+      const endDateTime = utcToLocal(classData.end_date, timezone)
 
       form.reset({
-        date: parseLocalDate(classData.date),
-        start_time: format(startTime, "HH:mm"),
-        end_time: format(endTime, "HH:mm"),
+        date: parseLocalDate(formatDateTime(startDateTime, 'yyyy-MM-dd', timezone)),
+        start_time: format(startDateTime, "HH:mm"),
+        end_time: format(endDateTime, "HH:mm"),
       })
     }
-  }, [classData, form])
+  }, [classData, form, timezone])
 
   // Handle form submission
   async function onSubmit(data: FormValues) {
     try {
+      // Convert local date and times to UTC before saving
+      const startUtc = combineDateTimeToUtc(
+        format(data.date, 'yyyy-MM-dd'),
+        data.start_time + ':00',
+        timezone
+      );
+      const endUtc = combineDateTimeToUtc(
+        format(data.date, 'yyyy-MM-dd'),
+        data.end_time + ':00',
+        timezone
+      );
+
       const result = await updateClassSession({
         sessionId: id,
         action: 'reschedule',
-        newDate: format(data.date, "yyyy-MM-dd"),
-        newStartTime: data.start_time,
-        newEndTime: data.end_time,
+        newStartDate: startUtc.toISOString(),
+        newEndDate: endUtc.toISOString(),
       })
 
       if (!result.success) {
@@ -163,7 +175,7 @@ export default function ReschedulePage() {
       // Show success toast
       toast({
         title: "Class rescheduled",
-        description: `The class has been rescheduled to ${format(data.date, "MMMM d, yyyy")} at ${data.start_time}`,
+        description: `The class has been rescheduled to ${formatDateTime(data.date, "MMMM d, yyyy", timezone)} at ${data.start_time}`,
       })
 
       // Redirect back to class details page
@@ -187,11 +199,11 @@ export default function ReschedulePage() {
     return notFound()
   }
 
-  const [year, month, day] = classData.date.split("-");
-  const localDate = new Date(Number(year), Number(month) - 1, Number(day));
-  const formattedDate = format(localDate, "MMMM d, yyyy");
-  const formattedStartTime = format(new Date(`${classData.date}T${classData.start_time}`), "HH:mm")
-  const formattedEndTime = format(new Date(`${classData.date}T${classData.end_time}`), "HH:mm")
+  const startDateTime = utcToLocal(classData.start_date, timezone)
+  const endDateTime = utcToLocal(classData.end_date, timezone)
+  const formattedDate = formatDateTime(startDateTime, "MMMM d, yyyy", timezone)
+  const formattedStartTime = format(startDateTime, "HH:mm")
+  const formattedEndTime = format(endDateTime, "HH:mm")
 
   return (
     <div className="flex flex-col gap-6">

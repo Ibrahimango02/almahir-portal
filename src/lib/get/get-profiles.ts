@@ -1,8 +1,8 @@
 import { createClient } from "@/utils/supabase/client"
-import { AdminType } from "@/types"
+import { AdminType, ProfileType } from "@/types"
 
 
-export async function getProfile() {
+export async function getProfile(): Promise<ProfileType> {
     const supabase = createClient()
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -67,20 +67,5 @@ export async function getAdminById(id: string): Promise<AdminType> {
         throw error
     }
 
-    return {
-        admin_id: profile.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        gender: profile.gender,
-        country: profile.country,
-        language: profile.language,
-        email: profile.email,
-        phone: profile.phone,
-        timezone: profile.timezone,
-        status: profile.status,
-        role: profile.role,
-        avatar_url: profile.avatar_url,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at
-    }
+    return profile
 }

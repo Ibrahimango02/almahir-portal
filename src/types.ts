@@ -10,6 +10,23 @@ export type WeeklyScheduleProps = {
     timeRangeEnd?: number
 }
 
+export type ProfileType = {
+    id: string
+    first_name: string
+    last_name: string
+    email: string
+    phone: string | null
+    gender: string
+    country: string
+    language: string
+    timezone: string
+    status: string
+    role: string
+    avatar_url: string | null
+    created_at: string
+    updated_at: string | null
+}
+
 export type AdminType = {
     admin_id: string
     first_name: string
@@ -90,8 +107,8 @@ export type ClassType = {
     title: string
     description: string | null
     subject: string
-    start_date: string
-    end_date: string
+    start_date: string // ISO datetime in UTC (timestamptz)
+    end_date: string // ISO datetime in UTC (timestamptz)
     status: string
     days_repeated: string[]
     sessions: SessionType[]
@@ -104,9 +121,8 @@ export type ClassType = {
 
 export type SessionType = {
     session_id: string
-    date: string
-    start_time: string
-    end_time: string
+    start_date: string // ISO datetime in UTC (timestamptz)
+    end_date: string // ISO datetime in UTC (timestamptz)
     status: string
     created_at: string
     updated_at: string | null
@@ -118,9 +134,8 @@ export type ClassSessionType = {
     title: string
     description: string | null
     subject: string
-    date: string
-    start_time: string
-    end_time: string
+    start_date: string // ISO datetime in UTC (timestamptz)
+    end_date: string // ISO datetime in UTC (timestamptz)
     status: string
     class_link: string | null
     teachers: TeacherType[]

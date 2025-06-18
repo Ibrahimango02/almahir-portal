@@ -1,37 +1,33 @@
 "use client"
 
-import type React from "react"
-import { format, parseISO, addDays, isSameDay, isWithinInterval, isPast, isFuture, isAfter, isBefore, endOfDay } from "date-fns"
-import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
-import { TablePagination } from "./table-pagination"
+import { useState, useEffect, useMemo } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { format, addDays, isSameDay, isWithinInterval, isPast, isFuture, isAfter, isBefore, endOfDay } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "./status-badge"
+import { TablePagination } from "./table-pagination"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CalendarDays, Clock, Users, ExternalLink } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { getClasses } from "@/lib/get/get-classes"
-import { ScheduleListViewProps, ClassType, ClassSessionType, StudentType, TeacherType, SessionType } from "@/types"
-
+import { ClassType, ClassSessionType, ScheduleListViewProps } from "@/types"
+import {
+  formatDateTime,
+  formatTime,
+  formatDate,
+  utcToLocal,
+  isTodayInTimezone
+} from "@/lib/utils/timezone"
+import { useTimezone } from "@/contexts/TimezoneContext"
 
 export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewProps) {
   const router = useRouter()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const { timezone } = useTimezone()
   const [classData, setClassData] = useState<ClassType[]>([])
-  const [loading, setLoading] = useState(true)
-
-  // Fetch class data
-  useEffect(() => {
-    const fetchClasses = async () => {
-      try {
-        const classes = await getClasses()
-        setClassData(classes)
-      } catch (error) {
-        console.error("Error fetching classes:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchClasses()
-  }, [])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
 
   // Helper function to parse time string (HH:MM:SS) to a Date object
   const combineDateTime = (date: string, time: string, isEndTime: boolean = false, startTime?: string): Date => {
@@ -76,35 +72,37 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
     }
   }
 
-  // Transform classes with sessions_status into flattened class sessions for display
-  const getClassSessions = (classes: ClassType[]): ClassSessionType[] => {
-    return classes.flatMap(cls => {
-      // If no sessions, return empty array
-      if (!cls.sessions || cls.sessions.length === 0) {
-        return [];
+  // Fetch class data
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const data = await getClasses()
+        setClassData(data)
+      } catch (error) {
+        console.error('Error fetching classes:', error)
+      } finally {
+        setIsLoading(false)
       }
+    }
 
-      // Create entry for each session - times are now in each session
-      return cls.sessions.map(session => ({
+    fetchClasses()
+  }, [])
+
+  // Extract all sessions from classes
+  const allClassSessions = useMemo(() => {
+    return classData.flatMap(cls =>
+      cls.sessions.map(session => ({
+        ...session,
         class_id: cls.class_id,
-        session_id: session.session_id,
         title: cls.title,
         description: cls.description,
         subject: cls.subject,
-        date: session.date,
-        start_time: session.start_time,
-        end_time: session.end_time,
-        days_repeated: cls.days_repeated || [],
-        status: session.status,
-        class_link: cls.class_link || "",
+        class_link: cls.class_link,
         teachers: cls.teachers,
         enrolled_students: cls.enrolled_students
-      }));
-    });
-  };
-
-  // Get all class sessions
-  const allClassSessions = classData.length ? getClassSessions(classData) : [];
+      }))
+    )
+  }, [classData])
 
   // Filter sessions based on the selected week
   const filterByWeek = (sessions: ClassSessionType[]) => {
@@ -119,19 +117,9 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
 
     return sessions.filter(session => {
       // Parse date accurately, ensuring time is reset to start of day
-      const [year, month, day] = session.date.split('-').map(Number);
-      if (!year || !month || !day) return false;
-
-      const sessionDate = new Date(year, month - 1, day);
+      const startDateTime = utcToLocal(session.start_date, timezone);
+      const sessionDate = new Date(startDateTime);
       sessionDate.setHours(0, 0, 0, 0);
-
-      // Debug log to check the date comparisons
-      // console.log({
-      //   sessionDate: sessionDate.toISOString(),
-      //   weekStart: weekStart.toISOString(),
-      //   weekEnd: weekEnd.toISOString(),
-      //   isInRange: sessionDate >= weekStart && sessionDate <= weekEnd
-      // });
 
       // Strict date comparison
       return sessionDate >= weekStart && sessionDate <= weekEnd;
@@ -141,143 +129,475 @@ export function ScheduleListView({ filter, currentWeekStart }: ScheduleListViewP
   // First filter by week to get only sessions in the selected week
   const weekFilteredSessions = filterByWeek(allClassSessions);
 
-  // Then apply additional filters (upcoming/recent)
-  const filteredSessions = weekFilteredSessions.filter((session) => {
-    if (!filter) return true;
+  // Then apply additional filters based on the filter prop
+  const filteredSessions = useMemo(() => {
+    if (!filter) return weekFilteredSessions;
 
-    // Only handle upcoming/recent filters - week filtering is already done
-    if (filter === "recent" || filter === "upcoming") {
       const now = new Date();
 
-      // Create a combined date-time for accurate comparison
-      const sessionDateTime = combineDateTime(session.date, session.end_time, true, session.start_time);
+    switch (filter) {
+      case "upcoming":
+        return weekFilteredSessions.filter(session => {
+          try {
+            const startDateTime = utcToLocal(session.start_date, timezone);
+            return isFuture(startDateTime);
+          } catch (error) {
+            console.error('Error parsing session time:', error);
+            return false;
+          }
+        });
 
-      // Use current date/time as reference point if viewing current week
-      // Otherwise use a reference relative to the week
-      const referencePoint = currentWeekStart && isAfter(now, endOfDay(addDays(currentWeekStart, 6)))
-        ? endOfDay(addDays(currentWeekStart, 6)) // If week is in the past, use end of week
-        : currentWeekStart && isBefore(now, currentWeekStart)
-          ? currentWeekStart // If week is in the future, use start of week
-          : now; // Current week or no week specified, use now
+      case "recent":
+        return weekFilteredSessions.filter(session => {
+          try {
+            const endDateTime = utcToLocal(session.end_date, timezone);
+            return isPast(endDateTime);
+          } catch (error) {
+            console.error('Error parsing session time:', error);
+            return false;
+          }
+        });
 
-      if (filter === "recent") {
-        // Include sessions that are either:
-        // 1. Past their end time OR
-        // 2. Have a status of complete, rescheduled, cancelled, or absence
-        return isBefore(sessionDateTime, referencePoint) ||
-          ['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
-      } else { // upcoming
-        // Only show sessions that are:
-        // 1. Not past their end time AND
-        // 2. Don't have a status of complete, rescheduled, cancelled, or absence
-        return !isBefore(sessionDateTime, referencePoint) &&
-          !['complete', 'rescheduled', 'cancelled', 'absence'].includes(session.status);
+      case "morning":
+        return weekFilteredSessions.filter(session => {
+          try {
+            const startDateTime = utcToLocal(session.start_date, timezone);
+            const hour = startDateTime.getHours();
+            return hour >= 6 && hour < 12;
+          } catch (error) {
+            console.error('Error parsing session time:', error);
+            return false;
+          }
+        });
+
+      case "afternoon":
+        return weekFilteredSessions.filter(session => {
+          try {
+            const startDateTime = utcToLocal(session.start_date, timezone);
+            const hour = startDateTime.getHours();
+            return hour >= 12 && hour < 18;
+          } catch (error) {
+            console.error('Error parsing session time:', error);
+            return false;
+          }
+        });
+
+      case "evening":
+        return weekFilteredSessions.filter(session => {
+          try {
+            const startDateTime = utcToLocal(session.start_date, timezone);
+            const hour = startDateTime.getHours();
+            return hour >= 18 || hour < 6;
+          } catch (error) {
+            console.error('Error parsing session time:', error);
+            return false;
+          }
+        });
+
+      default:
+        return weekFilteredSessions;
+    }
+  }, [weekFilteredSessions, filter, timezone]);
+
+  // Sort sessions by start time
+  const sortedSessions = useMemo(() => {
+    return [...filteredSessions].sort((a, b) => {
+      try {
+        const aStart = utcToLocal(a.start_date, timezone);
+        const bStart = utcToLocal(b.start_date, timezone);
+        return aStart.getTime() - bStart.getTime();
+      } catch (error) {
+        console.error('Error sorting sessions:', error);
+        return 0;
       }
-    }
+    });
+  }, [filteredSessions, timezone]);
 
-    return true;
-  });
+  // Pagination
+  const totalPages = Math.ceil(sortedSessions.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentSessions = sortedSessions.slice(startIndex, endIndex);
 
-  // Sort sessions by date and time
-  const sortedSessions = [...filteredSessions].sort((a, b) => {
-    const aDateTime = combineDateTime(a.date, a.start_time)
-    const bDateTime = combineDateTime(b.date, b.start_time)
-    return aDateTime.getTime() - bDateTime.getTime()
-  });
-
-  // Recalculate pagination after filtering
-  const totalFilteredItems = sortedSessions.length;
-  const totalFilteredPages = Math.ceil(totalFilteredItems / pageSize);
-  const finalPaginatedSessions = sortedSessions.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  // Handle row click to navigate to class details
-  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, classId: string, sessionId: string) => {
-    // Check if the click was on a link or other interactive element
-    const target = e.target as HTMLElement
-    const isLink = target.tagName === "A" || target.closest("a")
-
-    // Only navigate if the click wasn't on a link
-    if (!isLink) {
-      router.push(`/admin/classes/${classId}/${sessionId}`)
-    }
-  }
-
-  if (loading) {
-    return <div className="text-center py-8">Loading classes...</div>
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Loading class schedule...</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      {sortedSessions.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">No classes found</div>
-      ) : (
-        <>
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-muted/50">
-                  <th className="text-left p-3 font-medium text-sm">Class</th>
-                  <th className="text-left p-3 font-medium text-sm">Teacher</th>
-                  <th className="text-left p-3 font-medium text-sm">Date & Time</th>
-                  <th className="text-left p-3 font-medium text-sm">Subject</th>
-                  <th className="text-left p-3 font-medium text-sm">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {finalPaginatedSessions.map((session) => {
-                  const startDateTime = combineDateTime(session.date, session.start_time)
-                  const endDateTime = combineDateTime(session.date, session.end_time, true, session.start_time)
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Class Schedule</h2>
+          <p className="text-muted-foreground">
+            View and manage your class schedule
+          </p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+          <TabsTrigger value="recent">Recent</TabsTrigger>
+          <TabsTrigger value="morning">Morning</TabsTrigger>
+          <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="space-y-4">
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
+
+                return (
+                  <Card key={session.session_id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{session.title}</h3>
+                          <StatusBadge status={session.status} />
+                          {isToday && (
+                            <Badge variant="secondary" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-4 w-4" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {session.class_link && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(session.class_link!, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Join
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="upcoming" className="space-y-4">
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
+
+                return (
+                  <Card key={session.session_id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{session.title}</h3>
+                          <StatusBadge status={session.status} />
+                          {isToday && (
+                            <Badge variant="secondary" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-4 w-4" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {session.class_link && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(session.class_link!, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Join
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="recent" className="space-y-4">
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
 
                   return (
-                    <tr
-                      key={session.session_id}
-                      className="border-t hover:bg-muted/20 cursor-pointer transition-colors"
-                      onClick={(e) => handleRowClick(e, session.class_id, session.session_id)}
-                    >
-                      <td className="p-3">
-                        <div className="font-medium">{session.title}</div>
-                        <p className="text-xs text-muted-foreground">
-                          {session.description && session.description.substring(0, 50)}
-                          {session.description && session.description.length > 50 ? '...' : ''}
-                        </p>
-                      </td>
-                      <td className="p-3">
-                        {session.teachers[0] ?
-                          `${session.teachers[0].first_name} ${session.teachers[0].last_name}` :
-                          'No teacher assigned'}
-                      </td>
-                      <td className="p-3">
-                        <div>{format(startDateTime, "EEEE, MMMM d, yyyy")}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(startDateTime, "h:mm a")} - {format(endDateTime, "h:mm a")}
+                  <Card key={session.session_id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{session.title}</h3>
+                          <StatusBadge status={session.status} />
+                          {isToday && (
+                            <Badge variant="secondary" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
                         </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="inline-block">{session.subject}</div>
-                      </td>
-                      <td className="p-3">
-                        <StatusBadge status={session.status} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-4 w-4" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
           </div>
+        </TabsContent>
 
+        <TabsContent value="morning" className="space-y-4">
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
+
+                return (
+                  <Card key={session.session_id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{session.title}</h3>
+                          <StatusBadge status={session.status} />
+                          {isToday && (
+                            <Badge variant="secondary" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-4 w-4" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {session.class_link && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(session.class_link!, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Join
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="afternoon" className="space-y-4">
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
+
+                return (
+                  <Card key={session.session_id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-lg">{session.title}</h3>
+                        <StatusBadge status={session.status} />
+                          {isToday && (
+                            <Badge variant="secondary" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-4 w-4" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-4 w-4" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-4 w-4" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {session.class_link && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(session.class_link!, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            Join
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {totalPages > 1 && (
           <TablePagination
             currentPage={currentPage}
-            totalPages={totalFilteredPages}
-            pageSize={pageSize}
-            totalItems={totalFilteredItems}
+          totalPages={totalPages}
+          pageSize={itemsPerPage}
+          totalItems={sortedSessions.length}
             onPageChange={setCurrentPage}
-            onPageSizeChange={setPageSize}
+          onPageSizeChange={() => { }} // No-op since we're not changing page size
           />
-        </>
       )}
     </div>
-  )
+  );
 }

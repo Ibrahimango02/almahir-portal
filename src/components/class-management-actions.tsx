@@ -224,70 +224,61 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
   const showAbsence = currentStatus === "running"
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-medium mb-2">Class Management</h3>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+    <div>
+      <div className="grid grid-cols-2 gap-1 md:grid-cols-3 lg:grid-cols-5">
         <Button
           onClick={handleZoomCall}
-          className="flex items-center gap-2 border-2 border-blue-600 shadow-sm bg-blue-500 text-white hover:bg-blue-600"
+          className="flex items-center justify-center aspect-square h-12 w-12 border-2 border-blue-600 shadow-sm bg-blue-500 text-white hover:bg-blue-600 p-0"
         >
           <Video className="h-4 w-4" />
-          <span>Join Call</span>
         </Button>
 
         {currentStatus === "scheduled" ? (
           <Button
             onClick={handleInitiateClass}
-            className="flex items-center gap-2 bg-green-700 text-white hover:bg-green-800"
+            className="flex items-center justify-center aspect-square h-12 w-12 bg-green-700 text-white hover:bg-green-800 p-0"
             variant="default"
             disabled={isLoading}
           >
             <PlayCircle className="h-4 w-4" />
-            <span>Initiate</span>
           </Button>
         ) : (
           <Button
-            className="flex items-center gap-2 opacity-50 cursor-not-allowed"
+            className="flex items-center justify-center aspect-square h-12 w-12 opacity-50 cursor-not-allowed p-0"
             variant="outline"
             disabled
           >
             <PlayCircle className="h-4 w-4" />
-            <span>Initiated</span>
           </Button>
         )}
 
         {currentStatus === "pending" ? (
           <Button
             onClick={handleStartClass}
-            className="flex items-center gap-2 bg-green-700 text-white hover:bg-green-800"
+            className="flex items-center justify-center aspect-square h-12 w-12 bg-green-700 text-white hover:bg-green-800 p-0"
             variant="default"
             disabled={isLoading}
           >
             <Play className="h-4 w-4" />
-            <span>Start Class</span>
           </Button>
         ) : currentStatus === "running" ? (
           <Button
             onClick={handleEndClass}
-            className="flex items-center gap-2 bg-red-500 text-white hover:bg-red-700"
+            className="flex items-center justify-center aspect-square h-12 w-12 bg-red-500 text-white hover:bg-red-700 p-0"
             variant="destructive"
             disabled={isLoading}
           >
             <StopCircle className="h-4 w-4" />
-            <span>End Class</span>
           </Button>
         ) : (
-          <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
+          <Button className="flex items-center justify-center aspect-square h-12 w-12 opacity-50 cursor-not-allowed p-0" variant="outline" disabled>
             {currentStatus === "complete" ? (
               <>
                 <StopCircle className="h-4 w-4" />
-                <span>Ended</span>
               </>
             ) : (
               <>
                 <Play className="h-4 w-4" />
-                <span>Start Class</span>
               </>
             )}
           </Button>
@@ -296,25 +287,22 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
         {canLeave ? (
           <Button
             onClick={handleLeaveClass}
-            className="flex items-center gap-2 bg-red-500 text-white hover:bg-red-700"
+            className="flex items-center justify-center aspect-square h-12 w-12 bg-red-500 text-white hover:bg-red-700 p-0"
             disabled={isLoading}
           >
             <LogOut className="h-4 w-4" />
-            <span>Leave</span>
           </Button>
         ) : showAbsence ? (
           <Button
             onClick={handleAbsence}
-            className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            className="flex items-center justify-center aspect-square h-12 w-12 bg-amber-600 hover:bg-amber-700 text-white p-0"
             disabled={isLoading}
           >
             <UserX className="h-4 w-4" />
-            <span>Absence</span>
           </Button>
         ) : (
-          <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
+          <Button className="flex items-center justify-center aspect-square h-12 w-12 opacity-50 cursor-not-allowed p-0" variant="outline" disabled>
             <UserX className="h-4 w-4" />
-            <span>Absence</span>
             {currentStatus === "in_progress" && <span className="sr-only">(Disabled: Class in progress)</span>}
           </Button>
         )}
@@ -322,17 +310,15 @@ export function ClassManagementActions({ classData, currentStatus, onStatusChang
         {canReschedule ? (
           <Button
             onClick={handleRescheduleClass}
-            className="flex items-center gap-2"
+            className="flex items-center justify-center aspect-square h-12 w-12 p-0"
             variant="outline"
             disabled={isLoading}
           >
             <Calendar className="h-4 w-4" />
-            <span>Reschedule</span>
           </Button>
         ) : (
-          <Button className="flex items-center gap-2 opacity-50 cursor-not-allowed" variant="outline" disabled>
+          <Button className="flex items-center justify-center aspect-square h-12 w-12 opacity-50 cursor-not-allowed p-0" variant="outline" disabled>
             <Calendar className="h-4 w-4" />
-            <span>Reschedule</span>
             <span className="sr-only">(Disabled: Class already initiated)</span>
           </Button>
         )}

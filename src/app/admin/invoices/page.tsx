@@ -14,6 +14,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceType[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [filteredInvoices, setFilteredInvoices] = useState<InvoiceType[]>([])
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -22,7 +23,7 @@ export default function InvoicesPage() {
       setFilteredInvoices(data)
     }
     fetchInvoices()
-  }, [])
+  }, [refreshTrigger])
 
   useEffect(() => {
     const filtered = invoices.filter(invoice => {
@@ -70,7 +71,10 @@ export default function InvoicesPage() {
           <CardDescription>Manage invoices and payment information</CardDescription>
         </CardHeader>
         <CardContent>
-          <InvoicesTable invoices={filteredInvoices} />
+          <InvoicesTable
+            invoices={filteredInvoices}
+            onStatusUpdate={() => setRefreshTrigger(prev => prev + 1)}
+          />
         </CardContent>
       </Card>
     </div>
