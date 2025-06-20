@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
+import { WeeklySchedule } from "@/types"
 
 export async function updateTeacher(teacherId: string, data: any) {
     const supabase = createClient()
@@ -30,4 +31,52 @@ export async function updateTeacher(teacherId: string, data: any) {
     }
 
     return { success: true }
+}
+
+export async function updateTeacherAvailability(teacherId: string, weeklySchedule: WeeklySchedule) {
+    const supabase = createClient()
+
+    try {
+        // First, check if availability record exists
+        const { data: existingAvailability } = await supabase
+            .from('teacher_availability')
+            .select('id')
+            .eq('teacher_id', teacherId)
+            .single()
+
+        if (existingAvailability) {
+            // Update existing record
+            const { error } = await supabase
+                .from('teacher_availability')
+                .update({
+                    weekly_schedule: weeklySchedule,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('teacher_id', teacherId)
+
+            if (error) {
+                throw new Error(`Failed to update teacher availability: ${error.message}`)
+            }
+        } else {
+            // Create new record
+            const { error } = await supabase
+                .from('teacher_availability')
+                .insert({
+                    teacher_id: teacherId,
+                    weekly_schedule: weeklySchedule
+                })
+
+            if (error) {
+                throw new Error(`Failed to create teacher availability: ${error.message}`)
+            }
+        }
+
+        return {
+            success: true,
+            message: existingAvailability ? 'Teacher availability updated successfully' : 'Teacher availability created successfully'
+        }
+    } catch (error) {
+        console.error('Error in updateTeacherAvailability:', error)
+        throw error
+    }
 }

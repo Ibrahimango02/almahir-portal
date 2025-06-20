@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, GraduationCap, MoreHorizontal } from "lucide-react"
+import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Users, UserPen, UserCheck } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
@@ -23,6 +23,8 @@ import { StatusBadge } from "./status-badge"
 import { getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
+import { format, parseISO } from "date-fns"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 // Define types for related data
 type ParentType = {
@@ -82,120 +84,175 @@ export function StudentsTable({ students }: StudentsTableProps) {
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
-    <div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Age</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead>Language</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Parent</TableHead>
-              <TableHead>Teacher</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedStudents.map((student) => (
-              <TableRow
-                key={student.student_id}
-                className="hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={(e) => {
-                  // Prevent navigation if clicking on actions, the student ID link, or other interactive elements
-                  if (
-                    e.target instanceof HTMLElement &&
-                    (e.target.closest("button") ||
-                      e.target.closest("a") ||
-                      e.target.closest("[data-no-navigation]"))
-                  ) {
-                    return
-                  }
-                  router.push(`/admin/students/${student.student_id}`)
-                }}
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    {student.avatar_url ? (
-                      <AvatarIcon url={student.avatar_url} size="medium" />
-                    ) : (
-                      <Avatar>
-                        <AvatarFallback>
-                          {student.first_name[0]}
-                          {student.last_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div>
+    <div className="space-y-4">
+      {/* Table Container */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Student</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Contact</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Location</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Relations</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
+                <TableHead className="w-[50px] px-3"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedStudents.map((student, index) => (
+                <TableRow
+                  key={student.student_id}
+                  className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                    }`}
+                  onClick={(e) => {
+                    // Prevent navigation if clicking on actions, the student ID link, or other interactive elements
+                    if (
+                      e.target instanceof HTMLElement &&
+                      (e.target.closest("button") ||
+                        e.target.closest("a") ||
+                        e.target.closest("[data-no-navigation]"))
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/students/${student.student_id}`)
+                  }}
+                >
+                  {/* Student Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-3">
+                      {student.avatar_url ? (
+                        <AvatarIcon url={student.avatar_url} size="medium" />
+                      ) : (
+                        <Avatar className="h-10 w-10 border border-primary/10">
+                          <AvatarFallback className="bg-primary/5 text-primary text-xs font-semibold">
+                            {student.first_name[0]}
+                            {student.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="font-medium text-sm">
+                          {student.first_name} {student.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Age {student.age} • {student.gender}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Contact Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground max-w-[120px]">{student.email}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">{student.phone || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Location */}
+                  <TableCell className="py-2 px-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs">{student.country}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{student.language}</p>
+                    </div>
+                  </TableCell>
+
+                  {/* Relations */}
+                  <TableCell className="py-2 px-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="h-3 w-3 text-primary" />
+                        <span className="text-xs font-medium">Parents:</span>
+                        <span className="text-xs text-muted-foreground">
+                          {parentData[student.student_id]?.length > 0
+                            ? parentData[student.student_id].map(parent =>
+                              `${parent.first_name} ${parent.last_name}`
+                            ).join(', ')
+                            : 'None'
+                          }
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <UserCheck className="h-3 w-3 text-primary" />
+                        <span className="text-xs font-medium">Teachers:</span>
+                        <span className="text-xs text-muted-foreground">
+                          {teacherData[student.student_id]?.length > 0
+                            ? teacherData[student.student_id].map(teacher =>
+                              `${teacher.first_name} ${teacher.last_name}`
+                            ).join(', ')
+                            : 'None'
+                          }
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell className="py-2 px-3 text-center">
+                    <div className="max-w-[100px] mx-auto">
+                      <StatusBadge status={convertStatusToPrefixedFormat(student.status, 'user')} />
+                    </div>
+                  </TableCell>
+
+                  {/* Join Date */}
+                  <TableCell className="py-2 px-3">
+                    <div className="text-xs">
                       <p className="font-medium">
-                        {student.first_name} {student.last_name}
+                        {format(parseISO(student.created_at), "MMM dd, yyyy")}
                       </p>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>{student.age}</TableCell>
-                <TableCell>{student.gender}</TableCell>
-                <TableCell>{student.language}</TableCell>
-                <TableCell>{student.country}</TableCell>
-                <TableCell>{student.email}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {parentData[student.student_id]?.map((parent) => (
-                      <Badge key={parent.id} variant="outline">
-                        {parent.first_name} {parent.last_name}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {teacherData[student.student_id]?.map((teacher) => (
-                      <Badge key={teacher.id} variant="outline">
-                        {teacher.first_name} {teacher.last_name}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <StatusBadge status={student.status} />
-                </TableCell>
-                <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
-                <TableCell data-no-navigation>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/students/assign-class/${student.student_id}`}>
-                          <GraduationCap className="mr-2 h-4 w-4" />
-                          Assign to Class
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/students/edit/${student.student_id}`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell data-no-navigation className="py-2 px-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                          <Link href={`/admin/students/assign-class/${student.student_id}`} className="flex items-center">
+                            <GraduationCap className="mr-2 h-3.5 w-3.5" />
+                            Assign to Class
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                          <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center">
+                            <Edit className="mr-2 h-3.5 w-3.5" />
+                            Edit Student
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
+      {/* Pagination */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}

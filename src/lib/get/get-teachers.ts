@@ -1,13 +1,14 @@
 import { createClient } from '@/utils/supabase/client'
-import { TeacherType } from '@/types'
+import { TeacherType, TeacherAvailabilityType } from '@/types'
 
 export async function getTeachers(): Promise<TeacherType[]> {
     const supabase = createClient()
 
+    // Get profiles for both teachers and admins
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'teacher')
+        .in('role', ['teacher', 'admin'])
 
     if (!profile) return []
 
@@ -31,7 +32,6 @@ export async function getTeachers(): Promise<TeacherType[]> {
             language: teacherProfile.language,
             email: teacherProfile.email,
             phone: teacherProfile.phone || null,
-            timezone: teacherProfile.timezone,
             status: teacherProfile.status,
             role: teacherProfile.role,
             avatar_url: teacherProfile.avatar_url,
@@ -46,16 +46,15 @@ export async function getTeachers(): Promise<TeacherType[]> {
     return combinedTeachers
 }
 
-
 export async function getTeacherById(id: string): Promise<TeacherType | null> {
     const supabase = createClient()
 
-    // Get the teacher's profile data
+    // Get the teacher's profile data (can be either teacher or admin)
     const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
-        .eq('role', 'teacher')
+        .in('role', ['teacher', 'admin'])
         .single()
 
     if (!profile) {
@@ -79,7 +78,6 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
         language: profile.language,
         email: profile.email,
         phone: profile.phone || null,
-        timezone: profile.timezone,
         status: profile.status,
         role: profile.role,
         avatar_url: profile.avatar_url,
@@ -111,13 +109,30 @@ export async function getTeacherStudents(id: string) {
     return students
 }
 
+export async function getTeacherAvailability(id: string): Promise<TeacherAvailabilityType | null> {
+    const supabase = createClient()
+
+    // Fetch the teacher's availability by teacher_id
+    const { data, error } = await supabase
+        .from('teacher_availability')
+        .select('*')
+        .eq('teacher_id', id)
+        .single()
+
+    if (error) {
+        return null
+    }
+
+    return data
+}
+
 export async function getTeachersCount() {
     const supabase = createClient()
 
     const { count, error } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('role', 'teacher')
+        .in('role', ['teacher', 'admin'])
 
     if (error) {
         console.error('Error fetching teachers count:', error)

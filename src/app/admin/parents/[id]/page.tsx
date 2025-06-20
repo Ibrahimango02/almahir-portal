@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,18 +44,18 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                     <AvatarIcon url={parent.avatar_url} size="large" />
                   </div>
                 ) : (
-                  <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                  <Avatar className="h-24 w-24 mb-4 border-4 border-background shadow-md">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
                       {parent.first_name[0]}
                       {parent.last_name[0]}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <Badge
-                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${parent.status === "active" ? "bg-green-500"
+                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${parent.status === "active" ? "bg-green-600"
                     : parent.status === "inactive" ? "bg-amber-500"
                       : parent.status === "pending" ? "bg-blue-500"
-                        : parent.status === "suspended" ? "bg-red-500"
+                        : parent.status === "suspended" ? "bg-red-600"
                           : parent.status === "archived" ? "bg-gray-500"
                             : "bg-gray-500"
                     }`}
@@ -104,18 +104,28 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                 </h3>
                 <div className="pl-6">
                   {parentStudents.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {parentStudents.map((student) => (
-                        <div key={student.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium">{student.first_name} {student.last_name}</p>
+                        <Link
+                          key={student.id}
+                          href={`/admin/students/${student.id}`}
+                          className="block"
+                        >
+                          <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                            <Avatar className="h-10 w-10">
+                              {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
+                              <AvatarFallback className="text-sm">
+                                {student.first_name.charAt(0)}{student.last_name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-primary truncate">
+                                {student.first_name} {student.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Student</p>
+                            </div>
                           </div>
-                          <Link href={`/admin/students/${student.id}`}>
-                            <Button variant="outline" size="sm">
-                              View
-                            </Button>
-                          </Link>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   ) : (
@@ -143,10 +153,10 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                     <div className="flex items-center">
                       <span className="text-sm font-medium w-32">Account Status:</span>
                       <Badge
-                        className={`capitalize ${parent.status === "active" ? "bg-green-500"
+                        className={`capitalize ${parent.status === "active" ? "bg-green-600"
                           : parent.status === "inactive" ? "bg-amber-500"
                             : parent.status === "pending" ? "bg-blue-500"
-                              : parent.status === "suspended" ? "bg-red-500"
+                              : parent.status === "suspended" ? "bg-red-600"
                                 : parent.status === "archived" ? "bg-gray-500"
                                   : "bg-gray-500"
                           }`}

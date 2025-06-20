@@ -17,6 +17,7 @@ import { updateProfile, updatePassword } from "@/lib/put/put-profiles"
 import { createClient } from "@/utils/supabase/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
+import { TeacherAvailabilityEditor } from "@/components/teacher-availability-editor"
 
 type ProfileData = {
   first_name: string
@@ -146,7 +147,8 @@ export default function SettingsPage() {
         email,
         phone,
       });
-      // Optionally, refetch profile or show a success message
+      // Refresh the page after successful save
+      window.location.reload();
     } catch (error) {
       console.error("Failed to update profile:", error);
     } finally {
@@ -224,6 +226,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="w-full md:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="availability">Availability</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -335,18 +338,13 @@ export default function SettingsPage() {
                   <Label htmlFor="user-status">Status</Label>
                   <div>
                     <Badge
-                      className={`capitalize px-2 py-1 ${profile?.status === "active"
-                        ? "bg-green-500"
-                        : profile?.status === "inactive"
-                          ? "bg-amber-500"
-                          : profile?.status === "pending"
-                            ? "bg-blue-500"
-                            : profile?.status === "suspended"
-                              ? "bg-red-500"
-                              : profile?.status === "archived"
-                                ? "bg-gray-500"
+                      className={`capitalize px-2 py-1 ${profile?.status === "active" ? "bg-green-600"
+                        : profile?.status === "inactive" ? "bg-amber-500"
+                          : profile?.status === "pending" ? "bg-blue-500"
+                            : profile?.status === "suspended" ? "bg-red-600"
+                              : profile?.status === "archived" ? "bg-gray-500"
                                 : "bg-gray-500"
-                        }`}
+                        } `}
                     >
                       {profile?.status}
                     </Badge>
@@ -425,6 +423,24 @@ export default function SettingsPage() {
               </Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="availability" className="space-y-6">
+          {userId && (profile?.role === 'teacher' || profile?.role === 'admin') ? (
+            <TeacherAvailabilityEditor teacherId={userId} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Availability Settings</CardTitle>
+                <CardDescription>Availability settings are only available for teachers and administrators.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  If you are a teacher or administrator, please contact support if you cannot access availability settings.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

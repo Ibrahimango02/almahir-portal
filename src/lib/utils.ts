@@ -35,8 +35,32 @@ export const calculateAge = (birthDate: string): number => {
 
   // If birth month is after current month or same month but birth day is after today
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--
+    age--
   }
 
   return age
+}
+
+/**
+ * Converts old status values to new prefixed format for StatusBadge component
+ */
+export function convertStatusToPrefixedFormat(status: string, type: 'user' | 'class' | 'session' | 'invoice'): string {
+  // If already has prefix, return as is
+  if (status.includes('-')) {
+    return status
+  }
+
+  // Convert based on type
+  switch (type) {
+    case 'user':
+      return `user-${status}`
+    case 'class':
+      return `class-${status}`
+    case 'session':
+      return `session-${status}`
+    case 'invoice':
+      return `invoice-${status}`
+    default:
+      return status
+  }
 }

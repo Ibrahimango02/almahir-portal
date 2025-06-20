@@ -1,6 +1,8 @@
+"use client"
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { differenceInMinutes, isPast, isValid, isBefore } from "date-fns"
-import { Card } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { StatusBadge } from "./status-badge"
 import { getClassesToday } from "@/lib/get/get-classes"
@@ -12,6 +14,10 @@ import {
   isTodayInTimezone
 } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { CalendarDays, Clock, Users } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 // Helper function to format duration
 const formatDuration = (minutes: number) => {
@@ -48,8 +54,25 @@ const safeParseISO = (dateStr: string): Date | null => {
   }
 }
 
-export async function RecentClasses() {
-  const todayClasses: ClassType[] = await getClassesToday();
+export function RecentClasses() {
+  const router = useRouter()
+  const [todayClasses, setTodayClasses] = useState<ClassType[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      try {
+        const classes = await getClassesToday()
+        setTodayClasses(classes)
+      } catch (error) {
+        console.error('Error fetching classes:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchClasses()
+  }, [])
 
   // Create session objects for display - times are now in each session
   const todaySessions = todayClasses.flatMap(cls => {
@@ -152,56 +175,66 @@ export async function RecentClasses() {
     return b.endDateTime.getTime() - a.endDateTime.getTime();
   });
 
+  const handleCardClick = (classId: string, sessionId: string) => {
+    router.push(`/admin/classes/${classId}/${sessionId}`)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <p>Loading recent classes...</p>
+      </div>
+    );
+  }
+
   if (recentSessions.length === 0) {
     return (
-      <Card className="p-6">
-        <div className="text-center text-muted-foreground">
-          <p>No recent classes today</p>
-        </div>
-      </Card>
+      <div className="text-center py-8 text-muted-foreground">
+        <p>No recent classes today</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid gap-3">
       {recentSessions.map((session) => {
         if (!session) return null;
 
         return (
-          <Card key={session.session_id} className="p-4">
+          <div
+            key={session.session_id}
+            className="p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
+            onClick={() => handleCardClick(session.class_id, session.session_id)}
+          >
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-lg">{session.title}</h3>
-                  <StatusBadge status={session.status} />
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-base">{session.title}</h3>
                 </div>
                 <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-muted-foreground">
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-3 w-3" />
                     {formatDateTime(session.startDateTime, 'h:mm a')} - {formatTime(session.endDateTime, 'h:mm a')}
                   </span>
                   <span className="text-muted-foreground">•</span>
                   <span className="text-muted-foreground">{session.duration}</span>
+                  {session.teachers.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <Users className="h-3 w-3" />
+                        {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                      </span>
+                    </>
+                  )}
                 </div>
-                {session.teachers.length > 0 && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs text-muted-foreground">Teacher:</span>
-                    <span className="text-sm font-medium">
-                      {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
-                    </span>
-                  </div>
-                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/admin/classes/${session.class_id}/${session.session_id}`}
-                  className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3"
-                >
-                  View
-                </Link>
+              <div className="flex items-start gap-2 ml-3">
+                <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />
               </div>
             </div>
-          </Card>
+          </div>
         );
       })}
     </div>

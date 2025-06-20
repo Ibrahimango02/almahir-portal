@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
+import { addDays, format } from 'date-fns'
 
 export async function updateClass(params: {
     classId: string;
@@ -12,6 +13,7 @@ export async function updateClass(params: {
     class_link?: string | null;
     teacher_ids?: string[];
     student_ids?: string[];
+    times?: Record<string, { start: string; end: string }>;
 }): Promise<{ success: boolean; error?: any }> {
     const supabase = createClient()
     const {
@@ -25,10 +27,20 @@ export async function updateClass(params: {
         days_repeated,
         class_link,
         teacher_ids,
-        student_ids
+        student_ids,
+        times
     } = params
 
     try {
+        // Get current class data to compare with new data
+        const { data: currentClass, error: fetchError } = await supabase
+            .from('classes')
+            .select('*')
+            .eq('id', classId)
+            .single()
+
+        if (fetchError) throw fetchError
+
         // Update class basic information
         const classUpdateData: any = {}
         if (title !== undefined) classUpdateData.title = title
@@ -49,6 +61,148 @@ export async function updateClass(params: {
                 .eq('id', classId)
 
             if (classError) throw classError
+        }
+
+        // Handle session management if start_date, end_date, days_repeated, or times have changed
+        const shouldUpdateSessions = (
+            start_date !== undefined ||
+            end_date !== undefined ||
+            days_repeated !== undefined ||
+            times !== undefined
+        )
+
+        if (shouldUpdateSessions) {
+            // Get the final values (new or current)
+            const finalStartDate = start_date || currentClass.start_date
+            const finalEndDate = end_date || currentClass.end_date
+            const finalDaysRepeated = days_repeated || currentClass.days_repeated
+
+            // If times are not provided, we need to get existing sessions to extract time patterns
+            let finalTimes = times
+            if (!finalTimes) {
+                // Get existing sessions to extract time patterns
+                const { data: existingSessions, error: sessionsError } = await supabase
+                    .from('class_sessions')
+                    .select('start_date, end_date')
+                    .eq('class_id', classId)
+                    .order('start_date')
+
+                if (sessionsError) throw sessionsError
+
+                // Extract time patterns from existing sessions
+                finalTimes = {}
+                if (existingSessions && existingSessions.length > 0) {
+                    for (const session of existingSessions) {
+                        const sessionDate = new Date(session.start_date)
+                        const dayName = format(sessionDate, 'EEEE')
+                        const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1)
+
+                        // Extract time components
+                        const startTime = sessionDate.toTimeString().split(' ')[0]
+                        const endDate = new Date(session.end_date)
+                        const endTime = endDate.toTimeString().split(' ')[0]
+
+                        // Create a reference date for the time (using today's date)
+                        const today = new Date()
+                        const startDateTime = new Date(today)
+                        const endDateTime = new Date(today)
+
+                        const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
+                        const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
+
+                        startDateTime.setHours(startHours, startMinutes, startSeconds, 0)
+                        endDateTime.setHours(endHours, endMinutes, endSeconds, 0)
+
+                        finalTimes[capitalizedDayName] = {
+                            start: startDateTime.toISOString(),
+                            end: endDateTime.toISOString()
+                        }
+                    }
+                }
+            }
+
+            // Delete all existing sessions for this class
+            const { error: deleteSessionsError } = await supabase
+                .from('class_sessions')
+                .delete()
+                .eq('class_id', classId)
+
+            if (deleteSessionsError) throw deleteSessionsError
+
+            // Generate new sessions
+            if (finalStartDate && finalEndDate && finalDaysRepeated && Object.keys(finalTimes).length > 0) {
+                const sessions = []
+
+                // Helper function to get day name with capital first letter
+                const getDayName = (date: Date) => {
+                    const dayName = format(date, 'EEEE').toLowerCase()
+                    // Convert to capital first letter (e.g., "monday" -> "Monday")
+                    return dayName.charAt(0).toUpperCase() + dayName.slice(1)
+                }
+
+                // Generate sessions for each day in the date range
+                let currentDate = new Date(finalStartDate)
+                const endDateObj = new Date(finalEndDate)
+
+                while (currentDate <= endDateObj) {
+                    const dayName = getDayName(currentDate)
+
+                    // Check if this day is in the days_repeated array
+                    if (finalDaysRepeated.includes(dayName)) {
+                        const timeSlot = finalTimes[dayName]
+                        if (timeSlot) {
+                            try {
+                                // The times are already in ISO format, so we can use them directly
+                                const startDateTime = new Date(timeSlot.start)
+                                const endDateTime = new Date(timeSlot.end)
+
+                                // Validate the dates
+                                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+                                    throw new Error(`Invalid datetime format for ${dayName}: ${timeSlot.start} - ${timeSlot.end}`)
+                                }
+
+                                // Update the date part to match the current iteration date
+                                const sessionStartDate = new Date(currentDate)
+                                const sessionEndDate = new Date(currentDate)
+
+                                // Extract time components from the ISO strings
+                                const startTime = startDateTime.toTimeString().split(' ')[0]
+                                const endTime = endDateTime.toTimeString().split(' ')[0]
+
+                                const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
+                                const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
+
+                                sessionStartDate.setHours(startHours, startMinutes, startSeconds, 0)
+                                sessionEndDate.setHours(endHours, endMinutes, endSeconds, 0)
+
+                                sessions.push({
+                                    class_id: classId,
+                                    start_date: sessionStartDate.toISOString(),
+                                    end_date: sessionEndDate.toISOString(),
+                                    status: 'scheduled'
+                                })
+                            } catch (error) {
+                                console.error(`Error creating session for ${dayName}:`, error)
+                                throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+                            }
+                        }
+                    }
+
+                    // Move to next day
+                    currentDate = addDays(currentDate, 1)
+                }
+
+                // Insert all new sessions
+                if (sessions.length > 0) {
+                    const { error: sessionsError } = await supabase
+                        .from('class_sessions')
+                        .insert(sessions)
+
+                    if (sessionsError) {
+                        throw new Error(`Failed to create class sessions: ${sessionsError.message}`)
+                    }
+                }
+            }
         }
 
         // Update teacher assignments if provided

@@ -2,12 +2,12 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AttendanceTracker } from "@/components/attendance-tracker"
-import { ClassManagementActions } from "@/components/class-management-actions"
+import { ClassActionButtons } from "@/components/class-action-buttons"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDuration } from "@/lib/utils"
-import { differenceInMinutes, isValid } from "date-fns"
+import { differenceInMinutes, isValid, format, parseISO } from "date-fns"
 import {
   formatDateTime,
   formatTime,
@@ -28,6 +28,8 @@ import {
   XCircle,
   UserX
 } from "lucide-react"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { ClassSessionType } from "@/types"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -91,6 +93,7 @@ const parseTimeString = (timeString: string | null | undefined): Date | null => 
 
 interface ClassSessionDetailsProps {
   classData: {
+    class_id: string
     session_id: string
     title: string
     description: string | null
@@ -104,6 +107,7 @@ interface ClassSessionDetailsProps {
       first_name: string
       last_name: string
       avatar_url?: string | null
+      role: string
     }>
     enrolled_students: Array<{
       student_id: string
@@ -132,6 +136,7 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
 
   // Prepare data for ClassManagementActions
   const classDataForActions = {
+    class_id: classData.class_id,
     session_id: classData.session_id,
     title: classData.title,
     description: classData.description || '',
@@ -143,7 +148,8 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
     teacher: {
       teacher_id: classData.teachers?.[0]?.teacher_id || '',
       first_name: classData.teachers?.[0]?.first_name || '',
-      last_name: classData.teachers?.[0]?.last_name || ''
+      last_name: classData.teachers?.[0]?.last_name || '',
+      role: classData.teachers?.[0]?.role || ''
     },
     enrolled_students: classData.enrolled_students || []
   }
@@ -152,46 +158,30 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
   const teachers = classData.teachers || []
   const enrolledStudents = classData.enrolled_students || []
 
-  // Get status icon based on current status
-  const getStatusIcon = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'scheduled':
-        return <CalendarDays className="h-4 w-4" />
-      case 'running':
-        return <Play className="h-4 w-4" />
-      case 'complete':
-        return <CheckCircle className="h-4 w-4" />
-      case 'cancelled':
-        return <XCircle className="h-4 w-4" />
-      case 'absence':
-        return <UserX className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
-    }
-  }
-
   return (
     <>
       <style>{scrollbarStyles}</style>
       <Card>
         <CardHeader className="border-b pb-6">
-          <div className="flex items-center justify-between">
-            {/* Title and Buttons Row */}
-            <div className="flex items-center gap-8 flex-1 min-w-0">
-              <div className="space-y-1 min-w-0">
-                <CardTitle className="text-2xl truncate">{classData.title}</CardTitle>
-                <CardDescription className="text-lg truncate">{classData.subject}</CardDescription>
-              </div>
-              <div className="flex-shrink-0 ml-6">
-                <ClassManagementActions
-                  classData={classDataForActions}
-                  currentStatus={currentStatus}
-                  onStatusChange={setCurrentStatus}
-                />
-              </div>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            {/* Title and Subject on the left */}
+            <div className="space-y-1 min-w-0 flex-1">
+              <CardTitle className="text-2xl truncate">{classData.title}</CardTitle>
+              <CardDescription className="text-lg truncate">{classData.subject}</CardDescription>
+              {classData.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                  {classData.description}
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-              <StatusBadge status={currentStatus} />
+            {/* Status Badge and Action Buttons on the right */}
+            <div className="flex flex-col items-end gap-4 flex-shrink-0">
+              <StatusBadge status={convertStatusToPrefixedFormat(currentStatus, 'session')} />
+              <ClassActionButtons
+                classData={classDataForActions}
+                currentStatus={currentStatus}
+                onStatusChange={setCurrentStatus}
+              />
             </div>
           </div>
         </CardHeader>
@@ -207,7 +197,7 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="p-4 rounded-lg border bg-card">
+                  <div className="p-4 bg-card">
                     <div className="flex items-center gap-2 mb-3">
                       <Clock className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm font-medium">Date & Time</span>
@@ -235,25 +225,22 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{teachers.length}</span>
                   </div>
                   {teachers.length > 0 ? (
-                    <div className="space-y-3 max-h-[280px] overflow-y-auto custom-scrollbar">
+                    <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {teachers.map((teacher) => (
                         <Link
                           key={teacher.teacher_id}
                           href={`/admin/teachers/${teacher.teacher_id}`}
                           className="block"
                         >
-                          <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
-                            <Avatar className="h-12 w-12">
+                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                            <Avatar className="h-8 w-8">
                               {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
-                              <AvatarFallback className="text-sm font-medium">
-                                {teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}
-                              </AvatarFallback>
+                              <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-primary truncate">
                                 {teacher.first_name} {teacher.last_name}
                               </p>
-                              <p className="text-xs text-muted-foreground">Teacher</p>
                             </div>
                           </div>
                         </Link>
@@ -291,7 +278,6 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                               <p className="text-sm font-medium text-primary truncate">
                                 {student.first_name} {student.last_name}
                               </p>
-                              <p className="text-xs text-muted-foreground">Student</p>
                             </div>
                           </div>
                         </Link>
@@ -306,21 +292,11 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                 </div>
               </div>
 
-              <div className="space-y-4 mt-6">
-                {/* Description */}
-                {classData.description && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <BookOpen className="h-5 w-5" />
-                      <h3 className="text-sm font-medium">Description</h3>
-                    </div>
-                    <p className="text-sm leading-relaxed">
-                      {classData.description}
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
+          </div>
+
+          <div className="mt-6 pt-6">
+            {/* Description section removed - now in header */}
           </div>
 
           {/* Attendance Tracker */}

@@ -9,9 +9,10 @@ import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
+import { getTeacherAvailability } from "@/lib/get/get-teachers"
 import { getSessionsByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
-
+import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 
 export default async function TeacherDetailPage({ params }: { params: { id: string } }) {
   const { id } = await params
@@ -28,6 +29,7 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
   }
 
   const teacherSessions = await getSessionsByTeacherId(teacher.teacher_id)
+  const teacherAvailability = await getTeacherAvailability(teacher.teacher_id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,18 +50,18 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                     <AvatarIcon url={teacher.avatar_url} size="large" />
                   </div>
                 ) : (
-                  <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                  <Avatar className="h-24 w-24 mb-4 border-4 border-background shadow-md">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
                       {teacher.first_name[0]}
                       {teacher.last_name[0]}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <Badge
-                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${teacher.status === "active" ? "bg-green-500"
+                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${teacher.status === "active" ? "bg-green-600"
                     : teacher.status === "inactive" ? "bg-amber-500"
                       : teacher.status === "pending" ? "bg-blue-500"
-                        : teacher.status === "suspended" ? "bg-red-500"
+                        : teacher.status === "suspended" ? "bg-red-600"
                           : teacher.status === "archived" ? "bg-gray-500"
                             : "bg-gray-500"
                     }`}
@@ -71,9 +73,12 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                 {teacher.first_name} {teacher.last_name}
               </CardTitle>
               <div className="flex flex-wrap gap-2 justify-center mt-2 mb-4">
+                <Badge variant="secondary" className="font-medium">
+                  Teacher
+                </Badge>
                 {teacher.specialization && (
-                  <Badge variant="secondary" className="font-medium">
-                    Teacher
+                  <Badge variant="outline" className="font-medium">
+                    {teacher.specialization}
                   </Badge>
                 )}
               </div>
@@ -120,12 +125,16 @@ export default async function TeacherDetailPage({ params }: { params: { id: stri
                   <Calendar className="h-4 w-4 mr-2 text-primary" />
                   Availability
                 </h3>
-
-                {/* TODO: Implement availability */}
                 <div className="pl-6">
-                  <div className="p-3 bg-muted/30 rounded-md">
-                    <span className="text-sm text-muted-foreground">IMPLEMENT LATER</span>
-                  </div>
+                  {teacherAvailability ? (
+                    <TeacherAvailabilityDisplay
+                      schedule={teacherAvailability.weekly_schedule}
+                    />
+                  ) : (
+                    <div className="p-3 bg-muted/30 rounded-md">
+                      <span className="text-sm text-muted-foreground">No availability set</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

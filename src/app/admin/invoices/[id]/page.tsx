@@ -5,29 +5,17 @@ import { Edit, Calendar, User, Receipt, Clock, DollarSign, FileText } from "luci
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 import { BackButton } from "@/components/back-button"
 import { getInvoiceById } from "@/lib/get/get-invoices"
 import { InvoiceType } from "@/types"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "Invoice Details | Al-Mahir Academy",
   description: "View invoice details",
-}
-
-// Function to get status badge variant and color
-function getStatusBadgeVariant(status: string) {
-  switch (status) {
-    case "paid":
-      return "bg-green-500 hover:bg-green-600 text-white"
-    case "pending":
-      return "bg-blue-500 hover:bg-blue-600 text-white"
-    case "overdue":
-      return "bg-red-500 hover:bg-red-600 text-white"
-    default:
-      return "bg-gray-500 hover:bg-gray-600 text-white"
-  }
 }
 
 export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
@@ -68,9 +56,7 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Invoice Information</CardTitle>
-                <Badge className={cn("text-sm", getStatusBadgeVariant(invoice.status))}>
-                  {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-                </Badge>
+                <StatusBadge status={convertStatusToPrefixedFormat(invoice.status, 'invoice')} />
               </div>
             </CardHeader>
             <CardContent>

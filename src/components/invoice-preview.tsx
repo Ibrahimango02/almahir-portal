@@ -5,7 +5,9 @@ import { Calendar, User, Receipt, Clock, DollarSign, FileText } from "lucide-rea
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "./status-badge"
 import { cn } from "@/lib/utils"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { StudentType } from "@/types"
 import { ParentType } from "@/types"
 
@@ -29,20 +31,6 @@ interface InvoicePreviewProps {
   onBack: () => void
   students: StudentType[]
   parents: ParentType[]
-}
-
-// Function to get status badge variant and color
-function getStatusBadgeVariant(status: string) {
-  switch (status) {
-    case "paid":
-      return "bg-green-500 hover:bg-green-600 text-white"
-    case "pending":
-      return "bg-blue-500 hover:bg-blue-600 text-white"
-    case "overdue":
-      return "bg-red-500 hover:bg-red-600 text-white"
-    default:
-      return "bg-gray-500 hover:bg-gray-600 text-white"
-  }
 }
 
 export function InvoicePreview({ formData, lineItems, subtotal, tax, discount, total, onBack, students, parents }: InvoicePreviewProps) {
@@ -71,9 +59,7 @@ export function InvoicePreview({ formData, lineItems, subtotal, tax, discount, t
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Invoice Information</CardTitle>
-                <Badge className={cn("text-sm", getStatusBadgeVariant(formData.status))}>
-                  {formData.status.charAt(0).toUpperCase() + formData.status.slice(1)}
-                </Badge>
+                <StatusBadge status={convertStatusToPrefixedFormat(formData.status, 'invoice')} />
               </div>
             </CardHeader>
             <CardContent>

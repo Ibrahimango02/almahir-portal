@@ -1,8 +1,14 @@
 import { createClient } from "@/utils/supabase/client"
+import { WeeklySchedule } from "@/types"
 
 type TeacherAssignmentData = {
     teacher_id: string
     class_ids: string[]
+}
+
+type TeacherAvailabilityData = {
+    teacher_id: string
+    weekly_schedule: WeeklySchedule
 }
 
 export async function assignTeacherToClass(data: TeacherAssignmentData) {
@@ -63,6 +69,31 @@ export async function assignTeacherToClass(data: TeacherAssignmentData) {
         }
     } catch (error) {
         console.error('Error in assignTeacherToClass:', error)
+        throw error
+    }
+}
+
+export async function createTeacherAvailability(data: TeacherAvailabilityData) {
+    const supabase = createClient()
+
+    try {
+        const { error } = await supabase
+            .from('teacher_availability')
+            .insert({
+                teacher_id: data.teacher_id,
+                weekly_schedule: data.weekly_schedule
+            })
+
+        if (error) {
+            throw new Error(`Failed to create teacher availability: ${error.message}`)
+        }
+
+        return {
+            success: true,
+            message: 'Teacher availability created successfully'
+        }
+    } catch (error) {
+        console.error('Error in createTeacherAvailability:', error)
         throw error
     }
 }

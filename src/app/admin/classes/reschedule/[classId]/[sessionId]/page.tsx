@@ -96,7 +96,7 @@ function parseLocalDate(dateStr: string) {
 
 export default function ReschedulePage() {
   const params = useParams()
-  const { id } = params as { id: string }
+  const { classId, sessionId } = params as { classId: string, sessionId: string }
   const router = useRouter()
   const { toast } = useToast()
   const { timezone } = useTimezone()
@@ -106,7 +106,7 @@ export default function ReschedulePage() {
   useEffect(() => {
     async function fetchClassData() {
       try {
-        const data = await getSessionById(id)
+        const data = await getSessionById(sessionId)
         if (!data || data.status !== "scheduled") {
           notFound()
         }
@@ -120,7 +120,7 @@ export default function ReschedulePage() {
     }
 
     fetchClassData()
-  }, [id])
+  }, [sessionId])
 
   // Initialize form with default values
   const form = useForm<FormValues>({
@@ -162,7 +162,7 @@ export default function ReschedulePage() {
       );
 
       const result = await updateClassSession({
-        sessionId: id,
+        sessionId: sessionId,
         action: 'reschedule',
         newStartDate: startUtc.toISOString(),
         newEndDate: endUtc.toISOString(),
@@ -180,7 +180,7 @@ export default function ReschedulePage() {
 
       // Redirect back to class details page
       setTimeout(() => {
-        router.push(`/admin/schedule/${id}`)
+        router.push(`/admin/classes/${classId}/${sessionId}`)
       }, 1500)
     } catch (error) {
       toast({
@@ -208,7 +208,7 @@ export default function ReschedulePage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href={`/admin/schedule/${id}`} label="Back to Class Details" />
+        <BackButton href={`/admin/classes/${classId}/${sessionId}`} label="Back to Class Details" />
       </div>
 
       <Card>
@@ -311,7 +311,7 @@ export default function ReschedulePage() {
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" type="button" asChild>
-                  <Link href={`/admin/schedule/${id}`}>Cancel</Link>
+                  <Link href={`/admin/classes/${classId}/${sessionId}`}>Cancel</Link>
                 </Button>
                 <Button
                   type="submit"

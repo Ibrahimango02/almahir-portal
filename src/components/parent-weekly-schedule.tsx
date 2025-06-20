@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "./status-badge"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { format, parseISO } from "date-fns"
 
@@ -213,9 +215,7 @@ export function ParentWeeklySchedule({ filter, childId }: ParentWeeklySchedulePr
                       <Badge variant="outline" className="text-xs">
                         {classItem.subject}
                       </Badge>
-                      <Badge variant={classItem.status === "scheduled" ? "default" : "outline"} className="text-xs">
-                        {classItem.status}
-                      </Badge>
+                      <StatusBadge status={convertStatusToPrefixedFormat(classItem.status, 'session')} className="text-xs" />
                     </div>
                   </div>
                 ) : null}

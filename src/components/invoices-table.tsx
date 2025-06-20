@@ -12,13 +12,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, CheckCircle, Clock, AlertCircle, XCircle, ArrowUpDown } from "lucide-react"
+import { Edit, MoreHorizontal, CheckCircle, Clock, AlertCircle, XCircle, ArrowUpDown, Receipt, User, DollarSign, Calendar, CalendarDays } from "lucide-react"
 import { useState } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { InvoiceType } from "@/types"
 import { updateInvoice } from "@/lib/put/put-invoices"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 interface InvoicesTableProps {
   invoices: InvoiceType[]
@@ -135,14 +136,15 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
     }
   }
 
-  const SortableHeader = ({ label, sortKey }: { label: string, sortKey: string }) => (
+  const SortableHeader = ({ label, sortKey, icon: Icon }: { label: string, sortKey: string, icon?: any }) => (
     <TableHead
-      className="cursor-pointer hover:bg-muted/50"
+      className="h-10 px-3 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/50"
       onClick={() => handleSort(sortKey)}
     >
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />}
         {label}
-        <ArrowUpDown className="h-4 w-4" />
+        <ArrowUpDown className="h-3 w-3" />
         {sortConfig.key === sortKey && sortConfig.direction !== 'none' && (
           <span className="text-xs text-muted-foreground">
             ({sortConfig.direction === 'asc' ? '↑' : '↓'})
@@ -153,142 +155,195 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
   )
 
   return (
-    <div>
-      <div className="rounded-md border">
-        <div className="flex justify-end p-2 border-b">
+    <div className="space-y-4">
+      {/* Table Container */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="flex justify-end p-3 border-b bg-muted/30">
           <Button
             variant="ghost"
             size="sm"
             onClick={clearSorting}
-            className="text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-xs"
           >
             Clear Sorting
           </Button>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <SortableHeader label="Invoice" sortKey="invoice_id" />
-              <SortableHeader label="Student" sortKey="student" />
-              <SortableHeader label="Amount" sortKey="amount" />
-              <SortableHeader label="Date" sortKey="created_at" />
-              <SortableHeader label="Due Date" sortKey="due_date" />
-              <SortableHeader label="Status" sortKey="status" />
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedInvoices.map((invoice) => (
-              <TableRow
-                key={invoice.invoice_id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={(e) => {
-                  // Prevent navigation if clicking on actions, the invoice ID link, or status update items
-                  if (
-                    e.target instanceof HTMLElement &&
-                    (e.target.closest("button") ||
-                      e.target.closest("a") ||
-                      e.target.closest("[data-no-navigation]") ||
-                      e.target.closest("[data-status-update]"))
-                  ) {
-                    return
-                  }
-                  router.push(`/admin/invoices/${invoice.invoice_id}`)
-                }}
-              >
-                <TableCell>
-                  <Link href={`/admin/invoices/${invoice.invoice_id}`} className="font-medium hover:underline">
-                    {invoice.invoice_id}
-                  </Link>
-                </TableCell>
-                <TableCell>{invoice.student.first_name} {invoice.student.last_name}</TableCell>
-                <TableCell>{invoice.amount.toFixed(2)} {invoice.currency}</TableCell>
-                <TableCell>{format(new Date(invoice.created_at), "dd/MM/yyyy")}</TableCell>
-                <TableCell>{format(new Date(invoice.due_date + 'T00:00:00'), "dd/MM/yyyy")}</TableCell>
-                <TableCell className="text-center">
-                  <StatusBadge status={invoice.status} />
-                </TableCell>
-                <TableCell data-no-navigation>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/invoices/edit/${invoice.invoice_id}`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Update Status</DropdownMenuLabel>
-                      <DropdownMenuItem
-                        data-status-update
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(invoice.invoice_id, 'pending')
-                        }}
-                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'pending'}
-                      >
-                        <Clock className="mr-2 h-4 w-4" />
-                        Set Pending
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        data-status-update
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(invoice.invoice_id, 'paid')
-                        }}
-                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Mark as Paid
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        data-status-update
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(invoice.invoice_id, 'overdue')
-                        }}
-                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'overdue'}
-                      >
-                        <AlertCircle className="mr-2 h-4 w-4" />
-                        Mark as Overdue
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        data-status-update
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleStatusUpdate(invoice.invoice_id, 'cancelled')
-                        }}
-                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
-                      >
-                        <XCircle className="mr-2 h-4 w-4" />
-                        Cancel Invoice
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+        <div className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                <SortableHeader label="Invoice" sortKey="invoice_id" icon={Receipt} />
+                <SortableHeader label="Student" sortKey="student" icon={User} />
+                <SortableHeader label="Amount" sortKey="amount" icon={DollarSign} />
+                <SortableHeader label="Created" sortKey="created_at" icon={Calendar} />
+                <SortableHeader label="Due Date" sortKey="due_date" icon={CalendarDays} />
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
+                <TableHead className="w-[50px] px-3"></TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedInvoices.map((invoice, index) => (
+                <TableRow
+                  key={invoice.invoice_id}
+                  className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                    }`}
+                  onClick={(e) => {
+                    // Prevent navigation if clicking on actions, the invoice ID link, or status update items
+                    if (
+                      e.target instanceof HTMLElement &&
+                      (e.target.closest("button") ||
+                        e.target.closest("a") ||
+                        e.target.closest("[data-no-navigation]") ||
+                        e.target.closest("[data-status-update]"))
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/invoices/${invoice.invoice_id}`)
+                  }}
+                >
+                  {/* Invoice Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <Link href={`/admin/invoices/${invoice.invoice_id}`} className="font-medium text-sm hover:underline">
+                        {invoice.invoice_id}
+                      </Link>
+                    </div>
+                  </TableCell>
+
+                  {/* Student Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm">
+                        {invoice.student.first_name} {invoice.student.last_name}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Amount */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-semibold text-sm text-green-600">
+                        {invoice.amount.toFixed(2)} {invoice.currency}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Created Date */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">
+                        {format(parseISO(invoice.created_at), "MMM dd, yyyy")}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Due Date */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs">
+                        {format(parseISO(invoice.due_date + 'T00:00:00'), "MMM dd, yyyy")}
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell className="py-2 px-3 text-center">
+                    <div className="max-w-[100px] mx-auto">
+                      <StatusBadge status={convertStatusToPrefixedFormat(invoice.status, 'invoice')} />
+                    </div>
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell data-no-navigation className="py-2 px-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                          <Link href={`/admin/invoices/edit/${invoice.invoice_id}`} className="flex items-center">
+                            <Edit className="mr-2 h-3.5 w-3.5" />
+                            Edit Invoice
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
+                        <DropdownMenuItem
+                          data-status-update
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStatusUpdate(invoice.invoice_id, 'pending')
+                          }}
+                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'pending'}
+                          className="cursor-pointer text-xs"
+                        >
+                          <Clock className="mr-2 h-3.5 w-3.5" />
+                          Set Pending
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          data-status-update
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStatusUpdate(invoice.invoice_id, 'paid')
+                          }}
+                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
+                          className="cursor-pointer text-xs"
+                        >
+                          <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                          Mark as Paid
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          data-status-update
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStatusUpdate(invoice.invoice_id, 'overdue')
+                          }}
+                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'overdue'}
+                          className="cursor-pointer text-xs"
+                        >
+                          <AlertCircle className="mr-2 h-3.5 w-3.5" />
+                          Mark as Overdue
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          data-status-update
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStatusUpdate(invoice.invoice_id, 'cancelled')
+                          }}
+                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
+                          className="cursor-pointer text-xs"
+                        >
+                          <XCircle className="mr-2 h-3.5 w-3.5" />
+                          Cancel Invoice
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-      <div className="mt-4">
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          onPageSizeChange={setPageSize}
-          totalItems={totalItems}
-        />
-      </div>
+
+      {/* Pagination */}
+      <TablePagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
+        totalItems={totalItems}
+      />
     </div>
   )
 }

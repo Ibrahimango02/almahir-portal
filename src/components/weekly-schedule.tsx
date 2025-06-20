@@ -16,7 +16,7 @@ import {
   isToday,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight, Plus, Clock, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
 import { ClassSessionType } from "@/types"
@@ -24,38 +24,19 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "./table-pagination"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 // Utility function to parse class date and time
 const parseClassDateTime = (
-  cls: { date?: string; start_time?: string; end_time?: string },
-  timeField: "start_time" | "end_time"
+  cls: { start_date?: string; end_date?: string },
+  timeField: "start_date" | "end_date"
 ): Date | null => {
   try {
     const time = cls[timeField]
     if (!time) return null
 
-    if (cls.date) {
-      // If the class has a separate date field, use it with time
-      const cleanTime = time.replace(/(-|\+)\d{2}.*$/, '')
-      const [hours, minutes] = cleanTime.split(':').map(Number)
-      const [year, month, day] = cls.date.split('-').map(Number)
-
-      const result = new Date(year, month - 1, day)
-      result.setHours(hours || 0, minutes || 0, 0)
-
-      // If this is an end time and it's earlier than start time, add a day
-      if (timeField === "end_time" && cls.start_time) {
-        const startTime = parseClassDateTime(cls, "start_time")
-        if (startTime && result < startTime) {
-          result.setDate(result.getDate() + 1)
-        }
-      }
-
-      return result
-    } else {
-      // Otherwise, try to parse the ISO date from time fields
-      return parseISO(time)
-    }
+    // Parse the ISO datetime string directly
+    return parseISO(time)
   } catch (error) {
     console.error(`Error parsing ${timeField} for class:`, error, cls)
     return null
@@ -85,7 +66,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
 
   // Memoize sorted classes to prevent recreation on every render
   const sortedClasses = useMemo(() => {
-    return [...sessions].sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+    return [...sessions].sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
   }, [sessions])
 
   // Update visible classes when week changes or view changes
@@ -94,7 +75,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       // For calendar view, filter classes to show only those in the current week
       const weekEnd = addDays(currentWeekStart, 6) // 6 days after Monday = Sunday
       let filtered = sortedClasses.filter((cls) => {
-        const classDate = parseClassDateTime(cls, "start_time")
+        const classDate = parseClassDateTime(cls, "start_date")
         return classDate && isWithinInterval(classDate, {
           start: startOfDay(currentWeekStart),
           end: endOfDay(weekEnd),
@@ -104,7 +85,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       // Apply time filter if not "all"
       if (timeFilter !== "all") {
         filtered = filtered.filter((cls) => {
-          const startTime = parseClassDateTime(cls, "start_time")
+          const startTime = parseClassDateTime(cls, "start_date")
           if (!startTime) return false;
 
           const hour = startTime.getHours();
@@ -128,7 +109,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       const now = new Date()
 
       let filtered = sortedClasses.filter((cls) => {
-        const classDate = parseClassDateTime(cls, "start_time")
+        const classDate = parseClassDateTime(cls, "start_date")
         return classDate && isWithinInterval(classDate, {
           start: startOfDay(currentWeekStart),
           end: endOfDay(weekEnd),
@@ -138,12 +119,12 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       // Apply the upcoming/recent filter
       if (activeListTab === "upcoming") {
         filtered = filtered.filter((cls) => {
-          const endTime = parseClassDateTime(cls, "end_time")
+          const endTime = parseClassDateTime(cls, "end_date")
           return endTime && endTime >= now;
         });
       } else if (activeListTab === "recent") {
         filtered = filtered.filter((cls) => {
-          const endTime = parseClassDateTime(cls, "end_time")
+          const endTime = parseClassDateTime(cls, "end_date")
           return endTime && endTime <= now;
         });
       }
@@ -162,7 +143,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       const now = new Date()
 
       let filtered = sortedClasses.filter((cls) => {
-        const classDate = parseClassDateTime(cls, "start_time")
+        const classDate = parseClassDateTime(cls, "start_date")
         return classDate && isWithinInterval(classDate, {
           start: startOfDay(newWeekStart),
           end: endOfDay(weekEnd),
@@ -172,12 +153,12 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       // Apply the upcoming/recent filter
       if (activeListTab === "upcoming") {
         filtered = filtered.filter((cls) => {
-          const endTime = parseClassDateTime(cls, "end_time")
+          const endTime = parseClassDateTime(cls, "end_date")
           return endTime && endTime <= now;
         });
       } else if (activeListTab === "recent") {
         filtered = filtered.filter((cls) => {
-          const endTime = parseClassDateTime(cls, "end_time")
+          const endTime = parseClassDateTime(cls, "end_date")
           return endTime && endTime > now;
         });
       }
@@ -291,8 +272,8 @@ function ListScheduleView({
     // First get properly sorted classes
     const sorted = [...classes].sort((a, b) => {
       try {
-        const aDateTime = parseClassDateTime(a, "start_time")
-        const bDateTime = parseClassDateTime(b, "start_time")
+        const aDateTime = parseClassDateTime(a, "start_date")
+        const bDateTime = parseClassDateTime(b, "start_date")
 
         if (!aDateTime || !bDateTime) return 0
         return aDateTime.getTime() - bDateTime.getTime()
@@ -304,14 +285,9 @@ function ListScheduleView({
 
     // Then filter based on the active tab
     return sorted.filter(cls => {
-      const startDateTime = parseClassDateTime(cls, "start_time")
-      const endDateTime = parseClassDateTime(cls, "end_time")
+      const startDateTime = parseClassDateTime(cls, "start_date")
+      const endDateTime = parseClassDateTime(cls, "end_date")
       if (!startDateTime || !endDateTime) return false
-
-      console.log("now", now)
-      console.log("startDateTime", startDateTime)
-      console.log("endDateTime", endDateTime)
-
 
       if (filter === "upcoming") {
         // Show classes that are ongoing or in the future
@@ -333,78 +309,67 @@ function ListScheduleView({
     currentPage * pageSize
   )
 
-  const handleRowClick = (e: React.MouseEvent<HTMLTableRowElement>, classId: string) => {
-    // Check if the click was on a link or other interactive element
-    const target = e.target as HTMLElement
-    const isLink = target.tagName === "A" || target.closest("a")
-
-    // Only navigate if the click wasn't on a link
-    if (!isLink) {
-      router.push(`/admin/schedule/${classId}`)
-    }
+  const handleCardClick = (classId: string, sessionId: string) => {
+    router.push(`/admin/classes/${classId}/${sessionId}`)
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-medium">
-          {filter === "upcoming" ? "Ongoing & Upcoming Classes" : "Completed Classes"}
-        </h3>
-      </div>
-
       {filteredSortedClasses.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           {filter === "upcoming" ? "No ongoing or upcoming classes found" : "No completed classes found"}
         </div>
       ) : (
         <>
-          <div className="border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-muted/50">
-                  <th className="text-left p-3 font-medium text-sm">Class</th>
-                  <th className="text-left p-3 font-medium text-sm">Date & Time</th>
-                  <th className="text-left p-3 font-medium text-sm">Subject</th>
-                  <th className="text-left p-3 font-medium text-sm">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedClasses.map((classItem) => {
-                  const startDateTime = parseClassDateTime(classItem, "start_time")
-                  const endDateTime = parseClassDateTime(classItem, "end_time")
+          <div className="grid gap-3">
+            {paginatedClasses.map((classItem) => {
+              const startDateTime = parseClassDateTime(classItem, "start_date")
+              const endDateTime = parseClassDateTime(classItem, "end_date")
+              const isTodayClass = startDateTime && isToday(startDateTime)
 
-                  if (!startDateTime || !endDateTime) return null
+              if (!startDateTime || !endDateTime) return null
 
-                  return (
-                    <tr
-                      key={classItem.session_id}
-                      className="border-t hover:bg-muted/20 cursor-pointer transition-colors"
-                      onClick={(e) => handleRowClick(e, classItem.session_id)}
-                    >
-                      <td className="p-3">
-                        <div className="font-medium">{classItem.title}</div>
-                        <p className="text-xs text-muted-foreground">
-                          {classItem.description && classItem.description.substring(0, 50)}
-                          {classItem.description && classItem.description.length > 50 ? '...' : ''}
-                        </p>
-                      </td>
-                      <td className="p-3">
-                        <div>{format(startDateTime, "EEEE, MMMM d, yyyy")}</div>
-                        <div className="text-xs text-muted-foreground">
+              return (
+                <div
+                  key={classItem.session_id}
+                  className="p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
+                  onClick={() => handleCardClick(classItem.class_id, classItem.session_id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-base">{classItem.title}</h3>
+                        {isTodayClass && (
+                          <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-500 text-white font-medium px-2 py-1">
+                            Today
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">{classItem.subject}</p>
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <CalendarDays className="h-3 w-3" />
+                          {format(startDateTime, "PPP")}
+                        </span>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Clock className="h-3 w-3" />
                           {format(startDateTime, "h:mm a")} - {format(endDateTime, "h:mm a")}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="inline-block">{classItem.subject}</div>
-                      </td>
-                      <td className="p-3">
-                        <StatusBadge status={classItem.status} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                        </span>
+                        {classItem.teachers.length > 0 && (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Users className="h-3 w-3" />
+                            {classItem.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 ml-3">
+                      <StatusBadge status={convertStatusToPrefixedFormat(classItem.status, 'session')} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           <TablePagination
@@ -549,10 +514,10 @@ function CalendarScheduleView({
 
   // Function to check if two classes overlap
   const doClassesOverlap = (class1: ClassSessionType, class2: ClassSessionType) => {
-    const start1 = parseClassDateTime(class1, "start_time")
-    const end1 = parseClassDateTime(class1, "end_time")
-    const start2 = parseClassDateTime(class2, "start_time")
-    const end2 = parseClassDateTime(class2, "end_time")
+    const start1 = parseClassDateTime(class1, "start_date")
+    const end1 = parseClassDateTime(class1, "end_date")
+    const start2 = parseClassDateTime(class2, "start_date")
+    const end2 = parseClassDateTime(class2, "end_date")
 
     if (!start1 || !end1 || !start2 || !end2) return false
 
@@ -567,7 +532,7 @@ function CalendarScheduleView({
 
     // Sort classes by start time for consistent grouping
     const sortedClasses = [...classes].sort((a, b) => {
-      return parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
+      return parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime()
     })
 
     const groups: ClassSessionType[][] = []
@@ -600,49 +565,6 @@ function CalendarScheduleView({
     return groups
   }
 
-  // Helper to get status colors for classes
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return "border-blue-400/70 bg-blue-50/80 dark:border-blue-800/70 dark:bg-blue-950/80"
-      case "running":
-        return "border-emerald-400/70 bg-emerald-50/80 dark:border-emerald-800/70 dark:bg-emerald-950/80"
-      case "pending":
-        return "border-indigo-400/70 bg-indigo-50/80 dark:border-indigo-800/70 dark:bg-indigo-950/80"
-      case "complete":
-        return "border-purple-400/70 bg-purple-50/80 dark:border-purple-800/70 dark:bg-purple-950/80"
-      case "rescheduled":
-        return "border-amber-400/70 bg-amber-50/80 dark:border-amber-800/70 dark:bg-amber-950/80"
-      case "cancelled":
-        return "border-rose-400/70 bg-rose-50/80 dark:border-rose-800/70 dark:bg-rose-950/80"
-      case "absent":
-        return "border-orange-400/70 bg-orange-50/80 dark:border-orange-800/70 dark:bg-orange-950/80"
-      default:
-        return "border-gray-400/70 bg-gray-50/80 dark:border-gray-800/70 dark:bg-gray-950/80"
-    }
-  }
-
-  const getStatusTextColor = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return "text-blue-700 dark:text-blue-400"
-      case "running":
-        return "text-emerald-700 dark:text-emerald-400"
-      case "pending":
-        return "text-indigo-700 dark:text-indigo-400"
-      case "complete":
-        return "text-purple-700 dark:text-purple-400"
-      case "rescheduled":
-        return "text-amber-700 dark:text-amber-400"
-      case "cancelled":
-        return "text-rose-700 dark:text-rose-400"
-      case "absent":
-        return "text-orange-700 dark:text-orange-400"
-      default:
-        return "text-gray-700 dark:text-gray-400"
-    }
-  }
-
   // Format the hour for display
   const formatHour = (hour: number) => {
     const date = new Date()
@@ -650,12 +572,34 @@ function CalendarScheduleView({
     return format(date, "h a")
   }
 
+  // Helper to get status-specific border and background colors matching StatusBadge
+  const getStatusContainerStyles = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "border-blue-200 bg-blue-50/80 dark:border-blue-800/60 dark:bg-blue-950/50"
+      case "running":
+        return "border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/60 dark:bg-emerald-950/50"
+      case "pending":
+        return "border-indigo-200 bg-indigo-50/80 dark:border-indigo-800/60 dark:bg-indigo-950/50"
+      case "complete":
+        return "border-purple-200 bg-purple-50/80 dark:border-purple-800/60 dark:bg-purple-950/50"
+      case "rescheduled":
+        return "border-amber-200 bg-amber-50/80 dark:border-amber-800/60 dark:bg-amber-950/50"
+      case "cancelled":
+        return "border-rose-200 bg-rose-50/80 dark:border-rose-800/60 dark:bg-rose-950/50"
+      case "absence":
+        return "border-orange-200 bg-orange-50/80 dark:border-orange-800/60 dark:bg-orange-950/50"
+      default:
+        return "border-gray-200 bg-gray-50/80 dark:border-gray-800/60 dark:bg-gray-950/50"
+    }
+  }
+
   // Prepare classes for each day with overlap calculation
   const classesByDay = useMemo(() => {
     const byDay = weekDays.map((day) => {
       // Get all valid classes for this day
       const classesForDay = classes.filter((cls) => {
-        const startDateTime = parseClassDateTime(cls, "start_time")
+        const startDateTime = parseClassDateTime(cls, "start_date")
         return startDateTime && isSameDay(day, startDateTime)
       })
 
@@ -734,8 +678,8 @@ function CalendarScheduleView({
                     )}
                     {classesByDay[dayIndex].map((extendedClass: any) => {
                       try {
-                        const startTime = parseClassDateTime(extendedClass, "start_time")
-                        const endTime = parseClassDateTime(extendedClass, "end_time")
+                        const startTime = parseClassDateTime(extendedClass, "start_date")
+                        const endTime = parseClassDateTime(extendedClass, "end_date")
 
                         if (!startTime || !endTime) return null
 
@@ -768,7 +712,7 @@ function CalendarScheduleView({
                             key={`${extendedClass.id}-${extendedClass.session_id}`}
                             className={cn(
                               "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
-                              getStatusStyles(extendedClass.status),
+                              getStatusContainerStyles(extendedClass.status),
                             )}
                             style={{
                               height: `${heightPx}px`,
@@ -777,7 +721,7 @@ function CalendarScheduleView({
                               width: `${width}%`,
                               zIndex: 10,
                             }}
-                            onClick={() => router.push(`/admin/schedule/${extendedClass.session_id}`)}
+                            onClick={() => router.push(`/admin/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
                           >
                             <div>
                               <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
@@ -794,15 +738,10 @@ function CalendarScheduleView({
                             </div>
                             {/* Always show status badge regardless of height */}
                             <div className="flex justify-end items-center mt-auto">
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
-                                  getStatusTextColor(extendedClass.status),
-                                )}
-                              >
-                                {extendedClass.status}
-                              </Badge>
+                              <StatusBadge
+                                status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
+                                className="text-xs"
+                              />
                             </div>
                           </div>
                         )

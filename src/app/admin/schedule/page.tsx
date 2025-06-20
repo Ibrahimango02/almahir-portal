@@ -15,6 +15,7 @@ export default function SchedulePage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [activeTab, setActiveTab] = useState("all")
   const [activeListTab, setActiveListTab] = useState("upcoming")
+  const [searchQuery, setSearchQuery] = useState("")
 
   const navigateWeek = (direction: "next" | "prev") => {
     setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
@@ -40,7 +41,13 @@ export default function SchedulePage() {
         <div className="flex items-center gap-2">
           <div className="relative w-full md:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search classes..." className="w-full pl-8" />
+            <Input
+              type="search"
+              placeholder="Search classes..."
+              className="w-full pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <Button variant="outline" size="sm" onClick={toggleView}>
             {view === "calendar" ? (
@@ -107,6 +114,7 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={0}
                   timeRangeEnd={24}
+                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="morning">
@@ -115,6 +123,7 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={4}
                   timeRangeEnd={12}
+                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="afternoon">
@@ -123,6 +132,7 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={12}
                   timeRangeEnd={20}
+                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="evening">
@@ -131,6 +141,7 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={20}
                   timeRangeEnd={28} // 28 represents 4 AM next day
+                  searchQuery={searchQuery}
                 />
               </TabsContent>
             </Tabs>
@@ -141,10 +152,10 @@ export default function SchedulePage() {
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming">
-                <ScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} />
+                <ScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
               </TabsContent>
               <TabsContent value="recent">
-                <ScheduleListView filter="recent" currentWeekStart={currentWeekStart} />
+                <ScheduleListView filter="recent" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
               </TabsContent>
             </Tabs>
           )}

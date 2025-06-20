@@ -30,6 +30,15 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
   const [hasChanges, setHasChanges] = useState(false)
   const [isAttendanceTaken, setIsAttendanceTaken] = useState(false)
 
+  // Initialize attendance state when students change
+  useEffect(() => {
+    const initialAttendance: Record<string, boolean> = {}
+    students.forEach((student) => {
+      initialAttendance[student.student_id] = false // Default to absent
+    })
+    setAttendance(initialAttendance)
+  }, [students])
+
   // Function to get initials from name
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
@@ -62,9 +71,15 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
     setSaving(true)
 
     try {
+      // Ensure all students are explicitly marked as present or absent
+      const completeAttendance: Record<string, boolean> = {}
+      students.forEach((student) => {
+        completeAttendance[student.student_id] = attendance[student.student_id] || false
+      })
+
       const result = await updateClassSessionAttendance({
         sessionId,
-        attendance
+        attendance: completeAttendance
       })
 
       if (!result.success) {
@@ -72,7 +87,7 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
       }
 
       // Check if all students are absent
-      const allAbsent = students.length > 0 && Object.values(attendance).every((status) => status === false)
+      const allAbsent = students.length > 0 && Object.values(completeAttendance).every((status) => status === false)
 
       let description = `Attendance records for ${format(parseISO(sessionDate), "MMMM d, yyyy")} have been updated.`
       if (allAbsent) {
@@ -107,7 +122,6 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Attendance Tracking</h3>
         {isAttendanceEnabled ? (
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={markAllPresent} className="h-8">

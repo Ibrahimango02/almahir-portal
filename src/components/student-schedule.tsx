@@ -12,11 +12,16 @@ import {
   isWithinInterval,
   endOfDay,
   startOfDay,
+  isPast,
+  isFuture,
+  isAfter,
+  isBefore,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 type Class = {
   id: number
@@ -173,8 +178,8 @@ function ListScheduleView({ classes }: { classes: Class[] }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {cls.attendance_status && <StatusBadge status={cls.attendance_status} />}
-                  <StatusBadge status={cls.status} />
+                  {cls.attendance_status && <StatusBadge status={convertStatusToPrefixedFormat(cls.attendance_status, 'session')} />}
+                  <StatusBadge status={convertStatusToPrefixedFormat(cls.status, 'session')} />
                 </div>
               </div>
             ))}
@@ -286,9 +291,9 @@ function CalendarScheduleView({ classes, weekStart }: { classes: Class[]; weekSt
                           </div>
                           <div className="flex justify-between items-center mt-2">
                             {classItem.attendance_status && (
-                              <StatusBadge status={classItem.attendance_status} className="text-xs" />
+                              <StatusBadge status={convertStatusToPrefixedFormat(classItem.attendance_status, 'session')} className="text-xs" />
                             )}
-                            <StatusBadge status={classItem.status} className="text-xs" />
+                            <StatusBadge status={convertStatusToPrefixedFormat(classItem.status, 'session')} className="text-xs" />
                           </div>
                         </div>
                       ))}

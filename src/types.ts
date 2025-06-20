@@ -1,6 +1,7 @@
 export type ScheduleListViewProps = {
     filter?: "morning" | "afternoon" | "evening" | "recent" | "upcoming"
     currentWeekStart?: Date
+    searchQuery?: string
 }
 
 export type WeeklyScheduleProps = {
@@ -8,6 +9,7 @@ export type WeeklyScheduleProps = {
     currentWeekStart: Date
     timeRangeStart?: number
     timeRangeEnd?: number
+    searchQuery?: string
 }
 
 export type ProfileType = {
@@ -19,7 +21,6 @@ export type ProfileType = {
     gender: string
     country: string
     language: string
-    timezone: string
     status: string
     role: string
     avatar_url: string | null
@@ -36,7 +37,6 @@ export type AdminType = {
     language: string
     email: string
     phone: string | null
-    timezone: string
     status: string
     role: string
     avatar_url: string | null
@@ -53,7 +53,6 @@ export type ParentType = {
     language: string
     email: string
     phone: string | null
-    timezone: string
     status: string
     role: string
     avatar_url: string | null
@@ -70,7 +69,6 @@ export type StudentType = {
     language: string
     email: string | null
     phone: string | null
-    timezone: string
     status: string
     role: string
     avatar_url: string | null
@@ -90,7 +88,6 @@ export type TeacherType = {
     language: string
     email: string
     phone: string | null
-    timezone: string
     status: string
     role: string
     avatar_url: string | null
@@ -163,4 +160,27 @@ export type InvoiceType = {
     paid_at: string | null
     created_at: string
     updated_at: string | null
+}
+
+export type TimeSlot = {
+    start: string // HH:MM format
+    end: string // HH:MM format
+}
+
+export type WeeklySchedule = {
+    monday: TimeSlot[]
+    tuesday: TimeSlot[]
+    wednesday: TimeSlot[]
+    thursday: TimeSlot[]
+    friday: TimeSlot[]
+    saturday: TimeSlot[]
+    sunday: TimeSlot[]
+}
+
+export type TeacherAvailabilityType = {
+    id: string
+    teacher_id: string
+    weekly_schedule: WeeklySchedule
+    created_at: string
+    updated_at: string
 }

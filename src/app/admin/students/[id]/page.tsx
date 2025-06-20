@@ -51,18 +51,18 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                     <AvatarIcon url={student.avatar_url} size="large" />
                   </div>
                 ) : (
-                  <Avatar className="h-28 w-28 mb-4 border-4 border-background shadow-md">
-                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                  <Avatar className="h-24 w-24 mb-4 border-4 border-background shadow-md">
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
                       {student.first_name[0]}
                       {student.last_name[0]}
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <Badge
-                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${student.status === "active" ? "bg-green-500"
+                  className={`absolute bottom-4 right-0 capitalize px-2 py-1 ${student.status === "active" ? "bg-green-600"
                     : student.status === "inactive" ? "bg-amber-500"
                       : student.status === "pending" ? "bg-blue-500"
-                        : student.status === "suspended" ? "bg-red-500"
+                        : student.status === "suspended" ? "bg-red-600"
                           : student.status === "archived" ? "bg-gray-500"
                             : "bg-gray-500"
                     }`}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import Link from "next/link"
 import { CalendarDays, Users, BookOpen, Link as LinkIcon, UserCircle2, Clock, Trash2, Edit } from "lucide-react"
 import { getClassSessions } from "@/lib/get/get-classes"
@@ -16,6 +16,7 @@ import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
 import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -50,6 +51,7 @@ type ClassDetailsProps = {
       first_name: string
       last_name: string
       avatar_url: string | null
+      role: string
     }[]
     enrolled_students: {
       student_id: string
@@ -128,7 +130,7 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
               <CardDescription className="text-lg">{classData.subject}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <StatusBadge status={classData.status} />
+              <StatusBadge status={convertStatusToPrefixedFormat(classData.status, 'class')} />
               <Button
                 size="icon"
                 className="h-9 w-9 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
@@ -204,15 +206,14 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
                       className="block"
                     >
                       <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
-                        <Avatar className="h-10 w-10">
+                        <Avatar className="h-8 w-8">
                           {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
                           <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-primary truncate">
+                          <p className="text-sm font-medium text-primary truncate">
                             {teacher.first_name} {teacher.last_name}
                           </p>
-                          <p className="text-xs text-muted-foreground">Teacher</p>
                         </div>
                       </div>
                     </Link>
@@ -275,7 +276,6 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
                           <p className="text-sm font-medium text-primary truncate">
                             {student.first_name} {student.last_name}
                           </p>
-                          <p className="text-xs text-muted-foreground">Student</p>
                         </div>
                       </div>
                     </Link>
@@ -331,7 +331,7 @@ export function ClassDetails({ classData }: ClassDetailsProps) {
                               {formatDateTime(session.start_date, "h:mm a", timezone)} - {formatDateTime(session.end_date, "h:mm a", timezone)}
                             </p>
                           </div>
-                          <StatusBadge status={session.status} />
+                          <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />
                         </div>
                       </div>
                     </Link>

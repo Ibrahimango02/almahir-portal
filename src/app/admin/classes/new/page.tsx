@@ -440,7 +440,7 @@ export default function CreateClassPage() {
                                                         value={teacher.teacher_id}
                                                         disabled={field.value?.includes(teacher.teacher_id)}
                                                     >
-                                                        {teacher.first_name} {teacher.last_name} ({teacher.specialization || "No specialization"})
+                                                        {teacher.first_name} {teacher.last_name} {teacher.specialization ? `(${teacher.specialization})` : ""}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>

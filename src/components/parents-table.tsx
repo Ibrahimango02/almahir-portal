@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal } from "lucide-react"
+import { Edit, MoreHorizontal, Mail, Phone, MapPin, Users } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
@@ -23,6 +23,8 @@ import { StatusBadge } from "./status-badge"
 import { getParentStudents } from "@/lib/get/get-parents"
 import { ParentType } from "@/types"
 import AvatarIcon from "./avatar"
+import { format, parseISO } from "date-fns"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 // Define type for student data
 type StudentType = {
@@ -67,102 +69,151 @@ export function ParentsTable({ parents }: ParentsTableProps) {
   const paginatedParents = parents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   return (
-    <div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Gender</TableHead>
-              <TableHead>Country</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Students</TableHead>
-              <TableHead className="text-center">Status</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead className="w-[80px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedParents.map((parent) => (
-              <TableRow
-                key={parent.parent_id}
-                className="hover:bg-muted/50 transition-colors cursor-pointer"
-                onClick={(e) => {
-                  // Prevent navigation if clicking on actions, the parent ID link, or other interactive elements
-                  if (
-                    e.target instanceof HTMLElement &&
-                    (e.target.closest("button") ||
-                      e.target.closest("a") ||
-                      e.target.closest("[data-no-navigation]"))
-                  ) {
-                    return
-                  }
-                  router.push(`/admin/parents/${parent.parent_id}`)
-                }}
-              >
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    {parent.avatar_url ? (
-                      <AvatarIcon url={parent.avatar_url} size="medium" />
-                    ) : (
-                      <Avatar>
-                        <AvatarFallback>
-                          {parent.first_name[0]}
-                          {parent.last_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div>
+    <div className="space-y-4">
+      {/* Table Container */}
+      <div className="rounded-lg border bg-card shadow-sm">
+        <div className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Parent</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Contact</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Location</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Students</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
+                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
+                <TableHead className="w-[50px] px-3"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedParents.map((parent, index) => (
+                <TableRow
+                  key={parent.parent_id}
+                  className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                    }`}
+                  onClick={(e) => {
+                    // Prevent navigation if clicking on actions, the parent ID link, or other interactive elements
+                    if (
+                      e.target instanceof HTMLElement &&
+                      (e.target.closest("button") ||
+                        e.target.closest("a") ||
+                        e.target.closest("[data-no-navigation]"))
+                    ) {
+                      return
+                    }
+                    router.push(`/admin/parents/${parent.parent_id}`)
+                  }}
+                >
+                  {/* Parent Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-3">
+                      {parent.avatar_url ? (
+                        <AvatarIcon url={parent.avatar_url} size="medium" />
+                      ) : (
+                        <Avatar className="h-10 w-10 border border-primary/10">
+                          <AvatarFallback className="bg-primary/5 text-primary text-xs font-semibold">
+                            {parent.first_name[0]}
+                            {parent.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="font-medium text-sm">
+                          {parent.first_name} {parent.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {parent.gender}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Contact Info */}
+                  <TableCell className="py-2 px-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground max-w-[120px]">{parent.email}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">{parent.phone}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Location */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs">{parent.country}</span>
+                    </div>
+                  </TableCell>
+
+                  {/* Students */}
+                  <TableCell className="py-2 px-3">
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-primary" />
+                      <span className="text-xs text-muted-foreground">
+                        {studentData[parent.parent_id]?.length > 0
+                          ? studentData[parent.parent_id].map(student =>
+                            `${student.first_name} ${student.last_name}`
+                          ).join(', ')
+                          : 'None'
+                        }
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell className="py-2 px-3 text-center">
+                    <div className="max-w-[100px] mx-auto">
+                      <StatusBadge status={convertStatusToPrefixedFormat(parent.status, 'user')} />
+                    </div>
+                  </TableCell>
+
+                  {/* Join Date */}
+                  <TableCell className="py-2 px-3">
+                    <div className="text-xs">
                       <p className="font-medium">
-                        {parent.first_name} {parent.last_name}
+                        {format(parseISO(parent.created_at), "MMM dd, yyyy")}
                       </p>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell>{parent.gender}</TableCell>
-                <TableCell>{parent.country}</TableCell>
-                <TableCell>{parent.email}</TableCell>
-                <TableCell>{parent.phone}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {studentData[parent.parent_id]?.map((student) => (
-                      <Badge key={student.id} variant="outline">
-                        {student.first_name} {student.last_name}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-center">
-                  <StatusBadge status={parent.status} />
-                </TableCell>
-                <TableCell>{new Date(parent.created_at).toLocaleDateString()}</TableCell>
-                <TableCell data-no-navigation>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/admin/parents/edit/${parent.parent_id}`}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </TableCell>
+
+                  {/* Actions */}
+                  <TableCell data-no-navigation className="py-2 px-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                          <span className="sr-only">Open menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                          <Link href={`/admin/parents/edit/${parent.parent_id}`} className="flex items-center">
+                            <Edit className="mr-2 h-3.5 w-3.5" />
+                            Edit Parent
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
+      {/* Pagination */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}

@@ -45,7 +45,6 @@ export async function getAdmins(): Promise<AdminType[]> {
         language: profile.language,
         email: profile.email,
         phone: profile.phone,
-        timezone: profile.timezone,
         status: profile.status,
         role: profile.role,
         avatar_url: profile.avatar_url,

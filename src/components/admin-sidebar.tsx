@@ -20,9 +20,11 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logout } from "@/lib/auth/auth-actions"
+import { getProfile } from "@/lib/get/get-profiles"
+import { ProfileType } from "@/types"
 
 const routes = [
   {
@@ -85,6 +87,23 @@ export function Sidebar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showLogout, setShowLogout] = useState(false)
+  const [profile, setProfile] = useState<ProfileType | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile()
+        setProfile(data)
+      } catch (error) {
+        console.error("Failed to fetch profile:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
 
   // Only show the sidebar on admin pages
   const isAdminPage = pathname.startsWith("/admin")
@@ -115,8 +134,8 @@ export function Sidebar() {
       >
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
           <Link href="/admin/dashboard" className="flex flex-col items-center justify-center w-full">
-            <div className="relative w-30 h-35 overflow-hidden rounded-full bg-white dark:bg-gray-900">
-              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={120} height={120} className="object-cover" />
+            <div className="flex items-center justify-center w-full py-2">
+              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain shadow-md" />
             </div>
           </Link>
           <Button
@@ -148,36 +167,61 @@ export function Sidebar() {
         </div>
         <div className="mt-auto">
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
               <ThemeToggle />
             </div>
             <div className="relative">
               <div className="flex items-center justify-between rounded-lg px-3 py-2 dark:bg-gray-800/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center">
-                    <User className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-50">Admin User</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">admin@almahir.edu</p>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {profile?.avatar_url ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={profile.avatar_url}
+                        alt={`${profile.first_name} ${profile.last_name}`}
+                        width={32}
+                        height={32}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {isLoading ? (
+                      <>
+                        <div className="h-3.5 w-18 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1"></div>
+                        <div className="h-3 w-22 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-50 truncate">
+                          {profile ? `${profile.first_name} ${profile.last_name}` : 'Loading...'}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          {profile?.email || 'Loading...'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowLogout(!showLogout)}
-                  className="h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  className="h-7 w-7 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 ml-1"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </div>
               {showLogout && (
-                <div className="absolute right-0 mt-1 w-36 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                <div className="absolute right-0 mt-1 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
                     <button
                       onClick={logout}
-                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout

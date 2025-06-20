@@ -15,6 +15,7 @@ export default async function ClassSessionPage({ params }: { params: { classId: 
 
   // Transform the data to match the expected structure for ClassSessionDetails
   const classData = {
+    class_id: classId,
     session_id: classSessionData.session_id,
     title: classSessionData.title,
     description: classSessionData.description || "",

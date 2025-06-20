@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useEffect } from "react"
 import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday, startOfWeek } from "date-fns"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { getClasses } from "@/lib/get/get-classes"
@@ -10,8 +9,32 @@ import { WeeklyScheduleProps, ClassType } from "@/types"
 import { Card } from "@/components/ui/card"
 import { getClassesToday } from "@/lib/get/get-classes"
 import { formatDateTime } from "@/lib/utils/timezone"
+import { StatusBadge } from "./status-badge"
+import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
-export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd }: WeeklyScheduleProps) {
+// Helper to get status colors for classes
+const getStatusStyles = (status: string) => {
+    switch (status) {
+        case "scheduled":
+            return "border-blue-200 bg-blue-50/80 dark:border-blue-800/60 dark:bg-blue-950/50"
+        case "running":
+            return "border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/60 dark:bg-emerald-950/50"
+        case "pending":
+            return "border-indigo-200 bg-indigo-50/80 dark:border-indigo-800/60 dark:bg-indigo-950/50"
+        case "complete":
+            return "border-purple-200 bg-purple-50/80 dark:border-purple-800/60 dark:bg-purple-950/50"
+        case "rescheduled":
+            return "border-amber-200 bg-amber-50/80 dark:border-amber-800/60 dark:bg-amber-950/50"
+        case "cancelled":
+            return "border-rose-200 bg-rose-50/80 dark:border-rose-800/60 dark:bg-rose-950/50"
+        case "absence":
+            return "border-orange-200 bg-orange-50/80 dark:border-orange-800/60 dark:bg-orange-950/50"
+        default:
+            return "border-gray-200 bg-gray-50/80 dark:border-gray-800/60 dark:bg-gray-950/50"
+    }
+}
+
+export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd, searchQuery }: WeeklyScheduleProps) {
     const router = useRouter()
     const [classData, setClassData] = useState<ClassType[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +83,33 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
     const weekDays = useMemo(() => {
         return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i))
     }, [currentWeekStart])
+
+    // Filter classes by search query
+    const filterBySearch = (classes: any[]) => {
+        if (!searchQuery || searchQuery.trim() === '') return classes;
+
+        const query = searchQuery.toLowerCase().trim();
+
+        return classes.filter(cls => {
+            // Search in class title
+            if (cls.title.toLowerCase().includes(query)) return true;
+
+            // Search in subject
+            if (cls.subject.toLowerCase().includes(query)) return true;
+
+            // Search in teacher names
+            if (cls.teachers.some((teacher: any) =>
+                `${teacher.first_name} ${teacher.last_name}`.toLowerCase().includes(query) ||
+                teacher.first_name.toLowerCase().includes(query) ||
+                teacher.last_name.toLowerCase().includes(query)
+            )) return true;
+
+            // Search in description
+            if (cls.description && cls.description.toLowerCase().includes(query)) return true;
+
+            return false;
+        });
+    };
 
     // Dynamically filter classes based on the current week
     const filteredClasses = useMemo(() => {
@@ -145,9 +195,10 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
             });
         });
 
-        // Apply any additional filtering
-        let filtered = [...sessionsForWeek];
+        // Apply search filtering first
+        let filtered = filterBySearch(sessionsForWeek);
 
+        // Then apply time-based filtering
         if (filter) {
             filtered = filtered.filter((cls) => {
                 const hour = parseISO(cls.start_time).getHours();
@@ -159,7 +210,7 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
         }
 
         return filtered;
-    }, [classData, currentWeekStart, weekDays, filter, isLoading]);
+    }, [classData, currentWeekStart, weekDays, filter, isLoading, searchQuery]);
 
     // Find earliest and latest class times to determine time slots
     const timeRange = useMemo(() => {
@@ -241,45 +292,6 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
         // Add the last group
         groups.push(currentGroup)
         return groups
-    }
-
-    // Helper to get status colors for classes
-    const getStatusStyles = (status: string) => {
-        switch (status) {
-            case "scheduled":
-                return "border-blue-400/70 bg-blue-50/80 dark:border-blue-800/70 dark:bg-blue-950/80"
-            case "running":
-                return "border-emerald-400/70 bg-emerald-50/80 dark:border-emerald-800/70 dark:bg-emerald-950/80"
-            case "pending":
-                return "border-indigo-400/70 bg-indigo-50/80 dark:border-indigo-800/70 dark:bg-indigo-950/80"
-            case "complete":
-                return "border-purple-400/70 bg-purple-50/80 dark:border-purple-800/70 dark:bg-purple-950/80"
-            case "cancelled":
-                return "border-rose-400/70 bg-rose-50/80 dark:border-rose-800/70 dark:bg-rose-950/80"
-            case "absence":
-                return "border-orange-400/70 bg-orange-50/80 dark:border-orange-800/70 dark:bg-orange-950/80"
-            default:
-                return "border-gray-400/70 bg-gray-50/80 dark:border-gray-800/70 dark:bg-gray-950/80"
-        }
-    }
-
-    const getStatusTextColor = (status: string) => {
-        switch (status) {
-            case "scheduled":
-                return "text-blue-700 dark:text-blue-400"
-            case "running":
-                return "text-emerald-700 dark:text-emerald-400"
-            case "pending":
-                return "text-indigo-700 dark:text-indigo-400"
-            case "complete":
-                return "text-purple-700 dark:text-purple-400"
-            case "cancelled":
-                return "text-rose-700 dark:text-rose-400"
-            case "absence":
-                return "text-orange-700 dark:text-orange-400"
-            default:
-                return "text-gray-700 dark:text-gray-400"
-        }
     }
 
     // Format the hour for display, handling hours > 24 for evening view
@@ -450,15 +462,10 @@ export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart,
                                                 </div>
                                                 {/* Always show status badge regardless of height */}
                                                 <div className="flex justify-end items-center mt-auto">
-                                                    <Badge
-                                                        variant="outline"
-                                                        className={cn(
-                                                            "text-xs whitespace-nowrap text-ellipsis overflow-hidden max-w-full",
-                                                            getStatusTextColor(extendedClass.status),
-                                                        )}
-                                                    >
-                                                        {extendedClass.status}
-                                                    </Badge>
+                                                    <StatusBadge
+                                                        status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
+                                                        className="text-xs"
+                                                    />
                                                 </div>
                                             </div>
                                         )
