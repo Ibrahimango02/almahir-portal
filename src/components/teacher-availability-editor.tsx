@@ -399,9 +399,6 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
                             <Clock className="h-3 w-3 mr-1" />
                             {timezone}
                         </Badge>
-                        <Badge variant="secondary" className="bg-white">
-                            {totalTimeSlots} time slot{totalTimeSlots !== 1 ? 's' : ''}
-                        </Badge>
                     </div>
                 </div>
             </CardHeader>

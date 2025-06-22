@@ -24,6 +24,26 @@ export async function getProfile(): Promise<ProfileType> {
     return profile
 }
 
+export async function getProfileById(id: string): Promise<ProfileType> {
+    const supabase = createClient()
+
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+    if (error) {
+        throw error
+    }
+
+    if (!profile) {
+        throw new Error('Profile not found')
+    }
+
+    return profile
+}
+
 export async function getAdmins(): Promise<AdminType[]> {
     const supabase = createClient()
 

@@ -78,3 +78,20 @@ export async function logout() {
 
     redirect('/')
 }
+
+export async function fetchUserRole(userId: string) {
+    const supabase = await createClient()
+
+    try {
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', userId)
+            .single()
+
+        return profile?.role || null
+    } catch (error) {
+        console.error('Error fetching user role:', error)
+        return null
+    }
+}

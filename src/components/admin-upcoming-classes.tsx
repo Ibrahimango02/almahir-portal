@@ -3,14 +3,14 @@
 import { differenceInMinutes, isValid, isBefore } from "date-fns"
 import { StatusBadge } from "./status-badge"
 import { getClassesToday } from "@/lib/get/get-classes"
-import { ClassType, ClassSessionType } from "@/types"
+import { ClassType } from "@/types"
 import {
   formatDateTime,
   formatTime,
   utcToLocal,
 } from "@/lib/utils/timezone"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { CalendarDays, Clock, Users } from "lucide-react"
+import { Clock, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -28,17 +28,6 @@ const formatDuration = (minutes: number) => {
   return remainingMinutes > 0 ? `${hours} hr ${remainingMinutes} mins` : `${hours} hr`
 }
 
-// Helper function to safely format date
-const safeFormat = (date: Date | null, formatStr: string, fallback: string = "–") => {
-  if (!date || !isValid(date)) return fallback;
-  try {
-    return formatDateTime(date, formatStr);
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return fallback;
-  }
-}
-
 // Helper function to safely parse ISO dates
 const safeParseISO = (dateStr: string): Date | null => {
   try {
@@ -49,7 +38,7 @@ const safeParseISO = (dateStr: string): Date | null => {
   }
 }
 
-export function UpcomingClasses() {
+export function AdminUpcomingClasses() {
   const router = useRouter()
   const [todayClasses, setTodayClasses] = useState<ClassType[]>([])
   const [isLoading, setIsLoading] = useState(true)

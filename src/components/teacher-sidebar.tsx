@@ -5,45 +5,69 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   CalendarDays,
+  FileText,
   GraduationCapIcon as Graduation,
-  LayoutDashboard,
+  Home,
   LogOut,
   Menu,
   MoreVertical,
   Settings,
   User,
   X,
+  BookOpen,
+  FolderOpen,
+  Users,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { logout } from "@/lib/auth/auth-actions"
+import { getProfile } from "@/lib/get/get-profiles"
+import { ProfileType } from "@/types"
 
 const routes = [
   {
     label: "Dashboard",
-    icon: LayoutDashboard,
+    icon: Home,
     href: "/teacher/dashboard",
-    color: "text-sky-600",
+    color: "text-green-600",
   },
   {
     label: "Schedule",
     icon: CalendarDays,
     href: "/teacher/schedule",
-    color: "text-violet-600",
+    color: "text-green-600",
   },
   {
-    label: "Your Students",
+    label: "Classes",
+    icon: BookOpen,
+    href: "/teacher/classes",
+    color: "text-green-600",
+  },
+  {
+    label: "Students",
     icon: Graduation,
     href: "/teacher/students",
-    color: "text-emerald-600",
+    color: "text-green-600",
+  },
+  {
+    label: "Parents",
+    icon: Users,
+    href: "/teacher/parents",
+    color: "text-green-600",
+  },
+  {
+    label: "Resources",
+    icon: FolderOpen,
+    href: "/teacher/resources",
+    color: "text-green-600",
   },
   {
     label: "Settings",
     icon: Settings,
     href: "/teacher/settings",
-    color: "text-gray-600",
+    color: "text-green-600",
   },
 ]
 
@@ -51,6 +75,23 @@ export function TeacherSidebar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showLogout, setShowLogout] = useState(false)
+  const [profile, setProfile] = useState<ProfileType | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile()
+        setProfile(data)
+      } catch (error) {
+        console.error("Failed to fetch profile:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [])
 
   // Only show the sidebar on teacher pages
   const isTeacherPage = pathname.startsWith("/teacher")
@@ -81,10 +122,9 @@ export function TeacherSidebar() {
       >
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
           <Link href="/teacher/dashboard" className="flex flex-col items-center justify-center w-full">
-            <div className="relative w-12 h-12 overflow-hidden rounded-full bg-white dark:bg-gray-900">
-              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={48} height={48} className="object-cover" />
+            <div className="flex items-center justify-center w-full py-2">
+              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain shadow-md" />
             </div>
-            <h1 className="mt-2 text-lg font-semibold text-gray-900 dark:text-gray-50">Al-Mahir</h1>
           </Link>
           <Button
             variant="ghost"
@@ -115,36 +155,61 @@ export function TeacherSidebar() {
         </div>
         <div className="mt-auto">
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
               <ThemeToggle />
             </div>
             <div className="relative">
               <div className="flex items-center justify-between rounded-lg px-3 py-2 dark:bg-gray-800/50">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-950 flex items-center justify-center">
-                    <User className="h-4 w-4 text-sky-500 dark:text-sky-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-50">Sarah Johnson</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">Math Teacher</p>
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  {profile?.avatar_url ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={profile.avatar_url}
+                        alt={`${profile.first_name} ${profile.last_name}`}
+                        width={32}
+                        height={32}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {isLoading ? (
+                      <>
+                        <div className="h-3.5 w-18 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-1"></div>
+                        <div className="h-3 w-22 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-50 truncate">
+                          {profile ? `${profile.first_name} ${profile.last_name}` : 'Loading...'}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          {profile?.email || 'Loading...'}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowLogout(!showLogout)}
-                  className="h-8 w-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                  className="h-7 w-7 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 flex-shrink-0 ml-1"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </div>
               {showLogout && (
-                <div className="absolute right-0 mt-1 w-36 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                <div className="absolute right-0 mt-1 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
                     <button
                       onClick={logout}
-                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <LogOut className="h-4 w-4" />
                       Logout

@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
-import { TeacherType, TeacherAvailabilityType } from '@/types'
+import { TeacherType, StudentType, TeacherAvailabilityType } from '@/types'
+import { calculateAge } from '@/lib/utils'
 
 export async function getTeachers(): Promise<TeacherType[]> {
     const supabase = createClient()
@@ -89,22 +90,64 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
     }
 }
 
-export async function getTeacherStudents(id: string) {
+export async function getTeacherStudents(id: string): Promise<StudentType[]> {
     const supabase = createClient()
 
-    const { data: teacherStudents } = await supabase
-        .from('teacher_students')
-        .select('student_id')
+    // First, get all classes that this teacher teaches
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
         .eq('teacher_id', id)
 
-    if (!teacherStudents) return []
+    if (!teacherClasses || teacherClasses.length === 0) return []
 
-    const studentIds = teacherStudents.map(student => student.student_id)
+    const classIds = teacherClasses.map(ct => ct.class_id)
 
-    const { data: students } = await supabase
+    // Get all students enrolled in these classes
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .in('class_id', classIds)
+
+    if (!classStudents || classStudents.length === 0) return []
+
+    // Get unique student IDs (a student might be in multiple classes with the same teacher)
+    const studentIds = [...new Set(classStudents.map(cs => cs.student_id))]
+
+    const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', studentIds)
+
+    if (!profiles) return []
+
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('*')
+        .in('profile_id', studentIds)
+
+    // Combine the data into a single array of StudentType
+    const students: StudentType[] = profiles.map(profile => {
+        const student = studentsData?.find(s => s.profile_id === profile.id)
+        return {
+            student_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email || null,
+            phone: profile.phone || null,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            age: calculateAge(student?.birth_date),
+            grade_level: student?.grade_level || null,
+            notes: student?.notes || null,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at || null
+        }
+    })
 
     return students
 }

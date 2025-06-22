@@ -37,7 +37,8 @@ export default function StudentsPage() {
         student.country.toLowerCase().includes(searchLower) ||
         student.language.toLowerCase().includes(searchLower) ||
         student.status.toLowerCase().includes(searchLower) ||
-        student.age === parseInt(searchLower)
+        student.age === parseInt(searchLower) ||
+        student.gender.toLowerCase().includes(searchLower)
       )
     })
     setFilteredStudents(filtered)

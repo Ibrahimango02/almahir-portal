@@ -131,11 +131,11 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground max-w-[120px]">{teacher.email}</span>
+                        <span className="max-w-[120px]">{teacher.email}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{teacher.phone}</span>
+                        <span>{teacher.phone}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -147,7 +147,6 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                         <BookOpen className="h-3 w-3 text-primary" />
                         <span className="font-medium text-sm">{teacher.specialization}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{teacher.language}</p>
                     </div>
                   </TableCell>
 
@@ -157,6 +156,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                       <MapPin className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs">{teacher.country}</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">{teacher.language}</p>
                   </TableCell>
 
                   {/* Classes Count */}

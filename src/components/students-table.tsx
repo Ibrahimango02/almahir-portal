@@ -25,30 +25,50 @@ import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
 import { format, parseISO } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { getProfile } from "@/lib/get/get-profiles"
 
 // Define types for related data
 type ParentType = {
-  id: string;
+  parent_id: string;
   first_name: string;
   last_name: string;
 }
 
 type TeacherType = {
-  id: string;
+  teacher_id: string;
   first_name: string;
   last_name: string;
 }
 
 interface StudentsTableProps {
   students: StudentType[]
+  userRole?: 'admin' | 'teacher'
 }
 
-export function StudentsTable({ students }: StudentsTableProps) {
+export function StudentsTable({ students, userRole }: StudentsTableProps) {
   const router = useRouter()
   const [parentData, setParentData] = useState<Record<string, ParentType[]>>({})
   const [teacherData, setTeacherData] = useState<Record<string, TeacherType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const profile = await getProfile()
+        setCurrentUserRole(profile.role)
+      } catch (error) {
+        console.error("Error fetching user role:", error)
+        // Fallback to the passed userRole prop if available
+        if (userRole) {
+          setCurrentUserRole(userRole)
+        }
+      }
+    }
+
+    fetchUserRole()
+  }, [userRole])
 
   useEffect(() => {
     const fetchRelatedData = async () => {
@@ -83,6 +103,18 @@ export function StudentsTable({ students }: StudentsTableProps) {
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  const isAdmin = currentUserRole === 'admin'
+
+  const getStudentDetailUrl = (studentId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/students/${studentId}`
+  }
+
+  const getActionUrl = (action: 'assign-class' | 'edit', studentId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/students/${action}/${studentId}`
+  }
+
   return (
     <div className="space-y-4">
       {/* Table Container */}
@@ -97,7 +129,7 @@ export function StudentsTable({ students }: StudentsTableProps) {
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80">Relations</TableHead>
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
-                <TableHead className="w-[50px] px-3"></TableHead>
+                {isAdmin && <TableHead className="w-[50px] px-3"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -116,7 +148,7 @@ export function StudentsTable({ students }: StudentsTableProps) {
                     ) {
                       return
                     }
-                    router.push(`/admin/students/${student.student_id}`)
+                    router.push(getStudentDetailUrl(student.student_id))
                   }}
                 >
                   {/* Student Info */}
@@ -148,11 +180,11 @@ export function StudentsTable({ students }: StudentsTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground max-w-[120px]">{student.email}</span>
+                        <span className="max-w-[120px]">{student.email}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{student.phone || 'N/A'}</span>
+                        <span>{student.phone || 'N/A'}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -172,9 +204,8 @@ export function StudentsTable({ students }: StudentsTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <Users className="h-3 w-3 text-primary" />
                         <span className="text-xs font-medium">Parents:</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs">
                           {parentData[student.student_id]?.length > 0
                             ? parentData[student.student_id].map(parent =>
                               `${parent.first_name} ${parent.last_name}`
@@ -184,9 +215,8 @@ export function StudentsTable({ students }: StudentsTableProps) {
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <UserCheck className="h-3 w-3 text-primary" />
                         <span className="text-xs font-medium">Teachers:</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs">
                           {teacherData[student.student_id]?.length > 0
                             ? teacherData[student.student_id].map(teacher =>
                               `${teacher.first_name} ${teacher.last_name}`
@@ -214,37 +244,39 @@ export function StudentsTable({ students }: StudentsTableProps) {
                     </div>
                   </TableCell>
 
-                  {/* Actions */}
-                  <TableCell data-no-navigation className="py-2 px-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                        >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                          <Link href={`/admin/students/assign-class/${student.student_id}`} className="flex items-center">
-                            <GraduationCap className="mr-2 h-3.5 w-3.5" />
-                            Assign to Class
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                          <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center">
-                            <Edit className="mr-2 h-3.5 w-3.5" />
-                            Edit Student
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {/* Actions - Only show for admin */}
+                  {isAdmin && (
+                    <TableCell data-no-navigation className="py-2 px-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                            <Link href={getActionUrl('assign-class', student.student_id)} className="flex items-center">
+                              <GraduationCap className="mr-2 h-3.5 w-3.5" />
+                              Assign to Class
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                            <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
+                              <Edit className="mr-2 h-3.5 w-3.5" />
+                              Edit Student
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

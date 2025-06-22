@@ -34,7 +34,10 @@ export default function ParentsPage() {
         parent.last_name.toLowerCase().includes(searchLower) ||
         parent.email.toLowerCase().includes(searchLower) ||
         (parent.phone?.toLowerCase().includes(searchLower) ?? false) ||
-        parent.status.toLowerCase().includes(searchLower)
+        parent.country.toLowerCase().includes(searchLower) ||
+        parent.language.toLowerCase().includes(searchLower) ||
+        parent.status.toLowerCase().includes(searchLower) ||
+        parent.gender.toLowerCase().includes(searchLower)
       )
     })
     setFilteredParents(filtered)

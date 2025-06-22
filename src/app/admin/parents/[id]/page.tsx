@@ -150,20 +150,6 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                         {new Date(parent.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium w-32">Account Status:</span>
-                      <Badge
-                        className={`capitalize ${parent.status === "active" ? "bg-green-600"
-                          : parent.status === "inactive" ? "bg-amber-500"
-                            : parent.status === "pending" ? "bg-blue-500"
-                              : parent.status === "suspended" ? "bg-red-600"
-                                : parent.status === "archived" ? "bg-gray-500"
-                                  : "bg-gray-500"
-                          }`}
-                      >
-                        {parent.status}
-                      </Badge>
-                    </div>
                   </div>
                 </div>
               </div>

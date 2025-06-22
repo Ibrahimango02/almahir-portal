@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { format } from "date-fns"
+import { format, startOfDay } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -280,7 +280,7 @@ export default function CreateClassPage() {
                                                         mode="single"
                                                         selected={field.value}
                                                         onSelect={field.onChange}
-                                                        disabled={(date) => date < new Date()}
+                                                        disabled={(date) => startOfDay(date) < startOfDay(new Date())}
                                                         initialFocus
                                                     />
                                                 </PopoverContent>
@@ -317,7 +317,7 @@ export default function CreateClassPage() {
                                                         onSelect={field.onChange}
                                                         disabled={(date) => {
                                                             const startDate = form.getValues("startDate")
-                                                            return date < new Date() || (startDate && date < startDate)
+                                                            return startOfDay(date) < startOfDay(new Date()) || (startDate && startOfDay(date) < startOfDay(startDate))
                                                         }}
                                                         initialFocus
                                                     />

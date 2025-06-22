@@ -1,16 +1,16 @@
 import { notFound } from "next/navigation"
 import { WeeklySchedule } from "@/components/weekly-schedule"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, Calendar, Edit, BookOpen, Clock, Plus } from "lucide-react"
+import { Mail, User, Users, Edit, BookOpen, UserPen, Clock, Plus } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
-import { getSessionsByStudentId } from "@/lib/get/get-classes"
+import { getStudentClassCount, getSessionsByStudentId } from "@/lib/get/get-classes"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
 
@@ -19,6 +19,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
   const { id } = await params
   const student = await getStudentById(id)
   const studentParents = await getStudentParents(id)
+  const studentTeachers = await getStudentTeachers(id)
 
   if (!student) {
     notFound()
@@ -30,6 +31,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
     )
   }
 
+  const studentClassCount = await getStudentClassCount(student.student_id)
   const studentSessions = await getSessionsByStudentId(student.student_id)
 
   return (
@@ -90,8 +92,8 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                   <span className="text-xs text-muted-foreground">Age</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{studentSessions.length}</span>
-                  <span className="text-xs text-muted-foreground">Sessions</span>
+                  <span className="text-2xl font-bold text-primary">{studentClassCount}</span>
+                  <span className="text-xs text-muted-foreground">Classes</span>
                 </div>
               </div>
 
@@ -106,48 +108,99 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                     <Mail className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
                     <span className="text-sm break-all">{student.email}</span>
                   </div>
-                  <div className="flex items-start">
-                    <Users className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Parents: {studentParents?.map((parent, index) => (
-                      <React.Fragment key={parent.id}>
-                        <Link
-                          href={`/admin/parents/${parent.id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {parent.first_name} {parent.last_name}
-                        </Link>
-                        {index < studentParents.length - 1 ? ", " : ""}
-                      </React.Fragment>
-                    ))}</span>
-                  </div>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Academic Information */}
+              {/* Teachers Section */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <Calendar className="h-4 w-4 mr-2 text-primary" />
-                  Academic Information
+                  <UserPen className="h-4 w-4 mr-2 text-primary" />
+                  Teachers
                 </h3>
                 <div className="space-y-3 pl-6">
-                  <div className="flex items-start">
-                    <Clock className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <span className="font-medium block text-foreground">Enrollment Date</span>
-                      <span className="text-muted-foreground">
-                        {format(parseISO(student.created_at), "MMMM d, yyyy")}
-                      </span>
+                  {studentTeachers && studentTeachers.length > 0 ? (
+                    <div className="space-y-2">
+                      {studentTeachers.map((teacher) => (
+                        <Link
+                          key={teacher.teacher_id}
+                          href={`/admin/teachers/${teacher.teacher_id}`}
+                          className="block"
+                        >
+                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                            <Avatar className="h-8 w-8">
+                              {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
+                              <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-primary truncate">
+                                {teacher.first_name} {teacher.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {teacher.specialization || 'Teacher'}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-4 text-center border-2 border-dashed border-muted rounded-lg">
+                      <UserPen className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No teachers assigned</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Parents Section */}
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <Users className="h-4 w-4 mr-2 text-primary" />
+                  Parents
+                </h3>
+                <div className="space-y-3 pl-6">
+                  {studentParents && studentParents.length > 0 ? (
+                    <div className="space-y-2">
+                      {studentParents.map((parent) => (
+                        <Link
+                          key={parent.parent_id}
+                          href={`/admin/parents/${parent.parent_id}`}
+                          className="block"
+                        >
+                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                            <Avatar className="h-8 w-8">
+                              {parent.avatar_url && <AvatarImage src={parent.avatar_url} alt={parent.first_name} />}
+                              <AvatarFallback>{parent.first_name.charAt(0)}{parent.last_name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-primary truncate">
+                                {parent.first_name} {parent.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {parent.email}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center border-2 border-dashed border-muted rounded-lg">
+                      <Users className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">No parents assigned</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <Separator />
 
               {/* Notes */}
-              {(
+              {student.notes && (
                 <div>
                   <h3 className="text-base font-semibold flex items-center mb-3">
                     <BookOpen className="h-4 w-4 mr-2 text-primary" />
@@ -156,6 +209,17 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
                   <p className="text-sm text-muted-foreground leading-relaxed pl-6">{student.notes}</p>
                 </div>
               )}
+
+              {/* Enrollment Date - Styled like Notes section */}
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <Clock className="h-4 w-4 mr-2 text-primary" />
+                  Enrollment Date
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+                  {format(parseISO(student.created_at), "MMMM d, yyyy")}
+                </p>
+              </div>
 
               {/* Edit Button */}
               <Button

@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTheme } from "@/components/theme-provider"
 import { MoonIcon, SunIcon, LaptopIcon, Upload, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -24,6 +25,9 @@ type ProfileData = {
   last_name: string
   email: string
   phone: string | null
+  gender: string
+  country: string
+  language: string
   role: string
   status: string
   avatar_url: string | null
@@ -38,6 +42,9 @@ export default function SettingsPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState("");
+  const [country, setCountry] = useState("");
+  const [language, setLanguage] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -59,6 +66,9 @@ export default function SettingsPage() {
         setLastName(data?.last_name || "");
         setEmail(data?.email || "");
         setPhone(data?.phone || "");
+        setGender(data?.gender || "");
+        setCountry(data?.country || "");
+        setLanguage(data?.language || "");
         setAvatarUrl(data?.avatar_url || null);
       } catch (error) {
         console.error("Failed to fetch profile:", error);
@@ -146,6 +156,9 @@ export default function SettingsPage() {
         last_name: lastName,
         email,
         phone,
+        gender,
+        country,
+        language,
       });
       // Refresh the page after successful save
       window.location.reload();
@@ -325,6 +338,39 @@ export default function SettingsPage() {
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-gender">Gender</Label>
+                  <Select value={gender || ""} onValueChange={setGender}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-country">Country</Label>
+                  <Input
+                    id="user-country"
+                    value={country}
+                    onChange={e => setCountry(e.target.value)}
+                    placeholder="Enter your country"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="user-language">Language</Label>
+                  <Select value={language || ""} onValueChange={setLanguage}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="English">English</SelectItem>
+                      <SelectItem value="Arabic">Arabic</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-role">Role</Label>

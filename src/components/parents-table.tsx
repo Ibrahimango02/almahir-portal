@@ -25,6 +25,7 @@ import { ParentType } from "@/types"
 import AvatarIcon from "./avatar"
 import { format, parseISO } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { getProfile } from "@/lib/get/get-profiles"
 
 // Define type for student data
 type StudentType = {
@@ -35,13 +36,32 @@ type StudentType = {
 
 interface ParentsTableProps {
   parents: ParentType[]
+  userRole?: 'admin' | 'teacher'
 }
 
-export function ParentsTable({ parents }: ParentsTableProps) {
+export function ParentsTable({ parents, userRole }: ParentsTableProps) {
   const router = useRouter()
   const [studentData, setStudentData] = useState<Record<string, StudentType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const profile = await getProfile()
+        setCurrentUserRole(profile.role)
+      } catch (error) {
+        console.error("Error fetching user role:", error)
+        // Fallback to the passed userRole prop if available
+        if (userRole) {
+          setCurrentUserRole(userRole)
+        }
+      }
+    }
+
+    fetchUserRole()
+  }, [userRole])
 
   useEffect(() => {
     const fetchStudentData = async () => {
@@ -68,6 +88,18 @@ export function ParentsTable({ parents }: ParentsTableProps) {
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedParents = parents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
+  const isAdmin = currentUserRole === 'admin'
+
+  const getParentDetailUrl = (parentId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/parents/${parentId}`
+  }
+
+  const getActionUrl = (action: 'edit', parentId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/parents/${action}/${parentId}`
+  }
+
   return (
     <div className="space-y-4">
       {/* Table Container */}
@@ -82,7 +114,7 @@ export function ParentsTable({ parents }: ParentsTableProps) {
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80">Students</TableHead>
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
-                <TableHead className="w-[50px] px-3"></TableHead>
+                {isAdmin && <TableHead className="w-[50px] px-3"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -101,7 +133,7 @@ export function ParentsTable({ parents }: ParentsTableProps) {
                     ) {
                       return
                     }
-                    router.push(`/admin/parents/${parent.parent_id}`)
+                    router.push(getParentDetailUrl(parent.parent_id))
                   }}
                 >
                   {/* Parent Info */}
@@ -133,11 +165,11 @@ export function ParentsTable({ parents }: ParentsTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground max-w-[120px]">{parent.email}</span>
+                        <span className="max-w-[120px]">{parent.email}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{parent.phone}</span>
+                        <span>{parent.phone}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -148,13 +180,13 @@ export function ParentsTable({ parents }: ParentsTableProps) {
                       <MapPin className="h-3 w-3 text-muted-foreground" />
                       <span className="text-xs">{parent.country}</span>
                     </div>
+                    <p className="text-xs text-muted-foreground">{parent.language}</p>
                   </TableCell>
 
                   {/* Students */}
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-1.5">
-                      <Users className="h-3 w-3 text-primary" />
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs">
                         {studentData[parent.parent_id]?.length > 0
                           ? studentData[parent.parent_id].map(student =>
                             `${student.first_name} ${student.last_name}`
@@ -181,31 +213,33 @@ export function ParentsTable({ parents }: ParentsTableProps) {
                     </div>
                   </TableCell>
 
-                  {/* Actions */}
-                  <TableCell data-no-navigation className="py-2 px-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                        >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                          <Link href={`/admin/parents/edit/${parent.parent_id}`} className="flex items-center">
-                            <Edit className="mr-2 h-3.5 w-3.5" />
-                            Edit Parent
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {/* Actions - Only show for admin */}
+                  {isAdmin && (
+                    <TableCell data-no-navigation className="py-2 px-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                            <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
+                              <Edit className="mr-2 h-3.5 w-3.5" />
+                              Edit Parent
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

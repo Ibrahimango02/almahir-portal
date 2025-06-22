@@ -23,8 +23,6 @@ const getStatusStyles = (status: string) => {
             return "border-indigo-200 bg-indigo-50/80 dark:border-indigo-800/60 dark:bg-indigo-950/50"
         case "complete":
             return "border-purple-200 bg-purple-50/80 dark:border-purple-800/60 dark:bg-purple-950/50"
-        case "rescheduled":
-            return "border-amber-200 bg-amber-50/80 dark:border-amber-800/60 dark:bg-amber-950/50"
         case "cancelled":
             return "border-rose-200 bg-rose-50/80 dark:border-rose-800/60 dark:bg-rose-950/50"
         case "absence":
@@ -34,7 +32,7 @@ const getStatusStyles = (status: string) => {
     }
 }
 
-export function ScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd, searchQuery }: WeeklyScheduleProps) {
+export function AdminScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd, searchQuery }: WeeklyScheduleProps) {
     const router = useRouter()
     const [classData, setClassData] = useState<ClassType[]>([])
     const [isLoading, setIsLoading] = useState(true)

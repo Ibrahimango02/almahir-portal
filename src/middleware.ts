@@ -55,23 +55,30 @@ export async function middleware(request: NextRequest) {
     const role = profile?.role;
     //const path = request.nextUrl.pathname;
 
-    // Define route permissions
+    /* // Define route permissions
     const protectedRoutes = {
         '/admin/dashboard': ['admin'],
         '/admin/schedule': ['admin'],
-        '/admin/teachers': ['admin'],       // Add student routes later
-        '/admin/parents': ['admin'],
+        '/admin/classes': ['admin'],
+        '/admin/admins': ['admin'],
+        '/admin/teachers': ['admin'],
         '/admin/students': ['admin'],
+        '/admin/parents': ['admin'],
         '/admin/invoices': ['admin'],
+        '/admin/resources': ['admin'],
         '/admin/settings': ['admin'],
         '/teacher/dashboard': ['teacher'],
         '/teacher/schedule': ['teacher'],
+        '/teacher/classes': ['teacher'],
         '/teacher/students': ['teacher'],
+        '/teacher/parents': ['teacher'],
+        '/teacher/resources': ['teacher'],
         '/teacher/settings': ['teacher'],
         '/parent/dashboard': ['parent'],
         '/parent/students': ['parent'],
         '/parent/invoices': ['parent'],
         '/parent/settings': ['parent'],
+        '/student/...
     };
 
     // Check access for exact path matches
@@ -79,7 +86,7 @@ export async function middleware(request: NextRequest) {
         if (path === route && !allowedRoles.includes(role)) {
             return NextResponse.redirect(new URL('/error', request.url));
         }
-    }
+    } */
 
     return supabaseResponse;
 }

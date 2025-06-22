@@ -184,3 +184,17 @@ export type TeacherAvailabilityType = {
     created_at: string
     updated_at: string
 }
+
+export type ResourceType = {
+    resource_id: string
+    title: string
+    description: string | null
+    file_name: string
+    file_url: string
+    file_size: number | null
+    file_type: string
+    uploaded_by: string | null
+    is_public: boolean
+    created_at: string
+    updated_at: string | null
+}

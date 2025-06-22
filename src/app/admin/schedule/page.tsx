@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
-import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
-import { ScheduleListView } from "@/components/schedule-list-view"
+import { AdminScheduleCalendarView } from "@/components/admin-schedule-calendar-view"
+import { AdminScheduleListView } from "@/components/admin-schedule-list-view"
 
 export default function SchedulePage() {
   const [view, setView] = useState<"calendar" | "list">("calendar")
@@ -110,7 +110,7 @@ export default function SchedulePage() {
                 <TabsTrigger value="evening">Evening</TabsTrigger>
               </TabsList>
               <TabsContent value="all">
-                <ScheduleCalendarView
+                <AdminScheduleCalendarView
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={0}
                   timeRangeEnd={24}
@@ -118,7 +118,7 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="morning">
-                <ScheduleCalendarView
+                <AdminScheduleCalendarView
                   filter="morning"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={4}
@@ -127,7 +127,7 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="afternoon">
-                <ScheduleCalendarView
+                <AdminScheduleCalendarView
                   filter="afternoon"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={12}
@@ -136,7 +136,7 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="evening">
-                <ScheduleCalendarView
+                <AdminScheduleCalendarView
                   filter="evening"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={20}
@@ -152,10 +152,10 @@ export default function SchedulePage() {
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming">
-                <ScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
+                <AdminScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
               </TabsContent>
               <TabsContent value="recent">
-                <ScheduleListView filter="recent" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
+                <AdminScheduleListView filter="recent" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
               </TabsContent>
             </Tabs>
           )}

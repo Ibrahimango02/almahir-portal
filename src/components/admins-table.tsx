@@ -108,11 +108,11 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Mail className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-muted-foreground max-w-[120px]">{admin.email}</span>
+                                                <span className="max-w-[120px]">{admin.email}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Phone className="h-3 w-3 text-muted-foreground" />
-                                                <span className="text-muted-foreground">{admin.phone}</span>
+                                                <span>{admin.phone}</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -123,6 +123,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                             <MapPin className="h-3 w-3 text-muted-foreground" />
                                             <span className="text-xs">{admin.country}</span>
                                         </div>
+                                        <p className="text-xs text-muted-foreground">{admin.language}</p>
                                     </TableCell>
 
                                     {/* Status */}

@@ -100,3 +100,113 @@ export async function getParentStudents(id: string) {
 
     return students
 }
+
+export async function getTeacherStudentParents(teacherId: string): Promise<ParentType[]> {
+    const supabase = createClient()
+
+    // First, get all students that this teacher teaches
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    if (!teacherClasses || teacherClasses.length === 0) return []
+
+    const classIds = teacherClasses.map(ct => ct.class_id)
+
+    // Get all students enrolled in these classes
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .in('class_id', classIds)
+
+    if (!classStudents || classStudents.length === 0) return []
+
+    // Get unique student IDs (a student might be in multiple classes with the same teacher)
+    const studentIds = [...new Set(classStudents.map(cs => cs.student_id))]
+
+    // Get all parents of these students
+    const { data: parentStudents } = await supabase
+        .from('parent_students')
+        .select('parent_id')
+        .in('student_id', studentIds)
+
+    if (!parentStudents || parentStudents.length === 0) return []
+
+    // Get unique parent IDs (a parent might have multiple students with the same teacher)
+    const parentIds = [...new Set(parentStudents.map(ps => ps.parent_id))]
+
+    // Get parent profiles
+    const { data: parentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', parentIds)
+
+    if (!parentProfiles) return []
+
+    // Map the profiles to ParentType
+    const parents: ParentType[] = parentProfiles.map((profile: any) => ({
+        parent_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
+        email: profile.email || null,
+        phone: profile.phone || null,
+        status: profile.status,
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at || null
+    }))
+
+    return parents
+}
+
+export async function getParentStudentsForTeacher(parentId: string, teacherId: string) {
+    const supabase = createClient()
+
+    // First, get all students of this parent
+    const { data: parentStudents } = await supabase
+        .from('parent_students')
+        .select('student_id')
+        .eq('parent_id', parentId)
+
+    if (!parentStudents || parentStudents.length === 0) return []
+
+    const parentStudentIds = parentStudents.map(student => student.student_id)
+
+    // Get all classes that this teacher teaches
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    if (!teacherClasses || teacherClasses.length === 0) return []
+
+    const classIds = teacherClasses.map(ct => ct.class_id)
+
+    // Get all students enrolled in these classes
+    const { data: classStudents } = await supabase
+        .from('class_students')
+        .select('student_id')
+        .in('class_id', classIds)
+
+    if (!classStudents || classStudents.length === 0) return []
+
+    const teacherStudentIds = classStudents.map(cs => cs.student_id)
+
+    // Find the intersection: students who are both children of this parent AND taught by this teacher
+    const commonStudentIds = parentStudentIds.filter(id => teacherStudentIds.includes(id))
+
+    if (commonStudentIds.length === 0) return []
+
+    // Get the student profiles
+    const { data: students } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', commonStudentIds)
+
+    return students || []
+}

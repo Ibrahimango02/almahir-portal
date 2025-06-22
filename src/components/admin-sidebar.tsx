@@ -17,6 +17,7 @@ import {
   UserPen,
   X,
   BookOpen,
+  FolderOpen,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -70,6 +71,12 @@ const routes = [
     color: "text-green-600",
   },
   {
+    label: "Resources",
+    icon: FolderOpen,
+    href: "/admin/resources",
+    color: "text-green-600",
+  },
+  {
     label: "Invoices",
     icon: FileText,
     href: "/admin/invoices",
@@ -83,7 +90,7 @@ const routes = [
   },
 ]
 
-export function Sidebar() {
+export function AdminSidebar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [showLogout, setShowLogout] = useState(false)

@@ -41,16 +41,6 @@ export function InvoicePreview({ formData, lineItems, subtotal, tax, discount, t
 
   return (
     <div className="container max-w-7xl mx-auto py-8 space-y-8">
-      {/* Header Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Invoice Preview</h1>
-            <p className="text-muted-foreground">Preview how your invoice will look</p>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Invoice Details */}
@@ -138,7 +128,7 @@ export function InvoicePreview({ formData, lineItems, subtotal, tax, discount, t
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-muted-foreground">Amount</p>
-                    <p className="text-2xl font-bold">{formData.currency} {Number(formData.amount).toFixed(2)}</p>
+                    <p className="text-2xl font-bold">{Number(formData.amount).toFixed(2)} {formData.currency}</p>
                   </div>
                 </div>
                 <div className="pt-4 border-t">

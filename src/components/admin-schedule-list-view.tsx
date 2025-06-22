@@ -21,7 +21,7 @@ import {
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
-export function ScheduleListView({ filter, currentWeekStart, searchQuery }: ScheduleListViewProps) {
+export function AdminScheduleListView({ filter, currentWeekStart, searchQuery }: ScheduleListViewProps) {
   const router = useRouter()
   const { timezone } = useTimezone()
   const [classData, setClassData] = useState<ClassType[]>([])
@@ -279,69 +279,86 @@ export function ScheduleListView({ filter, currentWeekStart, searchQuery }: Sche
           Showing {sortedSessions.length} result{sortedSessions.length !== 1 ? 's' : ''} for "{searchQuery}"
         </div>
       )}
-      <div className="grid gap-4">
-        {currentSessions.map((session) => {
-          try {
-            const startDateTime = utcToLocal(session.start_date, timezone);
-            const endDateTime = utcToLocal(session.end_date, timezone);
-            const isToday = isTodayInTimezone(session.start_date, timezone);
 
-            return (
-              <Card
-                key={session.session_id}
-                className="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
-                onClick={() => handleCardClick(session.class_id, session.session_id)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold text-base">{session.title}</h3>
-                      {isToday && (
-                        <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-500 text-white font-medium px-2 py-1">
-                          Today
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <CalendarDays className="h-3 w-3" />
-                        {formatDate(startDateTime, 'PPP')}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
-                      </span>
-                      {session.teachers.length > 0 && (
-                        <span className="flex items-center gap-1 text-muted-foreground">
-                          <Users className="h-3 w-3" />
-                          {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2 ml-3">
-                    <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />
-                  </div>
-                </div>
-              </Card>
-            );
-          } catch (error) {
-            console.error('Error rendering session:', error);
-            return null;
-          }
-        })}
-      </div>
+      {sortedSessions.length === 0 && (
+        <div className="text-center py-8">
+          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No classes found</h3>
+          <p className="text-muted-foreground">
+            {filter === "upcoming" ? "No upcoming classes" :
+              filter === "recent" ? "No recent classes" :
+                `No ${filter} classes`} for this week.
+          </p>
+        </div>
+      )}
 
-      {totalPages > 1 && (
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          pageSize={itemsPerPage}
-          totalItems={sortedSessions.length}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={() => { }} // No-op since we're not changing page size
-        />
+      {sortedSessions.length > 0 && (
+        <>
+          <div className="grid gap-4">
+            {currentSessions.map((session) => {
+              try {
+                const startDateTime = utcToLocal(session.start_date, timezone);
+                const endDateTime = utcToLocal(session.end_date, timezone);
+                const isToday = isTodayInTimezone(session.start_date, timezone);
+
+                return (
+                  <Card
+                    key={session.session_id}
+                    className="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
+                    onClick={() => handleCardClick(session.class_id, session.session_id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-base">{session.title}</h3>
+                          {isToday && (
+                            <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-500 text-white font-medium px-2 py-1">
+                              Today
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
+                        <div className="flex items-center gap-3 text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <CalendarDays className="h-3 w-3" />
+                            {formatDate(startDateTime, 'PPP')}
+                          </span>
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatTime(startDateTime, 'h:mm a')} - {formatTime(endDateTime, 'h:mm a')}
+                          </span>
+                          {session.teachers.length > 0 && (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Users className="h-3 w-3" />
+                              {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 ml-3">
+                        <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />
+                      </div>
+                    </div>
+                  </Card>
+                );
+              } catch (error) {
+                console.error('Error rendering session:', error);
+                return null;
+              }
+            })}
+          </div>
+
+          {totalPages > 1 && (
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              pageSize={itemsPerPage}
+              totalItems={sortedSessions.length}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={() => { }} // No-op since we're not changing page size
+            />
+          )}
+        </>
       )}
     </div>
   );
