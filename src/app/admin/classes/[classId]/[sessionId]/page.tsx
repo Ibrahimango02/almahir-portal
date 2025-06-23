@@ -31,7 +31,7 @@ export default async function ClassSessionPage({ params }: { params: { classId: 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <BackButton href="/admin/schedule" label="Back to Schedule" />
+        <BackButton href={`/admin/classes/${classId}`} label="Back to Class" />
       </div>
 
       <ClassSessionDetails classData={classData} />

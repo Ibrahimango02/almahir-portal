@@ -165,7 +165,7 @@ export default function ResourcesPage() {
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+                        <Button className="cursor-pointer" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                             <Plus className="h-4 w-4 mr-2" />
                             Upload Resource
                         </Button>
@@ -211,7 +211,7 @@ export default function ResourcesPage() {
                                 type="submit"
                                 disabled={isUploading}
                                 style={{ backgroundColor: "#3d8f5b", color: "white" }}
-                                className="w-full"
+                                className="w-full cursor-pointer"
                             >
                                 {isUploading ? (
                                     <>

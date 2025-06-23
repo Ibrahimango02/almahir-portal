@@ -4,10 +4,8 @@ import { useMemo, useState, useEffect } from "react"
 import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday, startOfWeek } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { getClasses } from "@/lib/get/get-classes"
 import { WeeklyScheduleProps, ClassType } from "@/types"
 import { Card } from "@/components/ui/card"
-import { getClassesToday } from "@/lib/get/get-classes"
 import { formatDateTime } from "@/lib/utils/timezone"
 import { StatusBadge } from "./status-badge"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
@@ -32,30 +30,27 @@ const getStatusStyles = (status: string) => {
     }
 }
 
-export function AdminScheduleCalendarView({ filter, currentWeekStart, timeRangeStart, timeRangeEnd, searchQuery }: WeeklyScheduleProps) {
+interface ScheduleCalendarViewProps extends WeeklyScheduleProps {
+    classData: ClassType[]
+    isLoading?: boolean
+    baseRoute: string // e.g., "/admin" or "/teacher"
+}
+
+export function ScheduleCalendarView({
+    filter,
+    currentWeekStart,
+    timeRangeStart,
+    timeRangeEnd,
+    searchQuery,
+    classData,
+    isLoading = false,
+    baseRoute
+}: ScheduleCalendarViewProps) {
     const router = useRouter()
-    const [classData, setClassData] = useState<ClassType[]>([])
-    const [isLoading, setIsLoading] = useState(true)
 
     // State to track current time for the indicator
     const [currentTime, setCurrentTime] = useState<Date | null>(null)
     const [showTimeIndicator, setShowTimeIndicator] = useState(false)
-
-    // Fetch class data
-    useEffect(() => {
-        const fetchClasses = async () => {
-            try {
-                const data = await getClasses()
-                setClassData(data)
-            } catch (error) {
-                console.error('Error fetching classes:', error)
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchClasses()
-    }, [])
 
     // Update current time every 5 minutes
     useEffect(() => {
@@ -443,7 +438,7 @@ export function AdminScheduleCalendarView({ filter, currentWeekStart, timeRangeS
                                                     width: `${width}%`,
                                                     zIndex: 10,
                                                 }}
-                                                onClick={() => router.push(`/admin/classes/${extendedClass.id}/${extendedClass.session_id}`)}
+                                                onClick={() => router.push(`${baseRoute}/classes/${extendedClass.id}/${extendedClass.session_id}`)}
                                             >
                                                 <div>
                                                     <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
@@ -486,4 +481,4 @@ export function AdminScheduleCalendarView({ filter, currentWeekStart, timeRangeS
             </div>
         </div>
     )
-}
+} 

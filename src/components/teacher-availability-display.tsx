@@ -2,7 +2,7 @@
 
 import { Clock } from "lucide-react"
 import { WeeklySchedule } from "@/types"
-import { formatTime, getUserTimezone } from "@/lib/utils/timezone"
+import { convertUtcTimeToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useEffect, useState } from "react"
 
@@ -23,26 +23,7 @@ const dayNames = {
     sunday: "Sunday"
 }
 
-// Helper function to convert UTC time to local time
-function convertUtcTimeToLocal(utcTime: string, teacherTimezone?: string): string {
-    try {
-        // Create a date object for today with the UTC time
-        const today = new Date()
-        const [hours, minutes] = utcTime.split(':').map(Number)
 
-        // Create a UTC date object
-        const utcDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes))
-
-        // Convert to teacher's timezone or user's timezone
-        const targetTimezone = teacherTimezone || getUserTimezone()
-
-        // Format the time in the target timezone with AM/PM format
-        return formatTime(utcDate, 'h:mm a', targetTimezone)
-    } catch (error) {
-        console.error('Error converting time:', error)
-        return utcTime // Fallback to original time if conversion fails
-    }
-}
 
 export function TeacherAvailabilityDisplay({ schedule }: TeacherAvailabilityDisplayProps) {
     const { timezone: userTimezone } = useTimezone()
@@ -51,7 +32,7 @@ export function TeacherAvailabilityDisplay({ schedule }: TeacherAvailabilityDisp
 
     // Ensure we're on the client side before doing timezone conversions
     useEffect(() => {
-        setIsClient(true)   
+        setIsClient(true)
     }, [])
 
     if (!hasAvailability) {

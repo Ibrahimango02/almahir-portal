@@ -4,13 +4,10 @@ import { notFound } from "next/navigation"
 import { Edit, Calendar, User, Receipt, Clock, DollarSign, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "@/components/status-badge"
 import { BackButton } from "@/components/back-button"
 import { getInvoiceById } from "@/lib/get/get-invoices"
-import { InvoiceType } from "@/types"
 import { format } from "date-fns"
-import { cn } from "@/lib/utils"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 export const metadata: Metadata = {
@@ -39,12 +36,12 @@ export default async function InvoiceDetailPage({ params }: { params: { id: stri
             <h1 className="text-3xl font-bold tracking-tight">Invoice Details</h1>
             <p className="text-muted-foreground">View and manage invoice information</p>
           </div>
-          <Link href={`/admin/invoices/edit/${id}`}>
-            <Button style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+            <Link href={`/admin/invoices/edit/${id}`}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Invoice
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </div>
 

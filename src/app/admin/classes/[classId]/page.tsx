@@ -20,7 +20,7 @@ export default async function ClassPage({ params }: { params: { classId: string 
                 <BackButton href="/admin/classes" label="Back to Classes" />
             </div>
 
-            <ClassDetails classData={classData} />
+            <ClassDetails classData={classData} userRole="admin" />
         </div>
     )
 }

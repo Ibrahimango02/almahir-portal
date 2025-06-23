@@ -1,14 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
-import { AdminScheduleCalendarView } from "@/components/admin-schedule-calendar-view"
-import { AdminScheduleListView } from "@/components/admin-schedule-list-view"
+import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
+import { ScheduleListView } from "@/components/schedule-list-view"
+import { getClasses } from "@/lib/get/get-classes"
+import { ClassType } from "@/types"
 
 export default function SchedulePage() {
   const [view, setView] = useState<"calendar" | "list">("calendar")
@@ -16,6 +18,21 @@ export default function SchedulePage() {
   const [activeTab, setActiveTab] = useState("all")
   const [activeListTab, setActiveListTab] = useState("upcoming")
   const [searchQuery, setSearchQuery] = useState("")
+  const [classData, setClassData] = useState<ClassType[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const data = await getClasses()
+        setClassData(data)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
 
   const navigateWeek = (direction: "next" | "prev") => {
     setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
@@ -24,15 +41,12 @@ export default function SchedulePage() {
   const toggleView = () => {
     if (view === "calendar") {
       setView("list")
-      setActiveListTab("upcoming") // Reset to "upcoming" tab when switching to list view
+      setActiveListTab("upcoming")
     } else {
       setView("calendar")
-      setActiveTab("all") // Reset to "8-Hour" tab when switching to calendar view
+      setActiveTab("all")
     }
   }
-
-  // Get current time for "all" view
-  const currentHour = new Date().getHours()
 
   return (
     <div className="flex flex-col gap-6">
@@ -110,7 +124,10 @@ export default function SchedulePage() {
                 <TabsTrigger value="evening">Evening</TabsTrigger>
               </TabsList>
               <TabsContent value="all">
-                <AdminScheduleCalendarView
+                <ScheduleCalendarView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={0}
                   timeRangeEnd={24}
@@ -118,7 +135,10 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="morning">
-                <AdminScheduleCalendarView
+                <ScheduleCalendarView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
                   filter="morning"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={4}
@@ -127,7 +147,10 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="afternoon">
-                <AdminScheduleCalendarView
+                <ScheduleCalendarView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
                   filter="afternoon"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={12}
@@ -136,11 +159,14 @@ export default function SchedulePage() {
                 />
               </TabsContent>
               <TabsContent value="evening">
-                <AdminScheduleCalendarView
+                <ScheduleCalendarView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
                   filter="evening"
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={20}
-                  timeRangeEnd={28} // 28 represents 4 AM next day
+                  timeRangeEnd={28}
                   searchQuery={searchQuery}
                 />
               </TabsContent>
@@ -152,10 +178,24 @@ export default function SchedulePage() {
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming">
-                <AdminScheduleListView filter="upcoming" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
+                <ScheduleListView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
+                  filter="upcoming"
+                  currentWeekStart={currentWeekStart}
+                  searchQuery={searchQuery}
+                />
               </TabsContent>
               <TabsContent value="recent">
-                <AdminScheduleListView filter="recent" currentWeekStart={currentWeekStart} searchQuery={searchQuery} />
+                <ScheduleListView
+                  classData={classData}
+                  isLoading={isLoading}
+                  baseRoute="/admin"
+                  filter="recent"
+                  currentWeekStart={currentWeekStart}
+                  searchQuery={searchQuery}
+                />
               </TabsContent>
             </Tabs>
           )}

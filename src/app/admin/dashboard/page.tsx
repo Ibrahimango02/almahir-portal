@@ -2,7 +2,6 @@ import {
   BookCheck,
   BookX,
   Calendar,
-  CalendarClock,
   CheckCircle,
   Clock,
   GraduationCapIcon as Graduation,
@@ -12,13 +11,12 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AdminRecentClasses } from "@/components/admin-recent-classes"
-import { AdminUpcomingClasses } from "@/components/admin-upcoming-classes"
+import { RecentClasses } from "@/components/recent-classes"
+import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
-import { getClassesCountByStatus } from "@/lib/get/get-classes"
+import { getSessionsToday, getClassesCountByStatus, getWeeklySessionsCount } from "@/lib/get/get-classes"
 import { getStudentsCount } from "@/lib/get/get-students"
 import { getTeachersCount } from "@/lib/get/get-teachers"
-import { getWeeklySessionsCount } from "@/lib/get/get-classes"
 import { createClient } from "@/utils/supabase/server"
 
 export default async function AdminDashboard() {
@@ -31,6 +29,7 @@ export default async function AdminDashboard() {
     .select('first_name, last_name')
     .eq('id', user?.id)
     .single()
+
 
   // Fetch todaysClasses inside the component to ensure fresh data on each page load
   const todaysClasses = {
@@ -45,6 +44,9 @@ export default async function AdminDashboard() {
   const studentsCount = await getStudentsCount()
   const teachersCount = await getTeachersCount()
   const weeklySessionsCount = await getWeeklySessionsCount()
+
+  // Fetch sessions data for today using getSessionsToday()
+  const sessionsData = await getSessionsToday()
 
   return (
     <div className="flex flex-col gap-6">
@@ -145,10 +147,18 @@ export default async function AdminDashboard() {
                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
               </TabsList>
               <TabsContent value="upcoming" className="space-y-4">
-                <AdminUpcomingClasses />
+                <UpcomingClasses
+                  sessions={sessionsData}
+                  isLoading={false}
+                  userType="admin"
+                />
               </TabsContent>
               <TabsContent value="recent" className="space-y-4">
-                <AdminRecentClasses />
+                <RecentClasses
+                  sessions={sessionsData}
+                  isLoading={false}
+                  userType="admin"
+                />
               </TabsContent>
             </Tabs>
           </CardContent>

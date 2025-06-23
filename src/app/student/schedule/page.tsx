@@ -1,0 +1,211 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
+import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
+import { ScheduleListView } from "@/components/schedule-list-view"
+import { getClassesByStudentId } from "@/lib/get/get-classes"
+import { createClient } from "@/utils/supabase/client"
+import { ClassType } from "@/types"
+
+export default function StudentSchedulePage() {
+    const [view, setView] = useState<"calendar" | "list">("calendar")
+    const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+    const [activeTab, setActiveTab] = useState("all")
+    const [activeListTab, setActiveListTab] = useState("upcoming")
+    const [searchQuery, setSearchQuery] = useState("")
+    const [classData, setClassData] = useState<ClassType[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true)
+            try {
+                const supabase = createClient()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    const data = await getClassesByStudentId(user.id)
+                    setClassData(data)
+                }
+            } finally {
+                setIsLoading(false)
+            }
+        }
+        fetchData()
+    }, [])
+
+    const navigateWeek = (direction: "next" | "prev") => {
+        setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
+    }
+
+    const toggleView = () => {
+        if (view === "calendar") {
+            setView("list")
+            setActiveListTab("upcoming")
+        } else {
+            setView("calendar")
+            setActiveTab("all")
+        }
+    }
+
+    return (
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h1 className="text-3xl font-bold tracking-tight">Class Schedule</h1>
+                <div className="flex items-center gap-2">
+                    <div className="relative w-full md:w-64">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Search classes..."
+                            className="w-full pl-8"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={toggleView}>
+                        {view === "calendar" ? (
+                            <>
+                                <List className="mr-2 h-4 w-4" />
+                                View List
+                            </>
+                        ) : (
+                            <>
+                                <CalendarDays className="mr-2 h-4 w-4" />
+                                View Calendar
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+
+            <Card>
+                <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle>{view === "calendar" ? "Weekly Schedule" : "Schedule List"}</CardTitle>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => navigateWeek("prev")}
+                                aria-label="Previous week"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <p className="text-sm font-medium">
+                                {format(currentWeekStart, "MMMM d")} -{" "}
+                                {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "MMMM d, yyyy")}
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => navigateWeek("next")}
+                                aria-label="Next week"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <CardDescription>
+                        {view === "calendar"
+                            ? "View and manage your weekly class schedule"
+                            : "View all scheduled classes in list format"}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {view === "calendar" ? (
+                        <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="mb-4">
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="morning">Morning</TabsTrigger>
+                                <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
+                                <TabsTrigger value="evening">Evening</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="all">
+                                <ScheduleCalendarView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    currentWeekStart={currentWeekStart}
+                                    timeRangeStart={0}
+                                    timeRangeEnd={24}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                            <TabsContent value="morning">
+                                <ScheduleCalendarView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    filter="morning"
+                                    currentWeekStart={currentWeekStart}
+                                    timeRangeStart={4}
+                                    timeRangeEnd={12}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                            <TabsContent value="afternoon">
+                                <ScheduleCalendarView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    filter="afternoon"
+                                    currentWeekStart={currentWeekStart}
+                                    timeRangeStart={12}
+                                    timeRangeEnd={20}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                            <TabsContent value="evening">
+                                <ScheduleCalendarView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    filter="evening"
+                                    currentWeekStart={currentWeekStart}
+                                    timeRangeStart={20}
+                                    timeRangeEnd={28}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    ) : (
+                        <Tabs defaultValue="upcoming" value={activeListTab} onValueChange={setActiveListTab}>
+                            <TabsList className="mb-4 bg-muted/80">
+                                <TabsTrigger value="recent">Recent</TabsTrigger>
+                                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="upcoming">
+                                <ScheduleListView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    filter="upcoming"
+                                    currentWeekStart={currentWeekStart}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                            <TabsContent value="recent">
+                                <ScheduleListView
+                                    classData={classData}
+                                    isLoading={isLoading}
+                                    baseRoute="/teacher"
+                                    filter="recent"
+                                    currentWeekStart={currentWeekStart}
+                                    searchQuery={searchQuery}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    )
+}

@@ -18,6 +18,8 @@ import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
+import { ClientTimeDisplay } from "./client-time-display"
+import { createClient } from "@/utils/supabase/client"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -61,31 +63,24 @@ type ClassDetailsProps = {
       avatar_url: string | null
     }[]
   }
-  showActions?: boolean
+  userRole: 'admin' | 'teacher' | 'parent' | 'student'
+  userParentStudents?: string[] // Only needed for parent role
 }
 
-export function ClassDetails({ classData, showActions = true }: ClassDetailsProps) {
+export function ClassDetails({ classData, userRole, userParentStudents = [] }: ClassDetailsProps) {
   const [sessions, setSessions] = useState<ClassSessionType[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [userRole, setUserRole] = useState<string | null>(null)
   const { toast } = useToast()
   const router = useRouter()
   const { timezone } = useTimezone()
 
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const profile = await getProfile()
-        setUserRole(profile.role)
-      } catch (error) {
-        console.error("Error fetching user role:", error)
-      }
-    }
+  // Determine if actions should be shown based on user role
+  const showActions = userRole === 'admin' || userRole === 'teacher'
 
-    fetchUserRole()
-  }, [])
+  // Determine if links should be enabled based on user role
+  const enableLinks = userRole === 'admin' || userRole === 'teacher' || userRole === 'parent'
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -103,8 +98,6 @@ export function ClassDetails({ classData, showActions = true }: ClassDetailsProp
   }, [classData.class_id])
 
   const getRedirectPath = (action: 'list' | 'edit') => {
-    if (!userRole) return '/'
-
     const basePath = `/${userRole}`
     return action === 'edit'
       ? `${basePath}/classes/edit/${classData.class_id}`
@@ -112,13 +105,30 @@ export function ClassDetails({ classData, showActions = true }: ClassDetailsProp
   }
 
   const getEntityPath = (entityType: 'teachers' | 'students', entityId: string) => {
-    if (!userRole) return '/'
     return `/${userRole}/${entityType}/${entityId}`
   }
 
   const getSessionPath = (sessionId: string) => {
-    if (!userRole) return '/'
     return `/${userRole}/classes/${classData.class_id}/${sessionId}`
+  }
+
+  // Check if a student is associated with the current parent user
+  const isStudentAssociatedWithParent = (studentId: string) => {
+    if (userRole !== 'parent') return true // Allow all students for non-parent users
+    return userParentStudents.includes(studentId)
+  }
+
+  // Check if links should be enabled for a specific student
+  const shouldEnableStudentLink = (studentId: string) => {
+    if (!enableLinks) return false
+    if (userRole === 'admin' || userRole === 'teacher') return true
+    if (userRole === 'parent') return isStudentAssociatedWithParent(studentId)
+    return false
+  }
+
+  // Check if links should be enabled for teachers
+  const shouldEnableTeacherLink = () => {
+    return enableLinks && (userRole === 'admin' || userRole === 'teacher')
   }
 
   const handleDeleteClass = async () => {
@@ -272,23 +282,40 @@ export function ClassDetails({ classData, showActions = true }: ClassDetailsProp
                   {teachers.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {teachers.map((teacher) => (
-                        <Link
-                          key={teacher.teacher_id}
-                          href={getEntityPath('teachers', teacher.teacher_id)}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        shouldEnableTeacherLink() ? (
+                          <Link
+                            key={teacher.teacher_id}
+                            href={getEntityPath('teachers', teacher.teacher_id)}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                              <Avatar className="h-8 w-8">
+                                {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
+                                <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-primary truncate">
+                                  {teacher.first_name} {teacher.last_name}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div
+                            key={teacher.teacher_id}
+                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
+                          >
                             <Avatar className="h-8 w-8">
                               {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
                               <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-muted-foreground truncate">
                                 {teacher.first_name} {teacher.last_name}
                               </p>
                             </div>
                           </div>
-                        </Link>
+                        )
                       ))}
                     </div>
                   ) : (
@@ -309,23 +336,40 @@ export function ClassDetails({ classData, showActions = true }: ClassDetailsProp
                   {enrolledStudents.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {enrolledStudents.map((student) => (
-                        <Link
-                          key={student.student_id}
-                          href={getEntityPath('students', student.student_id)}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        shouldEnableStudentLink(student.student_id) ? (
+                          <Link
+                            key={student.student_id}
+                            href={getEntityPath('students', student.student_id)}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                              <Avatar className="h-8 w-8">
+                                {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
+                                <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-primary truncate">
+                                  {student.first_name} {student.last_name}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div
+                            key={student.student_id}
+                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
+                          >
                             <Avatar className="h-8 w-8">
                               {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
                               <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-muted-foreground truncate">
                                 {student.first_name} {student.last_name}
                               </p>
                             </div>
                           </div>
-                        </Link>
+                        )
                       ))}
                     </div>
                   ) : (
@@ -388,7 +432,7 @@ export function ClassDetails({ classData, showActions = true }: ClassDetailsProp
                                 {formatDateTime(session.start_date, "EEEE, MMMM d", timezone)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatDateTime(session.start_date, "h:mm a", timezone)} - {formatDateTime(session.end_date, "h:mm a", timezone)}
+                                <ClientTimeDisplay date={utcToLocal(session.start_date, timezone)} format="h:mm a" /> - <ClientTimeDisplay date={utcToLocal(session.end_date, timezone)} format="h:mm a" />
                               </p>
                             </div>
                             <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />

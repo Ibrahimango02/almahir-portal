@@ -1,9 +1,10 @@
 import { Calendar } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { TeacherRecentClasses } from "@/components/teacher-recent-classes"
-import { TeacherUpcomingClasses } from "@/components/teacher-upcoming-classes"
+import { RecentClasses } from "@/components/recent-classes"
+import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
+import { getTeacherSessionsToday } from "@/lib/get/get-classes"
 import { createClient } from "@/utils/supabase/server"
 
 export default async function TeacherDashboard() {
@@ -16,6 +17,9 @@ export default async function TeacherDashboard() {
         .select('first_name, last_name')
         .eq('id', user?.id)
         .single()
+
+    // Fetch teacher sessions data for the unified components
+    const sessionsData = user ? await getTeacherSessionsToday(user.id) : []
 
     return (
         <div className="flex flex-col gap-6">
@@ -51,10 +55,18 @@ export default async function TeacherDashboard() {
                                 <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
                             </TabsList>
                             <TabsContent value="upcoming" className="space-y-4">
-                                <TeacherUpcomingClasses />
+                                <UpcomingClasses
+                                    sessions={sessionsData}
+                                    isLoading={false}
+                                    userType="teacher"
+                                />
                             </TabsContent>
                             <TabsContent value="recent" className="space-y-4">
-                                <TeacherRecentClasses />
+                                <RecentClasses
+                                    sessions={sessionsData}
+                                    isLoading={false}
+                                    userType="teacher"
+                                />
                             </TabsContent>
                         </Tabs>
                     </CardContent>

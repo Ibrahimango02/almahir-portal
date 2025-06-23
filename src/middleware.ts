@@ -1,6 +1,5 @@
-
 import { updateSession } from '@/utils/supabase/middleware'
-import { createServerClient } from '@supabase/ssr'
+import { createMiddlewareClient } from '@/utils/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
 
 
@@ -8,26 +7,7 @@ export async function middleware(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
         request,
     })
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
-                setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
-                    )
-                },
-            },
-        }
-    )
+    const supabase = createMiddlewareClient(request, supabaseResponse)
 
     const path = request.nextUrl.pathname;
 
@@ -55,7 +35,7 @@ export async function middleware(request: NextRequest) {
     const role = profile?.role;
     //const path = request.nextUrl.pathname;
 
-    /* // Define route permissions
+    // Define route permissions
     const protectedRoutes = {
         '/admin/dashboard': ['admin'],
         '/admin/schedule': ['admin'],
@@ -74,11 +54,19 @@ export async function middleware(request: NextRequest) {
         '/teacher/parents': ['teacher'],
         '/teacher/resources': ['teacher'],
         '/teacher/settings': ['teacher'],
+        '/student/dashboard': ['student'],
+        '/student/schedule': ['student'],
+        '/student/classes': ['student'],
+        '/student/resources': ['student'],
+        '/student/invoices': ['student'],
+        '/student/settings': ['student'],
         '/parent/dashboard': ['parent'],
+        '/parent/schedule': ['parent'],
+        '/parent/classes': ['parent'],
         '/parent/students': ['parent'],
+        '/parent/resources': ['parent'],
         '/parent/invoices': ['parent'],
-        '/parent/settings': ['parent'],
-        '/student/...
+        '/parent/settings': ['parent']
     };
 
     // Check access for exact path matches
@@ -86,7 +74,7 @@ export async function middleware(request: NextRequest) {
         if (path === route && !allowedRoles.includes(role)) {
             return NextResponse.redirect(new URL('/error', request.url));
         }
-    } */
+    }
 
     return supabaseResponse;
 }

@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "./table-pagination"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { ClientTimeDisplay } from "./client-time-display"
 
 // Utility function to parse class date and time
 const parseClassDateTime = (
@@ -353,7 +354,7 @@ function ListScheduleView({
                         </span>
                         <span className="flex items-center gap-1 text-muted-foreground">
                           <Clock className="h-3 w-3" />
-                          {format(startDateTime, "h:mm a")} - {format(endDateTime, "h:mm a")}
+                          <ClientTimeDisplay date={startDateTime} format="h:mm a" /> - <ClientTimeDisplay date={endDateTime} format="h:mm a" />
                         </span>
                         {classItem.teachers.length > 0 && (
                           <span className="flex items-center gap-1 text-muted-foreground">
@@ -732,7 +733,7 @@ function CalendarScheduleView({
                               )}
                               {heightPx >= 90 && (
                                 <p className="text-xs text-muted-foreground truncate">
-                                  {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                                  <ClientTimeDisplay date={startTime} format="h:mm a" /> - <ClientTimeDisplay date={endTime} format="h:mm a" />
                                 </p>
                               )}
                             </div>

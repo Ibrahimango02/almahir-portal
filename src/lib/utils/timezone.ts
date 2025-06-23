@@ -6,6 +6,7 @@ const DEFAULT_TIMEZONE = 'UTC'
 
 /**
  * Get user's timezone from browser or use default
+ * NOTE: This function should only be used on the client side to avoid hydration mismatches
  */
 export function getUserTimezone(): string {
     if (typeof window !== 'undefined') {
@@ -15,10 +16,18 @@ export function getUserTimezone(): string {
 }
 
 /**
+ * Get user's timezone safely for SSR - always returns UTC to prevent hydration mismatches
+ * Use this for server-side rendering, then update with actual timezone on client
+ */
+export function getSafeTimezone(): string {
+    return DEFAULT_TIMEZONE
+}
+
+/**
  * Convert a UTC date to user's local timezone
  */
 export function utcToLocal(utcDate: string | Date, timezone?: string): Date {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
 
     if (typeof utcDate === 'string') {
         const parsed = parseISO(utcDate)
@@ -35,7 +44,7 @@ export function utcToLocal(utcDate: string | Date, timezone?: string): Date {
  * Convert a local date to UTC
  */
 export function localToUtc(localDate: Date, timezone?: string): Date {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
 
     // Create a date string in the target timezone
     const dateString = localDate.toLocaleString("en-US", { timeZone: tz })
@@ -62,7 +71,7 @@ export function formatInUserTimezone(
     formatString: string,
     timezone?: string
 ): string {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
 
     if (typeof date === 'string') {
         const parsed = parseISO(date)
@@ -83,7 +92,7 @@ export function combineDateTimeToUtc(
     timeStr: string,
     timezone?: string
 ): Date {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
 
     // Parse the date (YYYY-MM-DD)
     const [year, month, day] = dateStr.split('-').map(Number)
@@ -114,7 +123,7 @@ export function extractDateAndTime(
     utcDateTime: string | Date,
     timezone?: string
 ): { date: string; time: string } {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
 
     if (typeof utcDateTime === 'string') {
         const parsed = parseISO(utcDateTime)
@@ -170,7 +179,7 @@ export function formatDate(
  * Get current time in user's timezone
  */
 export function getCurrentTimeInTimezone(timezone?: string): Date {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
     return toZonedTime(new Date(), tz)
 }
 
@@ -178,9 +187,77 @@ export function getCurrentTimeInTimezone(timezone?: string): Date {
  * Check if a date is today in user's timezone
  */
 export function isTodayInTimezone(date: string | Date, timezone?: string): boolean {
-    const tz = timezone || getUserTimezone()
+    const tz = timezone || getSafeTimezone()
     const localDate = utcToLocal(date, tz)
     const today = getCurrentTimeInTimezone(tz)
 
     return localDate.toDateString() === today.toDateString()
+}
+
+/**
+ * Convert a UTC timestamp (timestamptz format) to local user timezone
+ * @param utcTimestamp - UTC timestamp in format YYYY-MM-DD HH:MM:SS+NN
+ * @returns Date object in user's local timezone
+ */
+export function convertUtcTimestampToLocal(utcTimestamp: string): Date {
+    try {
+        // Parse the UTC timestamp string
+        const parsed = parseISO(utcTimestamp)
+        if (!isValid(parsed)) {
+            throw new Error(`Invalid timestamp format: ${utcTimestamp}`)
+        }
+
+        // Get user's timezone
+        const userTimezone = getUserTimezone()
+
+        // Convert to user's local timezone
+        return toZonedTime(parsed, userTimezone)
+    } catch (error) {
+        console.error('Error converting UTC timestamp to local:', error)
+        // Fallback to original timestamp if conversion fails
+        return new Date(utcTimestamp)
+    }
+}
+
+// Helper function to convert UTC time to local time
+export function convertUtcTimeToLocal(utcTime: string, teacherTimezone?: string): string {
+    try {
+        // Create a date object for today with the UTC time
+        const today = new Date()
+        const [hours, minutes] = utcTime.split(':').map(Number)
+
+        // Create a UTC date object
+        const utcDate = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), hours, minutes))
+
+        // Convert to teacher's timezone or user's timezone
+        const targetTimezone = teacherTimezone || getUserTimezone()
+
+        // Format the time in the target timezone with AM/PM format
+        return formatTime(utcDate, 'h:mm a', targetTimezone)
+    } catch (error) {
+        console.error('Error converting time:', error)
+        return utcTime // Fallback to original time if conversion fails
+    }
+}
+
+/**
+ * Convert UTC datetime string to local timezone display format
+ * Specifically for full datetime strings (ISO format)
+ * @param utcDateTime - UTC datetime string in ISO format
+ * @param timezone - Optional timezone to convert to, defaults to user's timezone
+ * @returns Formatted time string in local timezone
+ */
+export function convertUtcDateTimeToLocal(utcDateTime: string, timezone?: string): string {
+    try {
+        const parsed = parseISO(utcDateTime)
+        if (!isValid(parsed)) {
+            throw new Error(`Invalid datetime format: ${utcDateTime}`)
+        }
+
+        const targetTimezone = timezone || getUserTimezone()
+        return formatTime(parsed, 'h:mm a', targetTimezone)
+    } catch (error) {
+        console.error('Error converting datetime:', error)
+        return 'Invalid Time'
+    }
 } 

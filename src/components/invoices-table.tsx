@@ -13,13 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, MoreHorizontal, CheckCircle, Clock, AlertCircle, XCircle, ArrowUpDown, Receipt, User, DollarSign, Calendar, CalendarDays } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { format, parseISO } from "date-fns"
 import { InvoiceType } from "@/types"
 import { updateInvoice } from "@/lib/put/put-invoices"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { getProfile } from "@/lib/get/get-profiles"
 
 interface InvoicesTableProps {
   invoices: InvoiceType[]
@@ -39,6 +40,20 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
   const [pageSize, setPageSize] = useState(10)
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'created_at', direction: 'none' })
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const profile = await getProfile()
+        setCurrentUserRole(profile.role)
+      } catch (error) {
+        console.error("Error fetching user role:", error)
+      }
+    }
+
+    fetchUserRole()
+  }, [])
 
   // Calculate pagination
   const totalItems = invoices.length
@@ -136,6 +151,18 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
     }
   }
 
+  const getInvoiceDetailUrl = (invoiceId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/invoices/${invoiceId}`
+  }
+
+  const getActionUrl = (action: 'edit', invoiceId: string) => {
+    if (!currentUserRole) return '/'
+    return `/${currentUserRole}/invoices/${action}/${invoiceId}`
+  }
+
+  const isAdmin = currentUserRole === 'admin'
+
   const SortableHeader = ({ label, sortKey, icon: Icon }: { label: string, sortKey: string, icon?: any }) => (
     <TableHead
       className="h-10 px-3 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/50"
@@ -178,7 +205,7 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
                 <SortableHeader label="Created" sortKey="created_at" icon={Calendar} />
                 <SortableHeader label="Due Date" sortKey="due_date" icon={CalendarDays} />
                 <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                <TableHead className="w-[50px] px-3"></TableHead>
+                {isAdmin && <TableHead className="w-[50px] px-3"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -198,13 +225,13 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
                     ) {
                       return
                     }
-                    router.push(`/admin/invoices/${invoice.invoice_id}`)
+                    router.push(getInvoiceDetailUrl(invoice.invoice_id))
                   }}
                 >
                   {/* Invoice Info */}
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-1.5">
-                      <Link href={`/admin/invoices/${invoice.invoice_id}`} className="font-medium text-sm hover:underline">
+                      <Link href={getInvoiceDetailUrl(invoice.invoice_id)} className="font-medium text-sm hover:underline">
                         {invoice.invoice_id}
                       </Link>
                     </div>
@@ -253,81 +280,83 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
                     </div>
                   </TableCell>
 
-                  {/* Actions */}
-                  <TableCell data-no-navigation className="py-2 px-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                        >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                          <Link href={`/admin/invoices/edit/${invoice.invoice_id}`} className="flex items-center">
-                            <Edit className="mr-2 h-3.5 w-3.5" />
-                            Edit Invoice
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          data-status-update
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusUpdate(invoice.invoice_id, 'pending')
-                          }}
-                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'pending'}
-                          className="cursor-pointer text-xs"
-                        >
-                          <Clock className="mr-2 h-3.5 w-3.5" />
-                          Set Pending
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          data-status-update
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusUpdate(invoice.invoice_id, 'paid')
-                          }}
-                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
-                          className="cursor-pointer text-xs"
-                        >
-                          <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                          Mark as Paid
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          data-status-update
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusUpdate(invoice.invoice_id, 'overdue')
-                          }}
-                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'overdue'}
-                          className="cursor-pointer text-xs"
-                        >
-                          <AlertCircle className="mr-2 h-3.5 w-3.5" />
-                          Mark as Overdue
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          data-status-update
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusUpdate(invoice.invoice_id, 'cancelled')
-                          }}
-                          disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
-                          className="cursor-pointer text-xs"
-                        >
-                          <XCircle className="mr-2 h-3.5 w-3.5" />
-                          Cancel Invoice
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+                  {/* Actions - Only show for admin */}
+                  {isAdmin && (
+                    <TableCell data-no-navigation className="py-2 px-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                            <Link href={getActionUrl('edit', invoice.invoice_id)} className="flex items-center">
+                              <Edit className="mr-2 h-3.5 w-3.5" />
+                              Edit Invoice
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
+                          <DropdownMenuItem
+                            data-status-update
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(invoice.invoice_id, 'pending')
+                            }}
+                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'pending'}
+                            className="cursor-pointer text-xs"
+                          >
+                            <Clock className="mr-2 h-3.5 w-3.5" />
+                            Set Pending
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            data-status-update
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(invoice.invoice_id, 'paid')
+                            }}
+                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
+                            className="cursor-pointer text-xs"
+                          >
+                            <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                            Mark as Paid
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            data-status-update
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(invoice.invoice_id, 'overdue')
+                            }}
+                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'overdue'}
+                            className="cursor-pointer text-xs"
+                          >
+                            <AlertCircle className="mr-2 h-3.5 w-3.5" />
+                            Mark as Overdue
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            data-status-update
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleStatusUpdate(invoice.invoice_id, 'cancelled')
+                            }}
+                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
+                            className="cursor-pointer text-xs"
+                          >
+                            <XCircle className="mr-2 h-3.5 w-3.5" />
+                            Cancel Invoice
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

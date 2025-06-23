@@ -32,9 +32,10 @@ type ClassActionButtonsProps = {
   }
   currentStatus: string
   onStatusChange: (status: string) => void
+  showOnlyJoinCall?: boolean
 }
 
-export function ClassActionButtons({ classData, currentStatus, onStatusChange }: ClassActionButtonsProps) {
+export function ClassActionButtons({ classData, currentStatus, onStatusChange, showOnlyJoinCall = false }: ClassActionButtonsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -352,7 +353,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange }:
   return (
     <div>
       <div className="flex items-center gap-2 p-1 bg-muted/30 rounded-lg border">
-        {/* Button 1 */}
+        {/* Button 1 - Join Call (always shown) */}
         <Button
           onClick={config.button1.onClick}
           className={config.button1.className}
@@ -362,35 +363,40 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange }:
           <config.button1.icon className="h-4 w-4" />
         </Button>
 
-        {/* Button 2 */}
-        <Button
-          onClick={config.button2.onClick}
-          className={config.button2.className}
-          disabled={config.button2.disabled}
-          title={config.button2.title}
-        >
-          <config.button2.icon className="h-4 w-4" />
-        </Button>
+        {/* Show other buttons only if showOnlyJoinCall is false */}
+        {!showOnlyJoinCall && (
+          <>
+            {/* Button 2 */}
+            <Button
+              onClick={config.button2.onClick}
+              className={config.button2.className}
+              disabled={config.button2.disabled}
+              title={config.button2.title}
+            >
+              <config.button2.icon className="h-4 w-4" />
+            </Button>
 
-        {/* Button 3 */}
-        <Button
-          onClick={config.button3.onClick}
-          className={config.button3.className}
-          disabled={config.button3.disabled}
-          title={config.button3.title}
-        >
-          <config.button3.icon className="h-4 w-4" />
-        </Button>
+            {/* Button 3 */}
+            <Button
+              onClick={config.button3.onClick}
+              className={config.button3.className}
+              disabled={config.button3.disabled}
+              title={config.button3.title}
+            >
+              <config.button3.icon className="h-4 w-4" />
+            </Button>
 
-        {/* Button 4 */}
-        <Button
-          onClick={config.button4.onClick}
-          className={config.button4.className}
-          disabled={config.button4.disabled}
-          title={config.button4.title}
-        >
-          <config.button4.icon className="h-4 w-4" />
-        </Button>
+            {/* Button 4 */}
+            <Button
+              onClick={config.button4.onClick}
+              className={config.button4.className}
+              disabled={config.button4.disabled}
+              title={config.button4.title}
+            >
+              <config.button4.icon className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getClassById } from "@/lib/get/get-classes"
 
-export default async function TeacherClassPage({ params }: { params: { classId: string } }) {
+export default async function ClassPage({ params }: { params: { classId: string } }) {
     // Fetch the class data using the class ID
     const { classId } = await params
 
@@ -20,7 +20,7 @@ export default async function TeacherClassPage({ params }: { params: { classId: 
                 <BackButton href="/teacher/classes" label="Back to Classes" />
             </div>
 
-            <ClassDetails classData={classData} showActions={false} />
+            <ClassDetails classData={classData} userRole="teacher" />
         </div>
     )
 }

@@ -266,3 +266,82 @@ export async function getInvoicesByParentId(parentId: string): Promise<InvoiceTy
         updated_at: invoice.updated_at
     }));
 }
+
+export async function getInvoicesByParentStudents(parentId: string): Promise<InvoiceType[] | null> {
+    const supabase = createClient();
+
+    // First, get all students associated with this parent
+    const { data: parentStudents, error: parentStudentsError } = await supabase
+        .from('parent_students')
+        .select('student_id')
+        .eq('parent_id', parentId);
+
+    if (parentStudentsError) {
+        throw parentStudentsError;
+    }
+
+    if (!parentStudents || parentStudents.length === 0) {
+        return null;
+    }
+
+    const studentIds = parentStudents.map(ps => ps.student_id);
+
+    // Get all invoices for these students
+    const { data: invoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .in('student_id', studentIds);
+
+    if (invoiceError) {
+        throw invoiceError;
+    }
+
+    if (!invoices || invoices.length === 0) {
+        return null;
+    }
+
+    // Get student profiles
+    const { data: studentProfiles, error: studentError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', studentIds);
+
+    if (studentError) {
+        throw studentError;
+    }
+
+    // Get parent profile
+    const { data: parentProfile, error: parentProfileError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .eq('id', parentId)
+        .single();
+
+    if (parentProfileError) {
+        throw parentProfileError;
+    }
+
+    // Map invoices to InvoiceType[]
+    return invoices.map(invoice => ({
+        invoice_id: invoice.invoice_id,
+        student: {
+            student_id: invoice.student_id,
+            first_name: studentProfiles?.find(student => student.id === invoice.student_id)?.first_name,
+            last_name: studentProfiles?.find(student => student.id === invoice.student_id)?.last_name
+        },
+        parent: {
+            parent_id: parentProfile?.id,
+            first_name: parentProfile?.first_name,
+            last_name: parentProfile?.last_name
+        },
+        invoice_type: invoice.invoice_type,
+        amount: invoice.amount,
+        currency: invoice.currency,
+        description: invoice.description,
+        due_date: invoice.due_date,
+        status: invoice.status,
+        paid_at: invoice.paid_at,
+        created_at: invoice.created_at,
+        updated_at: invoice.updated_at
+    }));
+}

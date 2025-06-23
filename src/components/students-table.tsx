@@ -42,7 +42,7 @@ type TeacherType = {
 
 interface StudentsTableProps {
   students: StudentType[]
-  userRole?: 'admin' | 'teacher'
+  userRole?: 'admin' | 'teacher' | 'parent'
 }
 
 export function StudentsTable({ students, userRole }: StudentsTableProps) {
@@ -207,9 +207,12 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                         <span className="text-xs font-medium">Parents:</span>
                         <span className="text-xs">
                           {parentData[student.student_id]?.length > 0
-                            ? parentData[student.student_id].map(parent =>
-                              `${parent.first_name} ${parent.last_name}`
-                            ).join(', ')
+                            ? parentData[student.student_id].map((parent, index) => (
+                              <span key={`${student.student_id}-parent-${parent.parent_id}-${index}`}>
+                                {parent.first_name} {parent.last_name}
+                                {index < parentData[student.student_id].length - 1 ? ', ' : ''}
+                              </span>
+                            ))
                             : 'None'
                           }
                         </span>
@@ -218,9 +221,12 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                         <span className="text-xs font-medium">Teachers:</span>
                         <span className="text-xs">
                           {teacherData[student.student_id]?.length > 0
-                            ? teacherData[student.student_id].map(teacher =>
-                              `${teacher.first_name} ${teacher.last_name}`
-                            ).join(', ')
+                            ? teacherData[student.student_id].map((teacher, index) => (
+                              <span key={`${student.student_id}-teacher-${teacher.teacher_id}-${index}`}>
+                                {teacher.first_name} {teacher.last_name}
+                                {index < teacherData[student.student_id].length - 1 ? ', ' : ''}
+                              </span>
+                            ))
                             : 'None'
                           }
                         </span>

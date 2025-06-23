@@ -4,13 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AttendanceTracker } from "@/components/attendance-tracker"
 import { ClassActionButtons } from "@/components/class-action-buttons"
 import { StatusBadge } from "@/components/status-badge"
-import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { formatDuration } from "@/lib/utils"
-import { differenceInMinutes, isValid, format, parseISO } from "date-fns"
+import { differenceInMinutes, isValid } from "date-fns"
 import {
   formatDateTime,
-  formatTime,
   utcToLocal,
 } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
@@ -19,17 +17,11 @@ import { useState } from "react"
 import {
   CalendarDays,
   Users,
-  BookOpen,
-  Link as LinkIcon,
   UserCircle2,
   Clock,
-  Play,
-  CheckCircle,
-  XCircle,
-  UserX
 } from "lucide-react"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { ClassSessionType } from "@/types"
+import { ClientTimeDisplay } from "./client-time-display"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -48,16 +40,6 @@ const scrollbarStyles = `
   }
 `
 
-// Helper function to safely format dates
-const safeFormat = (date: Date, formatStr: string, fallback = "N/A") => {
-  try {
-    if (!date || !isValid(date)) return fallback;
-    return formatDateTime(date, formatStr);
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return fallback;
-  }
-}
 
 // Helper function to safely parse ISO date strings
 const safeParseISO = (dateString: string | null | undefined): Date | null => {
@@ -116,9 +98,10 @@ interface ClassSessionDetailsProps {
       avatar_url?: string | null
     }>
   }
+  disableLinks?: boolean
 }
 
-export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
+export function ClassSessionDetails({ classData, disableLinks = false }: ClassSessionDetailsProps) {
   const [currentStatus, setCurrentStatus] = useState(classData.status)
   const { timezone } = useTimezone()
 
@@ -181,6 +164,7 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                 classData={classDataForActions}
                 currentStatus={currentStatus}
                 onStatusChange={setCurrentStatus}
+                showOnlyJoinCall={disableLinks}
               />
             </div>
           </div>
@@ -206,7 +190,7 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                       {formatDateTime(startDateTime, "EEEE, MMMM d, yyyy", timezone)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {formatDateTime(startDateTime, "h:mm a", timezone)} - {formatDateTime(endDateTime, "h:mm a", timezone)} ({duration})
+                      <ClientTimeDisplay date={startDateTime} format="h:mm a" /> - <ClientTimeDisplay date={endDateTime} format="h:mm a" /> ({duration})
                     </p>
                   </div>
 
@@ -227,23 +211,40 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                   {teachers.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {teachers.map((teacher) => (
-                        <Link
-                          key={teacher.teacher_id}
-                          href={`/admin/teachers/${teacher.teacher_id}`}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        disableLinks ? (
+                          <div
+                            key={teacher.teacher_id}
+                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
+                          >
                             <Avatar className="h-8 w-8">
                               {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
                               <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-muted-foreground truncate">
                                 {teacher.first_name} {teacher.last_name}
                               </p>
                             </div>
                           </div>
-                        </Link>
+                        ) : (
+                          <Link
+                            key={teacher.teacher_id}
+                            href={`/admin/teachers/${teacher.teacher_id}`}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                              <Avatar className="h-8 w-8">
+                                {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
+                                <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-primary truncate">
+                                  {teacher.first_name} {teacher.last_name}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        )
                       ))}
                     </div>
                   ) : (
@@ -264,23 +265,40 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
                   {enrolledStudents.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {enrolledStudents.map((student) => (
-                        <Link
-                          key={student.student_id}
-                          href={`/admin/students/${student.student_id}`}
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        disableLinks ? (
+                          <div
+                            key={student.student_id}
+                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
+                          >
                             <Avatar className="h-8 w-8">
                               {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
                               <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-muted-foreground truncate">
                                 {student.first_name} {student.last_name}
                               </p>
                             </div>
                           </div>
-                        </Link>
+                        ) : (
+                          <Link
+                            key={student.student_id}
+                            href={`/admin/students/${student.student_id}`}
+                            className="block"
+                          >
+                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                              <Avatar className="h-8 w-8">
+                                {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
+                                <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-primary truncate">
+                                  {student.first_name} {student.last_name}
+                                </p>
+                              </div>
+                            </div>
+                          </Link>
+                        )
                       ))}
                     </div>
                   ) : (
@@ -300,23 +318,25 @@ export function ClassSessionDetails({ classData }: ClassSessionDetailsProps) {
           </div>
 
           {/* Attendance Tracker */}
-          <div className="mt-6 pt-6 border-t">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-5 w-5" />
-                <h3 className="text-sm font-medium">Attendance</h3>
-              </div>
-              <div>
-                <AttendanceTracker
-                  sessionId={classData.session_id}
-                  sessionDate={formatDateTime(startDateTime, 'yyyy-MM-dd', timezone)}
-                  students={classData.enrolled_students}
-                  currentStatus={currentStatus}
-                  onStatusChange={setCurrentStatus}
-                />
+          {!disableLinks && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Users className="h-5 w-5" />
+                  <h3 className="text-sm font-medium">Attendance</h3>
+                </div>
+                <div>
+                  <AttendanceTracker
+                    sessionId={classData.session_id}
+                    sessionDate={formatDateTime(startDateTime, 'yyyy-MM-dd', timezone)}
+                    students={classData.enrolled_students}
+                    currentStatus={currentStatus}
+                    onStatusChange={setCurrentStatus}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
         </CardContent>
       </Card>

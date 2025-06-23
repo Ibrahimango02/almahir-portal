@@ -21,7 +21,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
     <div className="flex flex-col gap-6">
 
       <div>
-        <BackButton href="/admin/invoices" label="Back to Invoices" />
+        <BackButton href={`/admin/invoices/${id}`} label="Back to Invoice" />
         <h1 className="text-3xl font-bold tracking-tight mt-4">Edit Invoice: {invoice.invoice_id}</h1>
       </div>
 

@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
-import { ParentType } from '@/types'
+import { ParentType, StudentType } from '@/types'
+import { calculateAge } from '@/lib/utils'
 
 export async function getParents(): Promise<ParentType[]> {
     const supabase = createClient()
@@ -80,9 +81,10 @@ export async function getParentById(id: string): Promise<ParentType | null> {
     }
 }
 
-export async function getParentStudents(id: string) {
+export async function getParentStudents(id: string): Promise<StudentType[]> {
     const supabase = createClient()
 
+    // Get all student IDs for this parent
     const { data: parentStudents } = await supabase
         .from('parent_students')
         .select('student_id')
@@ -92,13 +94,44 @@ export async function getParentStudents(id: string) {
 
     const studentIds = parentStudents.map(student => student.student_id)
 
-
-    const { data: students } = await supabase
+    // Get student profiles
+    const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', studentIds)
 
-    return students
+    if (!profiles) return []
+
+    // Get student data from students table
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('*')
+        .in('profile_id', studentIds)
+
+    // Combine the data into a single array of StudentType objects
+    const combinedStudents = profiles.map((profile: any) => {
+        const student = studentsData?.find((s: any) => s.profile_id === profile.id)
+        return {
+            student_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email || null,
+            phone: profile.phone || null,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            age: calculateAge(student?.birth_date),
+            grade_level: student?.grade_level || null,
+            notes: student?.notes || null,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at || null
+        }
+    })
+
+    return combinedStudents
 }
 
 export async function getTeacherStudentParents(teacherId: string): Promise<ParentType[]> {
@@ -164,7 +197,7 @@ export async function getTeacherStudentParents(teacherId: string): Promise<Paren
     return parents
 }
 
-export async function getParentStudentsForTeacher(parentId: string, teacherId: string) {
+export async function getParentStudentsForTeacher(parentId: string, teacherId: string): Promise<StudentType[]> {
     const supabase = createClient()
 
     // First, get all students of this parent

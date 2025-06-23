@@ -472,20 +472,8 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="availability" className="space-y-6">
-          {userId && (profile?.role === 'teacher' || profile?.role === 'admin') ? (
+          {userId && (
             <TeacherAvailabilityEditor teacherId={userId} />
-          ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle>Availability Settings</CardTitle>
-                <CardDescription>Availability settings are only available for teachers and administrators.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  If you are a teacher or administrator, please contact support if you cannot access availability settings.
-                </p>
-              </CardContent>
-            </Card>
           )}
         </TabsContent>
       </Tabs>
