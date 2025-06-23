@@ -54,12 +54,6 @@ export default function AdminsPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-                        <Link href="/admin/admins/add">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Admin
-                        </Link>
-                    </Button>
                 </div>
             </div>
 

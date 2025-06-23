@@ -18,6 +18,7 @@ import {
   X,
   BookOpen,
   FolderOpen,
+  Plus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -142,7 +143,7 @@ export function AdminSidebar() {
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
           <Link href="/admin/dashboard" className="flex flex-col items-center justify-center w-full">
             <div className="flex items-center justify-center w-full py-2">
-              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain shadow-md" />
+              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={120} height={120} className="object-contain" />
             </div>
           </Link>
           <Button
@@ -173,6 +174,16 @@ export function AdminSidebar() {
           ))}
         </div>
         <div className="mt-auto">
+          <Button
+            asChild
+            style={{ backgroundColor: "#3d8f5b", color: "white", marginBottom: 16, width: '50%', marginLeft: '25%' }}
+            className="w-full"
+          >
+            <Link href="/admin/invite" className="flex items-center justify-center w-full">
+              <Plus className="mr-2 h-4 w-4" />
+              Add User
+            </Link>
+          </Button>
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>

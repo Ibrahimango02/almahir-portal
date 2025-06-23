@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { login, signup } from "../lib/auth/auth-actions"
+import Image from "next/image"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,18 +25,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-b from-background to-muted/30">
       <div className="w-full max-w-md mx-auto">
         <div className="mb-8 flex flex-col items-center">
-          <Logo className="mb-6" />
-          <h1 className="text-2xl font-bold text-center">Al-Mahir Academy Portal</h1>
-          <p className="text-center text-muted-foreground mt-2">Access your personalized learning environment</p>
+          <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={200} height={200} className="object-contain mb-8" />
         </div>
 
-        <Card className="w-full shadow-lg border-accent/20">
+        <Card className="w-full shadow-2xl border-none rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg transition-all duration-300">
           <CardHeader>
-            <CardTitle className="text-xl text-center">Welcome Back</CardTitle>
-            <CardDescription className="text-center">Sign in to access your account</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -52,9 +49,9 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+                  {/* <Link href="/forgot-password" className="text-sm text-primary hover:underline hover:text-primary/80 transition-colors">
                     Forgot password?
-                  </Link>
+                  </Link> */}
                 </div>
                 <div className="relative">
                   <Input
@@ -83,14 +80,14 @@ export default function LoginPage() {
                   checked={rememberMe}
                   onCheckedChange={(checked) => setRememberMe(checked === true)}
                 />
-                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer select-none">
                   Remember me for 30 days
                 </Label>
               </div>
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-md transition-all duration-200"
                 formAction={login}
                 onClick={() => setIsSubmitting(true)}
               >
@@ -100,24 +97,20 @@ export default function LoginPage() {
                     Signing in...
                   </>
                 ) : (
-                  "Sign in"
+                  "Sign In"
                 )}
               </Button>
+
             </form>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4 text-center text-sm">
-            <p className="text-muted-foreground">
-              New to Al-Mahir Academy?{" "}
-              <Link href="/signup" className="text-primary hover:underline">
-                Create an account
-              </Link>
-            </p>
           </CardFooter>
         </Card>
 
-        <div className="mt-8 text-center text-sm text-muted-foreground">
+        <div className="mt-8 text-center text-xs text-muted-foreground/70">
           <p>
-            Need help? Contact support at <span className="font-medium">support@al-mahir-academy.com</span>
+            Need help? Contact support at {" "}
+            <span className="font-medium underline underline-offset-2">almahir.info@gmail.com</span>
           </p>
         </div>
       </div>

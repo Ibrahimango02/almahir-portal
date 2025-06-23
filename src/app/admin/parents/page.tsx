@@ -58,15 +58,6 @@ export default function ParentsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button
-            asChild
-            style={{ backgroundColor: "#3d8f5b", color: "white" }}
-          >
-            <Link href="/admin/parents/add" className="flex items-center">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Parent
-            </Link>
-          </Button>
         </div>
       </div>
 

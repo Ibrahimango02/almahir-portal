@@ -59,12 +59,6 @@ export default function TeachersPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            <Link href="/admin/teachers/add">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Teacher
-            </Link>
-          </Button>
         </div>
       </div>
 

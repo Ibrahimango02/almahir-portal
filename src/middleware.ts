@@ -12,7 +12,7 @@ export async function middleware(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // Skip authentication check for the root path and public paths
-    if (path === '/') {
+    if (path === '/' || path.startsWith('/signup/') || path.startsWith('/api/validate-invitation/') || path.startsWith('/api/accept-invitation') || path.startsWith('/api/send-invitation')) {
         return supabaseResponse;
     }
 
