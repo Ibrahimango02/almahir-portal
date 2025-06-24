@@ -156,12 +156,19 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="max-w-[120px]">{parent.email}</span>
+                        <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="max-w-[120px] truncate" title={parent.email || ''}>
+                          {parent.email
+                            ? (parent.email.length > 20
+                              ? `${parent.email.substring(0, 20)}...`
+                              : parent.email)
+                            : 'N/A'
+                          }
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span>{parent.phone}</span>
+                        <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span>{parent.phone || 'N/A'}</span>
                       </div>
                     </div>
                   </TableCell>

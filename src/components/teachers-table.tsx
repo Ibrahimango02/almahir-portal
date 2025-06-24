@@ -129,12 +129,19 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="max-w-[120px]">{teacher.email}</span>
+                        <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="max-w-[120px] truncate" title={teacher.email || ''}>
+                          {teacher.email
+                            ? (teacher.email.length > 20
+                              ? `${teacher.email.substring(0, 20)}...`
+                              : teacher.email)
+                            : 'N/A'
+                          }
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <span>{teacher.phone}</span>
+                        <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span>{teacher.phone || 'N/A'}</span>
                       </div>
                     </div>
                   </TableCell>

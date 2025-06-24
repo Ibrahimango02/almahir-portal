@@ -178,11 +178,18 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Mail className="h-3 w-3 text-muted-foreground" />
-                        <span className="max-w-[120px]">{student.email}</span>
+                        <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                        <span className="max-w-[120px] truncate" title={student.email || ''}>
+                          {student.email
+                            ? (student.email.length > 20
+                              ? `${student.email.substring(0, 20)}...`
+                              : student.email)
+                            : 'N/A'
+                          }
+                        </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                         <span>{student.phone || 'N/A'}</span>
                       </div>
                     </div>
