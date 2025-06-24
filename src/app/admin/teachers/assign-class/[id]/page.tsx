@@ -133,7 +133,7 @@ export default function AssignClassPage() {
           <GraduationCap className="h-12 w-12 text-muted-foreground" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Teacher Not Found</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">The teacher you're looking for doesn't exist or has been removed.</p>
+        <p className="text-muted-foreground mb-6 max-w-md">The teacher you&apos;re looking for doesn&apos;t exist or has been removed.</p>
         <Button asChild>
           <Link href="/admin/teachers">Return to Teachers List</Link>
         </Button>
@@ -183,7 +183,7 @@ export default function AssignClassPage() {
             </span>
             {searchQuery && (
               <span>
-                Filtered by "{searchQuery}"
+                Filtered by &quot;{searchQuery}&quot;
               </span>
             )}
           </div>

@@ -40,39 +40,6 @@ const scrollbarStyles = `
   }
 `
 
-
-// Helper function to safely parse ISO date strings
-const safeParseISO = (dateString: string | null | undefined): Date | null => {
-  if (!dateString) return null;
-  try {
-    return utcToLocal(dateString);
-  } catch (error) {
-    console.error("Error parsing date:", error);
-    return null;
-  }
-}
-
-// Helper function to parse time strings (HH:mm:ss)
-const parseTimeString = (timeString: string | null | undefined): Date | null => {
-  if (!timeString) return null;
-  try {
-    // Check if it's just a time string (no date part)
-    if (timeString.match(/^\d{1,2}:\d{2}(:\d{2})?$/)) {
-      const today = new Date();
-      // For time-only strings, we'll use a different approach
-      const [hours, minutes, seconds = 0] = timeString.split(':').map(Number);
-      const result = new Date(today);
-      result.setHours(hours || 0, minutes || 0, seconds);
-      return isValid(result) ? result : null;
-    }
-    // If not a simple time string, try standard ISO parsing
-    return safeParseISO(timeString);
-  } catch (error) {
-    console.error("Error parsing time:", error);
-    return null;
-  }
-}
-
 interface ClassSessionDetailsProps {
   classData: {
     class_id: string

@@ -17,7 +17,8 @@ import { assignStudentToClasses } from "@/lib/post/post-students"
 import { StudentType, ClassType } from "@/types"
 import { formatDate, formatTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
-import { Calendar, Clock, Users, BookOpen, GraduationCap, CheckCircle2, Search, User } from "lucide-react"
+import { Calendar, Clock, Users, BookOpen, GraduationCap, CheckCircle2, Search } from "lucide-react"
+import Image from "next/image"
 
 export default function AssignToClassPage() {
   const params = useParams()
@@ -165,7 +166,7 @@ export default function AssignToClassPage() {
           <GraduationCap className="h-12 w-12 text-muted-foreground" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Student Not Found</h2>
-        <p className="text-muted-foreground mb-6 max-w-md">The student you're looking for doesn't exist or has been removed.</p>
+        <p className="text-muted-foreground mb-6 max-w-md">The student you&apos;re looking for doesn&apos;t exist or has been removed.</p>
         <Button asChild>
           <Link href="/admin/students">Return to Students List</Link>
         </Button>
@@ -215,7 +216,7 @@ export default function AssignToClassPage() {
             </span>
             {searchQuery && (
               <span>
-                Filtered by "{searchQuery}"
+                Filtered by &quot;{searchQuery}&quot;
               </span>
             )}
           </div>
@@ -286,9 +287,11 @@ export default function AssignToClassPage() {
                         <div className="flex items-center mb-2">
                           <Avatar className="h-5 w-5 mr-2">
                             {cls.teachers[0]?.avatar_url ? (
-                              <img
+                              <Image
                                 src={cls.teachers[0].avatar_url}
                                 alt={`${cls.teachers[0].first_name} ${cls.teachers[0].last_name}`}
+                                width={20}
+                                height={20}
                                 className="h-full w-full object-cover"
                               />
                             ) : (

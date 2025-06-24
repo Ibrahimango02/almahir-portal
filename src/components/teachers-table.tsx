@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin, BookOpen, Users } from "lucide-react"
+import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin, BookOpen } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -24,7 +24,6 @@ import { getTeacherClassCount } from "@/lib/get/get-classes"
 import { TeacherType } from "@/types"
 import AvatarIcon from "./avatar"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 
 interface TeachersTableProps {
   teachers: TeacherType[]

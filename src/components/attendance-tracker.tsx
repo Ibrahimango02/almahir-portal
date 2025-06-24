@@ -102,7 +102,7 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
 
       setHasChanges(false)
       setIsAttendanceTaken(true)
-    } catch (error) {
+    } catch {
       toast({
         title: "Error saving attendance",
         description: "There was a problem saving attendance records. Please try again.",

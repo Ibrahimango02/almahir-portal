@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
 
-export default async function ClassSessionPage({ params }: { params: { classId: string, sessionId: string } }) {
+export default async function ClassSessionPage({ params }: { params: Promise<{ classId: string, sessionId: string }> }) {
     // Fetch the class data using the session ID
     const { classId, sessionId } = await params
     const classSessionData = await getSessionById(sessionId)

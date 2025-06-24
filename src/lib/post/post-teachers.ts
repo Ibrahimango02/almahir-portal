@@ -1,14 +1,8 @@
 import { createClient } from "@/utils/supabase/client"
-import { WeeklySchedule } from "@/types"
 
 type TeacherAssignmentData = {
     teacher_id: string
     class_ids: string[]
-}
-
-type TeacherAvailabilityData = {
-    teacher_id: string
-    weekly_schedule: WeeklySchedule
 }
 
 export async function assignTeacherToClass(data: TeacherAssignmentData) {

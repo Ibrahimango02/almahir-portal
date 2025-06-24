@@ -18,14 +18,14 @@ export async function getInvoices(): Promise<InvoiceType[]> {
 
     const studentIds = invoices?.map(invoice => invoice.student_id)
 
-    const { data: students, error: studentsError } = await supabase
+    const { data: students } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
         .in('id', studentIds)
 
     const parentIds = invoices?.map(invoice => invoice.parent_id)
 
-    const { data: parents, error: parentsError } = await supabase
+    const { data: parents } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
         .in('id', parentIds)
@@ -35,13 +35,13 @@ export async function getInvoices(): Promise<InvoiceType[]> {
         invoice_id: invoice.invoice_id,
         student: {
             student_id: invoice.student_id,
-            first_name: students?.find(student => student.id === invoice.student_id)?.first_name,
-            last_name: students?.find(student => student.id === invoice.student_id)?.last_name
+            first_name: students?.find(student => student.id === invoice.student_id)?.first_name ?? "",
+            last_name: students?.find(student => student.id === invoice.student_id)?.last_name ?? ""
         },
         parent: {
             parent_id: invoice.parent_id,
-            first_name: parents?.find(parent => parent.id === invoice.parent_id)?.first_name,
-            last_name: parents?.find(parent => parent.id === invoice.parent_id)?.last_name
+            first_name: parents?.find(parent => parent.id === invoice.parent_id)?.first_name ?? "",
+            last_name: parents?.find(parent => parent.id === invoice.parent_id)?.last_name ?? ""
         },
         invoice_type: invoice.invoice_type,
         amount: invoice.amount,
@@ -74,14 +74,14 @@ export async function getInvoiceById(id: string): Promise<InvoiceType | null> {
     const invoice = invoices[0]
 
     // Fetch student info
-    const { data: students, error: studentsError } = await supabase
+    const { data: students } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
         .eq('id', invoice.student_id)
 
     const student = students && students.length > 0 ? students[0] : null
 
-    const { data: parents, error: parentsError } = await supabase
+    const { data: parents } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
         .eq('id', invoice.parent_id)
@@ -92,13 +92,13 @@ export async function getInvoiceById(id: string): Promise<InvoiceType | null> {
         invoice_id: invoice.invoice_id,
         student: {
             student_id: invoice.student_id,
-            first_name: student?.first_name,
-            last_name: student?.last_name
+            first_name: student?.first_name ?? "",
+            last_name: student?.last_name ?? ""
         },
         parent: {
             parent_id: invoice.parent_id,
-            first_name: parent?.first_name,
-            last_name: parent?.last_name
+            first_name: parent?.first_name ?? "",
+            last_name: parent?.last_name ?? ""
         },
         invoice_type: invoice.invoice_type,
         amount: invoice.amount,
@@ -160,7 +160,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Invoice
     // Get all parent ids from the invoices
     const parentIds = invoices.map(inv => inv.parent_id).filter(Boolean);
 
-    let parents: any[] = [];
+    let parents: { id: string; first_name: string; last_name: string }[] = [];
     if (parentIds.length > 0) {
         const { data: parentProfiles, error: parentError } = await supabase
             .from('profiles')
@@ -178,13 +178,13 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Invoice
         invoice_id: invoice.invoice_id,
         student: {
             student_id: invoice.student_id,
-            first_name: student?.first_name,
-            last_name: student?.last_name
+            first_name: student?.first_name ?? "",
+            last_name: student?.last_name ?? ""
         },
         parent: {
             parent_id: invoice.parent_id,
-            first_name: parents.find(parent => parent.id === invoice.parent_id)?.first_name,
-            last_name: parents.find(parent => parent.id === invoice.parent_id)?.last_name
+            first_name: parents.find(parent => parent.id === invoice.parent_id)?.first_name ?? "",
+            last_name: parents.find(parent => parent.id === invoice.parent_id)?.last_name ?? ""
         },
         invoice_type: invoice.invoice_type,
         amount: invoice.amount,
@@ -218,7 +218,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<InvoiceTy
     // Get all unique student ids from the invoices
     const studentIds = invoices.map(inv => inv.student_id).filter(Boolean);
 
-    let students: any[] = [];
+    let students: { student_id: string; first_name: string; last_name: string }[] = [];
     if (studentIds.length > 0) {
         const { data: studentProfiles, error: studentError } = await supabase
             .from('students')
@@ -247,13 +247,13 @@ export async function getInvoicesByParentId(parentId: string): Promise<InvoiceTy
         invoice_id: invoice.invoice_id,
         student: {
             student_id: invoice.student_id,
-            first_name: students.find(student => student.student_id === invoice.student_id)?.first_name,
-            last_name: students.find(student => student.student_id === invoice.student_id)?.last_name
+            first_name: students.find(student => student.student_id === invoice.student_id)?.first_name ?? "",
+            last_name: students.find(student => student.student_id === invoice.student_id)?.last_name ?? ""
         },
         parent: {
-            parent_id: parentProfile?.id,
-            first_name: parentProfile?.first_name,
-            last_name: parentProfile?.last_name
+            parent_id: parentProfile?.id ?? "",
+            first_name: parentProfile?.first_name ?? "",
+            last_name: parentProfile?.last_name ?? ""
         },
         invoice_type: invoice.invoice_type,
         amount: invoice.amount,
@@ -326,13 +326,13 @@ export async function getInvoicesByParentStudents(parentId: string): Promise<Inv
         invoice_id: invoice.invoice_id,
         student: {
             student_id: invoice.student_id,
-            first_name: studentProfiles?.find(student => student.id === invoice.student_id)?.first_name,
-            last_name: studentProfiles?.find(student => student.id === invoice.student_id)?.last_name
+            first_name: studentProfiles?.find(student => student.id === invoice.student_id)?.first_name ?? "",
+            last_name: studentProfiles?.find(student => student.id === invoice.student_id)?.last_name ?? ""
         },
         parent: {
-            parent_id: parentProfile?.id,
-            first_name: parentProfile?.first_name,
-            last_name: parentProfile?.last_name
+            parent_id: parentProfile?.id ?? "",
+            first_name: parentProfile?.first_name ?? "",
+            last_name: parentProfile?.last_name ?? ""
         },
         invoice_type: invoice.invoice_type,
         amount: invoice.amount,

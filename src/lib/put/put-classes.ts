@@ -14,7 +14,7 @@ export async function updateClass(params: {
     teacher_ids?: string[];
     student_ids?: string[];
     times?: Record<string, { start: string; end: string }>;
-}): Promise<{ success: boolean; error?: any }> {
+}): Promise<{ success: boolean; error?: { message: string } }> {
     const supabase = createClient()
     const {
         classId,
@@ -42,7 +42,19 @@ export async function updateClass(params: {
         if (fetchError) throw fetchError
 
         // Update class basic information
-        const classUpdateData: any = {}
+        const classUpdateData: {
+            title?: string;
+            description?: string | null;
+            subject?: string;
+            start_date?: string;
+            end_date?: string;
+            status?: string;
+            days_repeated?: string[];
+            class_link?: string | null;
+            updated_at: string;
+        } = {
+            updated_at: new Date().toISOString()
+        }
         if (title !== undefined) classUpdateData.title = title
         if (description !== undefined) classUpdateData.description = description
         if (subject !== undefined) classUpdateData.subject = subject
@@ -51,7 +63,6 @@ export async function updateClass(params: {
         if (status !== undefined) classUpdateData.status = status
         if (days_repeated !== undefined) classUpdateData.days_repeated = days_repeated
         if (class_link !== undefined) classUpdateData.class_link = class_link
-        classUpdateData.updated_at = new Date().toISOString()
 
         // Only update if there are fields to update
         if (Object.keys(classUpdateData).length > 0) {
@@ -258,14 +269,13 @@ export async function updateClass(params: {
         return { success: true }
     } catch (error) {
         console.error('Error updating class:', error)
-        return { success: false, error }
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }
 
 export async function updateClassSession(params: {
     sessionId: string;
     action: string;
-    teacherNotes?: string;
     newDate?: string;
     newStartTime?: string;
     newEndTime?: string;
@@ -273,7 +283,7 @@ export async function updateClassSession(params: {
     newEndDate?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, teacherNotes, newDate, newStartTime, newEndTime, newStartDate, newEndDate } = params
+    const { sessionId, action, newDate, newStartTime, newEndTime, newStartDate, newEndDate } = params
 
     try {
         switch (action.toLowerCase()) {
@@ -439,7 +449,7 @@ export async function updateClassSession(params: {
         return { success: true }
     } catch (error) {
         console.error('Error updating class:', error)
-        return { success: false, error }
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }
 
@@ -480,6 +490,6 @@ export async function updateClassSessionAttendance(params: { sessionId: string; 
         return { success: true }
     } catch (error) {
         console.error('Error updating attendance:', error)
-        return { success: false, error }
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }

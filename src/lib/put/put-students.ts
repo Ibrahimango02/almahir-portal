@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 
-export async function updateStudent(studentId: string, data: any) {
+export async function updateStudent(studentId: string, data: { grade_level?: string; notes?: string; status: string }) {
     const supabase = createClient()
 
     // Start a transaction by updating both tables

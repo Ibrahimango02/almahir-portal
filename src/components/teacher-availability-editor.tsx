@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -115,11 +115,7 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
     const { toast } = useToast()
     const { timezone } = useTimezone()
 
-    useEffect(() => {
-        loadAvailability()
-    }, [teacherId])
-
-    const loadAvailability = async () => {
+    const loadAvailability = useCallback(async () => {
         try {
             setIsLoading(true)
             const availability = await getTeacherAvailability(teacherId)
@@ -167,7 +163,11 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [teacherId, timezone, toast])
+
+    useEffect(() => {
+        loadAvailability()
+    }, [loadAvailability])
 
     const addTimeSlot = (day: keyof WeeklySchedule) => {
         setSchedule(prev => ({
@@ -377,8 +377,6 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
         )
     }
 
-    const totalTimeSlots = Object.values(schedule).reduce((total, day) => total + day.length, 0)
-
     return (
         <Card className="border-0 shadow-lg overflow-hidden">
             <CardHeader className="bg-gray-50 border-b">
@@ -438,7 +436,7 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
                                     <div className="text-center py-8 text-gray-500">
                                         <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
                                         <p className="text-sm">No time slots set for {dayNames[day]}</p>
-                                        <p className="text-xs mt-1">Click "Add Time" to set your availability</p>
+                                        <p className="text-xs mt-1">Click &quot;Add Time&quot; to set your availability</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-3">

@@ -1,11 +1,10 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
-import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday, startOfWeek } from "date-fns"
+import { useMemo, useState, useEffect, useCallback } from "react"
+import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { WeeklyScheduleProps, ClassType } from "@/types"
-import { Card } from "@/components/ui/card"
 import { formatDateTime } from "@/lib/utils/timezone"
 import { StatusBadge } from "./status-badge"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
@@ -34,6 +33,25 @@ interface ScheduleCalendarViewProps extends WeeklyScheduleProps {
     classData: ClassType[]
     isLoading?: boolean
     baseRoute: string // e.g., "/admin" or "/teacher"
+}
+
+// Local type for calendar session objects
+interface CalendarSessionType {
+    class_id: string;
+    session_id: string;
+    title: string;
+    description: string | null;
+    subject: string;
+    start_date: string;
+    end_date: string;
+    days_repeated: string[];
+    class_link: string | null;
+    teachers: { teacher_id: string; first_name: string; last_name: string; avatar_url?: string | null; role: string }[];
+    enrolled_students: { student_id: string; first_name: string; last_name: string; avatar_url?: string | null }[];
+    start_time: string;
+    end_time: string;
+    status: string;
+    session_date: string;
 }
 
 export function ScheduleCalendarView({
@@ -78,71 +96,44 @@ export function ScheduleCalendarView({
     }, [currentWeekStart])
 
     // Filter classes by search query
-    const filterBySearch = (classes: any[]) => {
+    const filterBySearch = useCallback((classes: CalendarSessionType[]) => {
         if (!searchQuery || searchQuery.trim() === '') return classes;
-
         const query = searchQuery.toLowerCase().trim();
-
         return classes.filter(cls => {
-            // Search in class title
             if (cls.title.toLowerCase().includes(query)) return true;
-
-            // Search in subject
             if (cls.subject.toLowerCase().includes(query)) return true;
-
-            // Search in teacher names
-            if (cls.teachers.some((teacher: any) =>
+            if (cls.teachers.some((teacher) =>
                 `${teacher.first_name} ${teacher.last_name}`.toLowerCase().includes(query) ||
                 teacher.first_name.toLowerCase().includes(query) ||
                 teacher.last_name.toLowerCase().includes(query)
             )) return true;
-
-            // Search in description
             if (cls.description && cls.description.toLowerCase().includes(query)) return true;
-
             return false;
         });
-    };
+    }, [searchQuery]);
 
     // Dynamically filter classes based on the current week
     const filteredClasses = useMemo(() => {
         if (isLoading) return [];
-
-        // Get all valid sessions from all classes that fall within the current week
-        const sessionsForWeek: any[] = [];
-
-        // Process each class
+        const sessionsForWeek: CalendarSessionType[] = [];
         classData.forEach(cls => {
             if (!cls || !cls.sessions) return;
-
-            // Find sessions that fall within the current week's view
             cls.sessions.forEach(session => {
                 if (!session || !session.start_date) return;
-
                 try {
-                    // Check if session date is within current week
                     const sessionDate = parseISO(session.start_date);
                     const isInCurrentWeek = weekDays.some(weekDay => isSameDay(weekDay, sessionDate));
-
                     if (!isInCurrentWeek) return;
-
-                    // Process the times
                     let startDateTime, endDateTime;
-
                     try {
-                        // Try direct parsing first - now using start_date and end_date
                         startDateTime = parseISO(session.start_date);
                         endDateTime = parseISO(session.end_date);
-
-                        // Validate the parsed dates
                         if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
                             throw new Error("Invalid date produced");
                         }
-                    } catch (e) {
-                        // Fallback to parsing as time strings
+                    } catch {
                         const parseTimeString = (timeStr: string) => {
                             if (!timeStr) return { hours: 0, minutes: 0, seconds: 0 };
-
                             const parts = timeStr.split(':').map(Number);
                             return {
                                 hours: parts[0] || 0,
@@ -150,19 +141,16 @@ export function ScheduleCalendarView({
                                 seconds: parts[2] || 0
                             };
                         };
-
                         const startTime = parseTimeString(session.start_date);
                         startDateTime = new Date(sessionDate);
                         startDateTime.setHours(startTime.hours, startTime.minutes, startTime.seconds);
-
                         const endTime = parseTimeString(session.end_date);
                         endDateTime = new Date(sessionDate);
                         endDateTime.setHours(endTime.hours, endTime.minutes, endTime.seconds);
                     }
-
-                    // Create the session object for this week
                     sessionsForWeek.push({
-                        id: cls.class_id,
+                        class_id: cls.class_id,
+                        session_id: session.session_id,
                         title: cls.title,
                         description: cls.description,
                         subject: cls.subject,
@@ -175,7 +163,6 @@ export function ScheduleCalendarView({
                         start_time: startDateTime.toISOString(),
                         end_time: endDateTime.toISOString(),
                         status: session.status,
-                        session_id: session.session_id,
                         session_date: formatDateTime(startDateTime, 'yyyy-MM-dd')
                     });
                 } catch (error) {
@@ -187,11 +174,7 @@ export function ScheduleCalendarView({
                 }
             });
         });
-
-        // Apply search filtering first
         let filtered = filterBySearch(sessionsForWeek);
-
-        // Then apply time-based filtering
         if (filter) {
             filtered = filtered.filter((cls) => {
                 const hour = parseISO(cls.start_time).getHours();
@@ -201,9 +184,8 @@ export function ScheduleCalendarView({
                 return true;
             });
         }
-
         return filtered;
-    }, [classData, currentWeekStart, weekDays, filter, isLoading, searchQuery]);
+    }, [classData, weekDays, filter, isLoading, filterBySearch]);
 
     // Find earliest and latest class times to determine time slots
     const timeRange = useMemo(() => {
@@ -237,55 +219,43 @@ export function ScheduleCalendarView({
     }, [timeRange])
 
     // Function to check if two classes overlap
-    const doClassesOverlap = (class1: any, class2: any) => {
+    const doClassesOverlap = (class1: CalendarSessionType, class2: CalendarSessionType) => {
         const start1 = new Date(class1.start_time)
         const end1 = new Date(class1.end_time)
         const start2 = new Date(class2.start_time)
         const end2 = new Date(class2.end_time)
-
         return start1 < end2 && start2 < end1
     }
 
     // Function to group overlapping classes
-    const groupOverlappingClasses = (classes: any[]) => {
+    const groupOverlappingClasses = useCallback((classes: CalendarSessionType[]) => {
         if (classes.length <= 1) {
             return [classes]
         }
-
-        // Sort classes by start time for consistent grouping
         const sortedClasses = [...classes].sort((a, b) => {
             return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
         })
-
-        const groups: any[][] = []
-        let currentGroup: any[] = [sortedClasses[0]]
-
+        const groups: CalendarSessionType[][] = []
+        let currentGroup: CalendarSessionType[] = [sortedClasses[0]]
         for (let i = 1; i < sortedClasses.length; i++) {
             const currentClass = sortedClasses[i]
             let overlapsWithCurrentGroup = false
-
-            // Check if current class overlaps with any class in the current group
             for (const groupClass of currentGroup) {
                 if (doClassesOverlap(currentClass, groupClass)) {
                     overlapsWithCurrentGroup = true
                     break
                 }
             }
-
             if (overlapsWithCurrentGroup) {
-                // Add to the current group if there's overlap
                 currentGroup.push(currentClass)
             } else {
-                // Start a new group if there's no overlap
                 groups.push(currentGroup)
                 currentGroup = [currentClass]
             }
         }
-
-        // Add the last group
         groups.push(currentGroup)
         return groups
-    }
+    }, []);
 
     // Format the hour for display, handling hours > 24 for evening view
     const formatHour = (hour: number) => {
@@ -300,10 +270,8 @@ export function ScheduleCalendarView({
         const byDay = weekDays.map((day) => {
             // Get all classes for this day
             const classesForDay = filteredClasses.filter((cls) => isSameDay(day, parseISO(cls.start_time)))
-
             // Group overlapping classes
             const groups = groupOverlappingClasses(classesForDay)
-
             // Flatten groups but preserve group information
             return groups.flatMap((group, groupIndex) =>
                 group.map((cls, classIndex) => ({
@@ -314,9 +282,8 @@ export function ScheduleCalendarView({
                 })),
             )
         })
-
         return byDay
-    }, [filteredClasses, weekDays])
+    }, [filteredClasses, weekDays, groupOverlappingClasses])
 
     // Calculate position for the current time indicator
     const currentTimeIndicator = useMemo(() => {
@@ -372,16 +339,6 @@ export function ScheduleCalendarView({
                         </div>
 
                         {weekDays.map((day, dayIndex) => {
-                            // Find classes that start at or span this specific hour
-                            const classes = classesByDay[dayIndex].filter((cls) => {
-                                const startTime = parseISO(cls.start_time)
-                                const endTime = parseISO(cls.end_time)
-                                const classStartHour = startTime.getHours()
-                                const classEndHour = endTime.getHours() + (endTime.getMinutes() > 0 ? 1 : 0)
-
-                                return classStartHour <= hour && classEndHour > hour
-                            })
-
                             const isTodayColumn = isToday(day);
                             const showCurrentTimeIndicator = isTodayColumn &&
                                 currentTimeIndicator &&
@@ -426,7 +383,7 @@ export function ScheduleCalendarView({
 
                                         return (
                                             <div
-                                                key={`${extendedClass.id}-${extendedClass.session_id}`}
+                                                key={`${extendedClass.class_id}-${extendedClass.session_id}`}
                                                 className={cn(
                                                     "absolute rounded-md border p-2 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
                                                     getStatusStyles(extendedClass.status),
@@ -438,7 +395,7 @@ export function ScheduleCalendarView({
                                                     width: `${width}%`,
                                                     zIndex: 10,
                                                 }}
-                                                onClick={() => router.push(`${baseRoute}/classes/${extendedClass.id}/${extendedClass.session_id}`)}
+                                                onClick={() => router.push(`${baseRoute}/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
                                             >
                                                 <div>
                                                     <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>

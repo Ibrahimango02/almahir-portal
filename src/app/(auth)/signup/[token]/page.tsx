@@ -6,9 +6,8 @@ import { useState, useEffect, use } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
-import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -49,7 +48,7 @@ export default function SignupPage({ params }: { params: Promise<{ token: string
                 const fullName = `${data.invitation.first_name || ''} ${data.invitation.last_name || ''}`.trim()
                 setFullName(fullName || '')
                 setIsValidating(false)
-            } catch (err) {
+            } catch {
                 setError('Failed to validate invitation')
                 setIsValidating(false)
             }

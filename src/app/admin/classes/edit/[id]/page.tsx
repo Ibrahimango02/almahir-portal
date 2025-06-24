@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { format, parse, startOfDay } from "date-fns"
+import { format, startOfDay } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -17,9 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { cn } from "@/lib/utils"
-import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { Checkbox } from "@/components/ui/checkbox"
 import { BackButton } from "@/components/back-button"
 import { getTeachers } from "@/lib/get/get-teachers"
 import { getStudents } from "@/lib/get/get-students"
@@ -42,17 +40,6 @@ const formSchema = z.object({
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
 })
-
-// Days of the week array
-const daysOfWeek = [
-    { id: "monday", label: "Monday" },
-    { id: "tuesday", label: "Tuesday" },
-    { id: "wednesday", label: "Wednesday" },
-    { id: "thursday", label: "Thursday" },
-    { id: "friday", label: "Friday" },
-    { id: "saturday", label: "Saturday" },
-    { id: "sunday", label: "Sunday" },
-]
 
 // Define the subjects available for selection
 const subjects = [
@@ -99,9 +86,6 @@ export default function EditClassPage() {
         },
     })
 
-    // Watch selected days
-    const selectedDays = form.watch("daysRepeated")
-
     // Fetch data on mount
     useEffect(() => {
         async function fetchData() {
@@ -147,7 +131,7 @@ export default function EditClassPage() {
         }
 
         fetchData()
-    }, [classId, form])
+    }, [classId, form, timezone, toast])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true)
@@ -204,7 +188,7 @@ export default function EditClassPage() {
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="text-center">
                     <p className="text-lg font-semibold mb-2">Class not found</p>
-                    <p className="text-muted-foreground mb-4">The class you're looking for doesn't exist.</p>
+                    <p className="text-muted-foreground mb-4">The class you&apos;re looking for doesn&apos;t exist.</p>
                     <Button asChild>
                         <Link href="/admin/classes">Back to Classes</Link>
                     </Button>

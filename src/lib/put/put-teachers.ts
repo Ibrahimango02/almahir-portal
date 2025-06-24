@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/client"
 import { WeeklySchedule } from "@/types"
 
-export async function updateTeacher(teacherId: string, data: any) {
+export async function updateTeacher(teacherId: string, data: { specialization?: string; hourly_rate: string; status: string }) {
     const supabase = createClient()
 
     // Start a transaction by updating both tables

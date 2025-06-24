@@ -56,7 +56,7 @@ export default function ParentSchedulePage() {
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h1 className="text-3xl font-bold tracking-tight">Your Children's Class Schedule</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Your Children&apos;s Class Schedule</h1>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

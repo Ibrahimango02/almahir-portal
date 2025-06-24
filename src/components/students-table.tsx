@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Users, UserPen, UserCheck } from "lucide-react"
+import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"

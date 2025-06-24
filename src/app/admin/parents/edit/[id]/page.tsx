@@ -48,7 +48,7 @@ export default function EditParentPage() {
         if (parentData) {
           // Map parent students to full student data
           const associatedStudents = studentsData.filter(student =>
-            (parentStudents || []).some(parentStudent => parentStudent.id === student.student_id)
+            (parentStudents || []).some(parentStudent => parentStudent.student_id === student.student_id)
           )
 
           setFormData({
@@ -158,7 +158,7 @@ export default function EditParentPage() {
       <Card>
         <CardHeader>
           <CardTitle>Edit Parent Information</CardTitle>
-          <CardDescription>Update {parent.first_name} {parent.last_name}'s information</CardDescription>
+          <CardDescription>Update {parent.first_name} {parent.last_name}&apos;s information</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

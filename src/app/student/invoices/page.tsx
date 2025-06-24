@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
@@ -14,8 +13,8 @@ export default function InvoicesPage() {
     const [invoices, setInvoices] = useState<InvoiceType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [filteredInvoices, setFilteredInvoices] = useState<InvoiceType[]>([])
-    const [refreshTrigger, setRefreshTrigger] = useState(0)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+    const [refreshTrigger, setRefreshTrigger] = useState(0)
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -45,7 +44,7 @@ export default function InvoicesPage() {
         }
 
         fetchInvoices()
-    }, [currentUserId])
+    }, [currentUserId, refreshTrigger])
 
     useEffect(() => {
         const filtered = invoices.filter(invoice => {

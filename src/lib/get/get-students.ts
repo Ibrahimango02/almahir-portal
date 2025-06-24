@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/client'
-import { StudentType, TeacherType, ParentType, ClassType } from '@/types'
+import { StudentType, TeacherType, ParentType } from '@/types'
 import { calculateAge } from '@/lib/utils'
 
 export async function getStudents(): Promise<StudentType[]> {
@@ -31,7 +31,7 @@ export async function getStudents(): Promise<StudentType[]> {
             gender: studentProfile.gender,
             country: studentProfile.country,
             language: studentProfile.language,
-            email: studentProfile.email || null,
+            email: studentProfile.email ?? "",
             phone: studentProfile.phone || null,
             status: studentProfile.status,
             role: studentProfile.role,
@@ -75,7 +75,7 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
         gender: profile.gender,
         country: profile.country,
         language: profile.language,
-        email: profile.email || null,
+        email: profile.email ?? "",
         phone: profile.phone || null,
         status: profile.status,
         role: profile.role,
@@ -109,14 +109,14 @@ export async function getStudentParents(id: string): Promise<ParentType[]> {
     if (!parentProfiles) return []
 
     // Map the profiles to ParentType
-    const parents: ParentType[] = parentProfiles.map((profile: any) => ({
+    const parents: ParentType[] = parentProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => ({
         parent_id: profile.id,
         first_name: profile.first_name,
         last_name: profile.last_name,
         gender: profile.gender,
         country: profile.country,
         language: profile.language,
-        email: profile.email || null,
+        email: profile.email ?? "",
         phone: profile.phone || null,
         status: profile.status,
         role: profile.role,
@@ -167,8 +167,8 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
         .in('profile_id', teacherIds)
 
     // Map the profiles to TeacherType
-    const teachers: TeacherType[] = teacherProfiles.map((profile: any) => {
-        const teacher = teachersData?.find((t: any) => t.profile_id === profile.id)
+    const teachers: TeacherType[] = teacherProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
+        const teacher = teachersData?.find((t: { profile_id: string; specialization: string | null; hourly_rate: number | null; notes: string | null }) => t.profile_id === profile.id)
         return {
             teacher_id: profile.id,
             first_name: profile.first_name,

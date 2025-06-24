@@ -1,11 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Plus, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { getAdmins } from "@/lib/get/get-profiles"
-import Link from "next/link"
 import { AdminsTable } from "@/components/admins-table"
 import { useState, useEffect } from "react"
 import { AdminType } from "@/types"

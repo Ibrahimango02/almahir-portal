@@ -44,7 +44,7 @@ export default async function ParentDashboard() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
                 <Card className="col-span-7">
                     <CardHeader>
-                        <CardTitle>Your Children's Classes Overview</CardTitle>
+                        <CardTitle>Your Children&apos;s Classes Overview</CardTitle>
                         <CardDescription>View upcoming and recent classes for your children</CardDescription>
                     </CardHeader>
                     <CardContent>

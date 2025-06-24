@@ -4,7 +4,7 @@ import { BackButton } from "@/components/back-button"
 import { getClassById } from "@/lib/get/get-classes"
 import { createClient } from "@/utils/supabase/server"
 
-export default async function ClassPage({ params }: { params: { classId: string } }) {
+export default async function ClassPage({ params }: { params: Promise<{ classId: string }> }) {
     // Fetch the class data using the class ID
     const { classId } = await params
 

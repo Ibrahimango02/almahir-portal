@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description: "View invoice details",
 }
 
-export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const invoice = await getInvoiceById(id)
 

@@ -4,7 +4,6 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -15,24 +14,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, Mail, Phone, MapPin, Users } from "lucide-react"
+import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getParentStudents } from "@/lib/get/get-parents"
-import { ParentType } from "@/types"
+import { ParentType, StudentType } from "@/types"
 import AvatarIcon from "./avatar"
 import { format, parseISO } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
-
-// Define type for student data
-type StudentType = {
-  id: string;
-  first_name: string;
-  last_name: string;
-}
 
 interface ParentsTableProps {
   parents: ParentType[]

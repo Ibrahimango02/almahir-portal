@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
-import { format, parseISO } from "date-fns"
 import Link from "next/link"
-import { CalendarDays, Users, BookOpen, Link as LinkIcon, UserCircle2, Clock, Trash2, Edit } from "lucide-react"
+import { CalendarDays, Users, BookOpen, UserCircle2, Clock, Trash2, Edit } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
 import { deleteClass } from "@/lib/delete/delete-classes"
 import { useEffect, useState } from "react"
@@ -17,9 +16,7 @@ import { useRouter } from "next/navigation"
 import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { getProfile } from "@/lib/get/get-profiles"
 import { ClientTimeDisplay } from "./client-time-display"
-import { createClient } from "@/utils/supabase/client"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -200,7 +197,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                       <DialogHeader>
                         <DialogTitle>Delete Class</DialogTitle>
                         <DialogDescription>
-                          Are you sure you want to delete "{classData.title}"? This action cannot be undone and will permanently remove the class and all associated data including sessions, teacher assignments, and student enrollments.
+                          Are you sure you want to delete &quot;{classData.title}&quot;? This action cannot be undone and will permanently remove the class and all associated data including sessions, teacher assignments, and student enrollments.
                         </DialogDescription>
                       </DialogHeader>
                       <DialogFooter>

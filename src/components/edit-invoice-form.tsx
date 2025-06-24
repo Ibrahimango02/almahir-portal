@@ -162,7 +162,7 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
                       <FormField
                         control={form.control}
                         name="invoice_id"
-                        render={({ field }) => (
+                        render={() => (
                           <FormItem>
                             <FormLabel>Invoice ID</FormLabel>
                             <FormControl>
@@ -397,12 +397,6 @@ export function EditInvoiceForm({ invoice }: EditInvoiceFormProps) {
         <TabsContent value="preview">
           <InvoicePreview
             formData={form.getValues()}
-            lineItems={[]}
-            subtotal={form.getValues().amount}
-            tax={0}
-            discount={0}
-            total={form.getValues().amount}
-            onBack={() => setActiveTab("form")}
             students={students}
             parents={parents}
           />

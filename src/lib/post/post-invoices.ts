@@ -21,10 +21,21 @@ export async function createInvoice(invoiceData: InvoiceData) {
         : 'INV-001'
 
     // Prepare the invoice object, omitting parent_id if it's "none"
-    const invoiceToInsert: any = {
+    const invoiceToInsert: {
+        invoice_id: string;
+        student_id: string;
+        parent_id: string | null;
+        invoice_type: string;
+        amount: number;
+        currency: string;
+        description: string;
+        due_date: string;
+        status: string;
+        created_at: string;
+    } = {
         invoice_id: nextId,
         student_id: invoiceData.student_id,
-        parent_id: invoiceData.parent_id,
+        parent_id: invoiceData.parent_id ?? null,
         invoice_type: invoiceData.invoice_type,
         amount: invoiceData.amount,
         currency: invoiceData.currency,

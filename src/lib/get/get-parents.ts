@@ -12,16 +12,7 @@ export async function getParents(): Promise<ParentType[]> {
 
     if (!profile) return []
 
-    const parentIds = profile.map(parent => parent.id)
-
-    const { data: parents } = await supabase
-        .from('parents')
-        .select('*')
-        .in('profile_id', parentIds)
-
     const combinedParents = profile?.map(parentProfile => {
-        const parent = parents?.find(p => p.profile_id === parentProfile.id)
-
         return {
             parent_id: parentProfile.id,
             first_name: parentProfile.first_name,
@@ -56,12 +47,6 @@ export async function getParentById(id: string): Promise<ParentType | null> {
     if (!profile) {
         return null
     }
-
-    const { data: parent } = await supabase
-        .from('parents')
-        .select('*')
-        .eq('profile_id', id)
-        .single()
 
     // Return the parent with their students
     return {
@@ -109,8 +94,8 @@ export async function getParentStudents(id: string): Promise<StudentType[]> {
         .in('profile_id', studentIds)
 
     // Combine the data into a single array of StudentType objects
-    const combinedStudents = profiles.map((profile: any) => {
-        const student = studentsData?.find((s: any) => s.profile_id === profile.id)
+    const combinedStudents = profiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
+        const student = studentsData?.find((s: { profile_id: string; birth_date: string; grade_level: string | null; notes: string | null }) => s.profile_id === profile.id)
         return {
             student_id: profile.id,
             first_name: profile.first_name,
@@ -118,7 +103,7 @@ export async function getParentStudents(id: string): Promise<StudentType[]> {
             gender: profile.gender,
             country: profile.country,
             language: profile.language,
-            email: profile.email || null,
+            email: profile.email,
             phone: profile.phone || null,
             status: profile.status,
             role: profile.role,
@@ -178,14 +163,14 @@ export async function getTeacherStudentParents(teacherId: string): Promise<Paren
     if (!parentProfiles) return []
 
     // Map the profiles to ParentType
-    const parents: ParentType[] = parentProfiles.map((profile: any) => ({
+    const parents: ParentType[] = parentProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => ({
         parent_id: profile.id,
         first_name: profile.first_name,
         last_name: profile.last_name,
         gender: profile.gender,
         country: profile.country,
         language: profile.language,
-        email: profile.email || null,
+        email: profile.email || '',
         phone: profile.phone || null,
         status: profile.status,
         role: profile.role,

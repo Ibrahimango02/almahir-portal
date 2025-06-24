@@ -1,10 +1,9 @@
-import { updateSession } from '@/utils/supabase/middleware'
 import { createMiddlewareClient } from '@/utils/supabase/server'
 import { NextResponse, type NextRequest } from 'next/server'
 
 
 export async function middleware(request: NextRequest) {
-    let supabaseResponse = NextResponse.next({
+    const supabaseResponse = NextResponse.next({
         request,
     })
     const supabase = createMiddlewareClient(request, supabaseResponse)

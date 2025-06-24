@@ -136,7 +136,7 @@ export async function getTeacherStudents(id: string): Promise<StudentType[]> {
             gender: profile.gender,
             country: profile.country,
             language: profile.language,
-            email: profile.email || null,
+            email: profile.email ?? "",
             phone: profile.phone || null,
             status: profile.status,
             role: profile.role,

@@ -163,7 +163,7 @@ export function InvoicesTable({ invoices, onStatusUpdate }: InvoicesTableProps) 
 
   const isAdmin = currentUserRole === 'admin'
 
-  const SortableHeader = ({ label, sortKey, icon: Icon }: { label: string, sortKey: string, icon?: any }) => (
+  const SortableHeader = ({ label, sortKey, icon: Icon }: { label: string, sortKey: string, icon?: React.ComponentType<{ className?: string }> }) => (
     <TableHead
       className="h-10 px-3 font-semibold text-foreground/80 cursor-pointer hover:bg-muted/50"
       onClick={() => handleSort(sortKey)}

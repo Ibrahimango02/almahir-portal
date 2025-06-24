@@ -2,11 +2,8 @@
 
 import { format } from "date-fns"
 import { Calendar, User, Receipt, Clock, DollarSign, FileText } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "./status-badge"
-import { cn } from "@/lib/utils"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { StudentType } from "@/types"
 import { ParentType } from "@/types"
@@ -23,17 +20,11 @@ interface InvoicePreviewProps {
     due_date: Date
     status: string
   }
-  lineItems: any[]
-  subtotal: number
-  tax: number
-  discount: number
-  total: number
-  onBack: () => void
   students: StudentType[]
   parents: ParentType[]
 }
 
-export function InvoicePreview({ formData, lineItems, subtotal, tax, discount, total, onBack, students, parents }: InvoicePreviewProps) {
+export function InvoicePreview({ formData, students, parents }: InvoicePreviewProps) {
   const student = students.find(s => s.student_id === formData.student_id)
   const parent = formData.parent_id && formData.parent_id !== "none"
     ? parents.find(p => p.parent_id === formData.parent_id)

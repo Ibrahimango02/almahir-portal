@@ -1,7 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
-import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType } from '@/types'
-import { calculateAge } from '@/lib/utils'
-import { addDays, format, parse, isWithinInterval } from 'date-fns'
+import { addDays, format } from 'date-fns'
 
 type ClassData = {
     title: string

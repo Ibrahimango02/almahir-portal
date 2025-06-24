@@ -15,7 +15,7 @@ import React from "react"
 import AvatarIcon from "@/components/avatar"
 
 
-export default async function StudentDetailPage({ params }: { params: { id: string } }) {
+export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const student = await getStudentById(id)
   const studentParents = await getStudentParents(id)
@@ -241,7 +241,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Class Schedule</CardTitle>
-              <CardDescription>View {student.first_name}'s upcoming classes and attendance</CardDescription>
+              <CardDescription>View {student.first_name}&apos;s upcoming classes and attendance</CardDescription>
             </div>
             <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
               <Link href={`/admin/students/assign-class/${student.student_id}`}>

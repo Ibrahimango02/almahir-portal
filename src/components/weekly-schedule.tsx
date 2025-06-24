@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   format,
   parseISO,
@@ -16,7 +16,7 @@ import {
   isToday,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight, Plus, Clock, Users } from "lucide-react"
+import { List, CalendarDays, ChevronLeft, ChevronRight, Plus, Clock, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
 import { ClassSessionType } from "@/types"
@@ -63,7 +63,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
     if (isPastWeek && activeListTab === "upcoming") {
       setActiveListTab("recent")
     }
-  }, [isPastWeek, currentWeekStart])
+  }, [isPastWeek, activeListTab])
 
   // Memoize sorted classes to prevent recreation on every render
   const sortedClasses = useMemo(() => {
@@ -240,7 +240,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
               </TabsList>
             </Tabs>
           </div>
-          <ListScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={activeListTab} />
+          <ListScheduleView classes={visibleClasses} filter={activeListTab} />
         </>
       ) : (
         <CalendarScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={timeFilter} />
@@ -251,22 +251,17 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
 
 function ListScheduleView({
   classes,
-  weekStart,
   filter
 }: {
   classes: ClassSessionType[];
-  weekStart: Date;
   filter: "upcoming" | "recent";
 }) {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  // Calculate the end of the week (Monday to Sunday)
-  const weekEnd = addDays(weekStart, 6)
-
   // Current date and time for filtering
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
 
   // Sort and filter classes by date and time
   const filteredSortedClasses = useMemo(() => {
@@ -397,121 +392,65 @@ function CalendarScheduleView({
   filter?: "all" | "morning" | "afternoon" | "evening";
 }) {
   const router = useRouter()
-  const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [scrollbarWidth, setScrollbarWidth] = useState(0)
   const [mounted, setMounted] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [scrollbarWidth, setScrollbarWidth] = useState(0)
 
-  // Set mounted state after hydration
+  // Client-side only state
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Create an array of the days of the week
+  // Calculate scrollbar width
+  useEffect(() => {
+    if (wrapperRef.current) {
+      const width = wrapperRef.current.offsetWidth - wrapperRef.current.clientWidth
+      setScrollbarWidth(width)
+    }
+  }, [mounted])
+
+  // Generate week days based on the weekStart
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
   }, [weekStart])
 
-  // Scroll to 8 AM when the filter changes to "all"
-  useEffect(() => {
-    if (filter === "all" && scrollContainerRef.current) {
-      // Scroll to 8 AM (8 * 60px = 480px) - adjust as needed
-      setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = 480;
-        }
-      }, 100);
-    }
-  }, [filter]);
-
-  // Calculate scrollbar width using a ref and effect
-  useEffect(() => {
-    // Create a div with overflow to measure scrollbar width
-    const scrollDiv = document.createElement('div')
-    scrollDiv.style.overflow = 'scroll'
-    scrollDiv.style.height = '100px'
-    scrollDiv.style.width = '100px'
-    scrollDiv.style.position = 'absolute'
-    scrollDiv.style.top = '-9999px'
-    document.body.appendChild(scrollDiv)
-
-    // Calculate scrollbar width
-    const width = scrollDiv.offsetWidth - scrollDiv.clientWidth
-
-    // Remove the div
-    document.body.removeChild(scrollDiv)
-
-    // Set scrollbar width
-    setScrollbarWidth(width)
-  }, []) // Calculate once on mount
-
   // Find earliest and latest class times to determine time slots
   const timeRange = useMemo(() => {
-    // Determine time range based on filter
     if (filter === "morning") {
       return { earliestHour: 4, latestHour: 12 }
     } else if (filter === "afternoon") {
       return { earliestHour: 12, latestHour: 20 }
     } else if (filter === "evening") {
-      return { earliestHour: 20, latestHour: 4 } // 20 to 4 represents 8 PM to 4 AM
-    } else if (filter === "all") {
-      // For "all", show full 24 hours
+      return { earliestHour: 20, latestHour: 4 }
+    } else {
       return { earliestHour: 0, latestHour: 24 }
     }
-
-    // If we get here, it's likely a default case or invalid filter
-    // Provide a reasonable default range
-    return { earliestHour: 8, latestHour: 20 }
   }, [filter])
 
-  // Time slots for the day (dynamic based on class times, with defaults)
+  // Time slots for the day
   const timeSlots = useMemo(() => {
-    // Handle evening view that wraps around midnight
+    const slots = []
+
     if (filter === "evening") {
-      // Create slots for 8 PM to midnight, then midnight to 4 AM
-      const eveningSlots = []
-      // From 8 PM (20) to midnight (24)
-      for (let i = timeRange.earliestHour; i < 24; i++) {
-        eveningSlots.push(i)
+      // For evening view, create slots from 8 PM (20) to 4 AM (4) the next day
+      // First add hours from 8 PM to 11 PM (20-23)
+      for (let i = 20; i < 24; i++) {
+        slots.push(i)
       }
-      // From midnight (0) to 4 AM (4)
-      for (let i = 0; i < timeRange.latestHour; i++) {
-        eveningSlots.push(i)
+      // Then add hours from 12 AM to 4 AM (0-3)
+      for (let i = 0; i < 4; i++) {
+        slots.push(i)
       }
-      return eveningSlots
+    } else {
+      // For other filters, use the normal range
+      for (let i = timeRange.earliestHour; i < timeRange.latestHour; i++) {
+        slots.push(i)
+      }
     }
 
-    // For other time ranges
-    return Array.from(
-      { length: timeRange.latestHour - timeRange.earliestHour },
-      (_, i) => i + timeRange.earliestHour,
-    )
+    return slots
   }, [timeRange, filter])
-
-  // Calculate position for the current time indicator
-  const currentTimeIndicator = useMemo(() => {
-    if (!mounted) return null
-
-    const now = new Date()
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-
-    // Check if current time is within displayed range
-    if (currentHour < timeRange.earliestHour || currentHour >= timeRange.latestHour) {
-      return null;
-    }
-
-    // Calculate position on the timeline
-    const hourIndex = timeSlots.findIndex(hour => hour === currentHour);
-    if (hourIndex === -1) return null;
-
-    // Position within the hour (0-60 minutes)
-    const minutePercentage = (currentMinute / 60) * 100;
-    return {
-      hourIndex,
-      top: minutePercentage
-    };
-  }, [mounted, timeSlots, timeRange]);
 
   // Function to check if two classes overlap
   const doClassesOverlap = (class1: ClassSessionType, class2: ClassSessionType) => {
@@ -526,14 +465,16 @@ function CalendarScheduleView({
   }
 
   // Function to group overlapping classes
-  const groupOverlappingClasses = (classes: ClassSessionType[]) => {
+  const groupOverlappingClasses = useCallback((classes: ClassSessionType[]) => {
     if (classes.length <= 1) {
       return [classes]
     }
 
-    // Sort classes by start time for consistent grouping
     const sortedClasses = [...classes].sort((a, b) => {
-      return parseISO(a.start_date).getTime() - parseISO(b.start_date).getTime()
+      const startA = parseClassDateTime(a, "start_date")
+      const startB = parseClassDateTime(b, "start_date")
+      if (!startA || !startB) return 0
+      return startA.getTime() - startB.getTime()
     })
 
     const groups: ClassSessionType[][] = []
@@ -543,7 +484,6 @@ function CalendarScheduleView({
       const currentClass = sortedClasses[i]
       let overlapsWithCurrentGroup = false
 
-      // Check if current class overlaps with any class in the current group
       for (const groupClass of currentGroup) {
         if (doClassesOverlap(currentClass, groupClass)) {
           overlapsWithCurrentGroup = true
@@ -552,19 +492,49 @@ function CalendarScheduleView({
       }
 
       if (overlapsWithCurrentGroup) {
-        // Add to the current group if there's overlap
         currentGroup.push(currentClass)
       } else {
-        // Start a new group if there's no overlap
         groups.push(currentGroup)
         currentGroup = [currentClass]
       }
     }
 
-    // Add the last group
     groups.push(currentGroup)
     return groups
-  }
+  }, [])
+
+  // Calculate position for the current time indicator
+  const currentTimeIndicator = useMemo(() => {
+    if (!mounted) return null;
+
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    // Check if current time is within displayed range
+    if (filter === "evening") {
+      // For evening view, check if current time is between 8 PM and 4 AM
+      if (currentHour < 20 && currentHour >= 4) {
+        return null;
+      }
+    } else {
+      // For other filters, use the normal range check
+      if (currentHour < timeRange.earliestHour || currentHour >= timeRange.latestHour) {
+        return null;
+      }
+    }
+
+    // Calculate position on the timeline
+    const hourIndex = timeSlots.findIndex(hour => hour === currentHour);
+    if (hourIndex === -1) return null;
+
+    // Position within the hour (0-60 minutes)
+    const minutePercentage = (currentMinute / 60) * 100;
+    return {
+      hourIndex,
+      top: minutePercentage
+    };
+  }, [mounted, timeSlots, timeRange, filter]);
 
   // Format the hour for display
   const formatHour = (hour: number) => {
@@ -619,7 +589,7 @@ function CalendarScheduleView({
     })
 
     return byDay
-  }, [classes, weekDays])
+  }, [classes, weekDays, groupOverlappingClasses])
 
   return (
     <div className="overflow-x-auto border rounded-lg" ref={wrapperRef}>
@@ -677,7 +647,7 @@ function CalendarScheduleView({
                         <div className="absolute -right-1 w-2 h-2 rounded-full bg-red-500"></div>
                       </div>
                     )}
-                    {classesByDay[dayIndex].map((extendedClass: any) => {
+                    {classesByDay[dayIndex].map((extendedClass: ClassSessionType & { groupIndex: number; classIndex: number; groupSize: number }) => {
                       try {
                         const startTime = parseClassDateTime(extendedClass, "start_date")
                         const endTime = parseClassDateTime(extendedClass, "end_date")
@@ -710,7 +680,7 @@ function CalendarScheduleView({
 
                         return (
                           <div
-                            key={`${extendedClass.id}-${extendedClass.session_id}`}
+                            key={`${extendedClass.class_id}-${extendedClass.session_id}`}
                             className={cn(
                               "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
                               getStatusContainerStyles(extendedClass.status),
@@ -746,7 +716,7 @@ function CalendarScheduleView({
                             </div>
                           </div>
                         )
-                      } catch (error) {
+                      } catch {
                         return null
                       }
                     })}

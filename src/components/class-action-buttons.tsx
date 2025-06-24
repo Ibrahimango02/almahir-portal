@@ -72,7 +72,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       } else {
         throw new Error("Failed to initiate class")
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to initiate class. Please try again.",
@@ -100,7 +100,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       } else {
         throw new Error("Failed to start class")
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to start class. Please try again.",
@@ -128,7 +128,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       } else {
         throw new Error("Failed to end class")
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to end class. Please try again.",
@@ -156,7 +156,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       } else {
         throw new Error("Failed to leave class")
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to leave class. Please try again.",
@@ -200,7 +200,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       } else {
         throw new Error("Failed to mark absence")
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to mark absence. Please try again.",

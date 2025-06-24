@@ -5,13 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useTheme } from "@/components/theme-provider"
-import { MoonIcon, SunIcon, LaptopIcon, Upload, Trash2 } from "lucide-react"
+import { Upload, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { getProfile } from "@/lib/get/get-profiles"
 import { updateProfile, updatePassword } from "@/lib/put/put-profiles"
@@ -33,7 +29,6 @@ type ProfileData = {
 }
 
 export default function SettingsPage() {
-    const { theme, setTheme } = useTheme()
     const [isMounted, setIsMounted] = useState(false)
     const [profile, setProfile] = useState<ProfileData | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -53,7 +48,6 @@ export default function SettingsPage() {
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-    const [uploadError, setUploadError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -83,20 +77,17 @@ export default function SettingsPage() {
     const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         try {
             setUploading(true);
-            setUploadError(null);
 
             const file = event.target.files?.[0];
             if (!file) return;
 
             // Validate file type
             if (!file.type.startsWith('image/')) {
-                setUploadError('Please upload an image file');
                 return;
             }
 
             // Validate file size (max 5MB)
             if (file.size > 5 * 1024 * 1024) {
-                setUploadError('File size must be less than 5MB');
                 return;
             }
 
@@ -106,7 +97,7 @@ export default function SettingsPage() {
             const fileExt = file.name.split('.').pop();
             const fileName = `profiles/${userId}/avatar-${Math.random()}.${fileExt}`;
 
-            const { error: uploadError, data } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
                 .from('profile-pictures')
                 .upload(fileName, file);
 
@@ -127,7 +118,6 @@ export default function SettingsPage() {
 
         } catch (error) {
             console.error('Error uploading avatar:', error);
-            setUploadError('Failed to upload image. Please try again.');
         } finally {
             setUploading(false);
         }
@@ -142,7 +132,6 @@ export default function SettingsPage() {
             setAvatarUrl(null);
         } catch (error) {
             console.error('Error removing avatar:', error);
-            setUploadError('Failed to remove profile picture. Please try again.');
         }
     };
 

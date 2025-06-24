@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileText, Download, Plus, Upload, Calendar, HardDrive, Eye, Trash2, User } from "lucide-react"
+import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User } from "lucide-react"
 import { getResourcesByUser } from "@/lib/get/get-resources"
 import { createResource } from "@/lib/post/post-resources"
 import { deleteResource } from "@/lib/delete/delete-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
-import { ResourceType, ProfileType } from "@/types"
+import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/utils/supabase/client"
@@ -36,25 +36,7 @@ export default function TeacherResourcesPage() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const { toast } = useToast()
 
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setCurrentUserId(user.id)
-            }
-        }
-
-        getCurrentUser()
-    }, [])
-
-    useEffect(() => {
-        if (currentUserId) {
-            fetchResources()
-        }
-    }, [currentUserId])
-
-    const fetchResources = async () => {
+    const fetchResources = useCallback(async () => {
         if (!currentUserId) return
 
         try {
@@ -73,8 +55,8 @@ export default function TeacherResourcesPage() {
                                     last_name: profile.last_name
                                 }
                             }
-                        } catch (error) {
-                            console.error(`Failed to fetch uploader for resource ${resource.resource_id}:`, error)
+                        } catch {
+                            console.error(`Failed to fetch uploader for resource ${resource.resource_id}`)
                             return resource
                         }
                     }
@@ -83,7 +65,7 @@ export default function TeacherResourcesPage() {
             )
 
             setResources(resourcesWithUploaders)
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to fetch resources",
@@ -92,7 +74,25 @@ export default function TeacherResourcesPage() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [currentUserId, toast])
+
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                setCurrentUserId(user.id)
+            }
+        }
+
+        getCurrentUser()
+    }, [])
+
+    useEffect(() => {
+        if (currentUserId) {
+            fetchResources()
+        }
+    }, [currentUserId, fetchResources])
 
     const handleUpload = async (formData: FormData) => {
         setIsUploading(true)
@@ -104,7 +104,7 @@ export default function TeacherResourcesPage() {
                 title: "Success",
                 description: "Resource uploaded successfully",
             })
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to upload resource",
@@ -254,7 +254,7 @@ export default function TeacherResourcesPage() {
                     <DialogHeader>
                         <DialogTitle>Delete Resource</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to delete "{resourceToDelete?.title}"? This action cannot be undone and will permanently remove the resource file and its record from the database.
+                            Are you sure you want to delete &quot;{resourceToDelete?.title}&quot;? This action cannot be undone and will permanently remove the resource file and its record from the database.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

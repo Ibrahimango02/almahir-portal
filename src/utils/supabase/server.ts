@@ -50,7 +50,7 @@ export function createServerActionClient() {
 
 // For middleware
 export function createMiddlewareClient(request: NextRequest, response?: NextResponse) {
-    let supabaseResponse = response || NextResponse.next({ request })
+    const supabaseResponse = response || NextResponse.next({ request })
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,

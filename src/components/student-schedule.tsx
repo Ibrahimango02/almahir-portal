@@ -4,18 +4,14 @@ import { useState, useEffect, useMemo } from "react"
 import {
   format,
   parseISO,
-  startOfWeek,
   addDays,
-  isSameDay,
   addWeeks,
   subWeeks,
   isWithinInterval,
   endOfDay,
   startOfDay,
-  isPast,
-  isFuture,
-  isAfter,
-  isBefore,
+  startOfWeek,
+  isSameDay,
 } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { List, CalendarDays, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react"

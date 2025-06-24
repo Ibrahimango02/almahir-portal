@@ -2,7 +2,7 @@ import { notFound } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Mail, Phone, User, Calendar, Edit } from "lucide-react"
 import Link from "next/link"
@@ -10,7 +10,7 @@ import { BackButton } from "@/components/back-button"
 import { getParentById, getParentStudents } from "@/lib/get/get-parents"
 import AvatarIcon from "@/components/avatar"
 
-export default async function ParentDetailPage({ params }: { params: { id: string } }) {
+export default async function ParentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const parent = await getParentById(id)
   const parentStudents = await getParentStudents(id) ?? []
@@ -107,8 +107,8 @@ export default async function ParentDetailPage({ params }: { params: { id: strin
                     <div className="space-y-3">
                       {parentStudents.map((student) => (
                         <Link
-                          key={student.id}
-                          href={`/admin/students/${student.id}`}
+                          key={student.student_id}
+                          href={`/admin/students/${student.student_id}`}
                           className="block"
                         >
                           <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">

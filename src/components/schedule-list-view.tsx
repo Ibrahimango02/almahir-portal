@@ -2,15 +2,13 @@
 
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { StatusBadge } from "./status-badge"
 import { TablePagination } from "./table-pagination"
-import { CalendarDays, Clock, Users, BookOpen } from "lucide-react"
+import { CalendarDays, Clock, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ClassType, ClassSessionType, ScheduleListViewProps } from "@/types"
 import {
-    formatDateTime,
     formatDate,
     utcToLocal,
     isTodayInTimezone
@@ -192,7 +190,7 @@ export function ScheduleListView({
         <div className="space-y-6">
             {searchQuery && (
                 <div className="text-sm text-muted-foreground">
-                    Showing {sortedSessions.length} result{sortedSessions.length !== 1 ? 's' : ''} for "{searchQuery}"
+                    Showing {sortedSessions.length} result{sortedSessions.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
                 </div>
             )}
 

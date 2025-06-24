@@ -14,7 +14,7 @@ import { getSessionsByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 
-export default async function AdminDetailPage({ params }: { params: { id: string } }) {
+export default async function AdminDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const admin = await getTeacherById(id)
 
@@ -174,7 +174,7 @@ export default async function AdminDetailPage({ params }: { params: { id: string
                         <div className="flex items-center justify-between">
                             <div>
                                 <CardTitle>Class Schedule</CardTitle>
-                                <CardDescription>View {admin.first_name}'s upcoming classes and schedule</CardDescription>
+                                <CardDescription>View {admin.first_name}&apos;s upcoming classes and schedule</CardDescription>
                             </div>
                             <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                                 <Link href={`/admin/teachers/assign-class/${admin.teacher_id}`}>

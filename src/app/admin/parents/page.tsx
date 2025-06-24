@@ -1,11 +1,9 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Plus, Search } from "lucide-react"
+import { Search } from "lucide-react"
 import { ParentsTable } from "@/components/parents-table"
-import Link from "next/link"
 import { useState, useEffect } from "react"
 import { ParentType } from "@/types"
 import { getParents } from "@/lib/get/get-parents"

@@ -382,12 +382,12 @@ export default function CreateClassPage() {
                                             <div className="font-semibold mb-2">{daysOfWeek.find((d) => d.id === day)?.label} Time</div>
                                             <FormField
                                                 control={form.control}
-                                                name={`times.${day}.start` as any}
+                                                name={`times.${day}.start` as keyof z.infer<typeof formSchema>}
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>Start Time</FormLabel>
                                                         <FormControl>
-                                                            <Input placeholder="HH:MM (24h)" {...field} value={field.value ?? ""} />
+                                                            <Input placeholder="HH:MM (24h)" {...field} value={String(field.value || "")} />
                                                         </FormControl>
                                                         <FormDescription className="text-xs">Format: 14:30</FormDescription>
                                                         <FormMessage />
@@ -396,12 +396,12 @@ export default function CreateClassPage() {
                                             />
                                             <FormField
                                                 control={form.control}
-                                                name={`times.${day}.end` as any}
+                                                name={`times.${day}.end` as keyof z.infer<typeof formSchema>}
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel>End Time</FormLabel>
                                                         <FormControl>
-                                                            <Input placeholder="HH:MM (24h)" {...field} value={field.value ?? ""} />
+                                                            <Input placeholder="HH:MM (24h)" {...field} value={String(field.value || "")} />
                                                         </FormControl>
                                                         <FormDescription className="text-xs">Format: 16:00</FormDescription>
                                                         <FormMessage />

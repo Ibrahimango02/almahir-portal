@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Edit, MoreHorizontal, Mail, Phone, User, MapPin } from "lucide-react"
+import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
 import { useState } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"

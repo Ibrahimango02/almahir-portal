@@ -14,7 +14,7 @@ interface InvoiceLineItemsProps {
   lineItems: LineItem[]
   addLineItem: () => void
   removeLineItem: (id: number) => void
-  updateLineItem: (id: number, field: string, value: any) => void
+  updateLineItem: (id: number, field: string, value: string | number) => void
 }
 
 export function InvoiceLineItems({ lineItems, addLineItem, removeLineItem, updateLineItem }: InvoiceLineItemsProps) {

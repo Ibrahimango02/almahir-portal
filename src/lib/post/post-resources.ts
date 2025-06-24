@@ -22,7 +22,7 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
 
     // Upload file to Supabase Storage
     const fileName = `${Date.now()}-${file.name}`
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
         .from('resources')
         .upload(fileName, file)
 

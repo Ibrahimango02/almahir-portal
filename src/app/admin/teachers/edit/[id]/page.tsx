@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -41,8 +40,8 @@ export default function EditTeacherPage() {
         setTeacher(teacher)
         if (teacher) {
           setFormData({
-            specialization: teacher.specialization,
-            hourly_rate: teacher.hourly_rate.toString(),
+            specialization: teacher.specialization || "",
+            hourly_rate: teacher.hourly_rate?.toString() || "",
             status: teacher.status,
           })
         }
@@ -113,7 +112,7 @@ export default function EditTeacherPage() {
         <CardHeader>
           <CardTitle>Edit Teacher Information</CardTitle>
           <CardDescription>
-            Update {teacher.first_name} {teacher.last_name}'s information
+            Update {teacher.first_name} {teacher.last_name}&apos;s information
           </CardDescription>
         </CardHeader>
         <CardContent>

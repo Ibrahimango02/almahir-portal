@@ -1,5 +1,5 @@
 import { formatInTimeZone, toZonedTime } from 'date-fns-tz'
-import { format, parseISO, isValid } from 'date-fns'
+import { parseISO, isValid } from 'date-fns'
 
 // Default timezone - you can make this configurable
 const DEFAULT_TIMEZONE = 'UTC'

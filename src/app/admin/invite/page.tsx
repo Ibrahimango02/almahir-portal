@@ -9,9 +9,8 @@ import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
-import Link from "next/link"
-import { ArrowLeft, Mail, User } from "lucide-react"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectLabel } from "@/components/ui/select"
+import { Mail, User } from "lucide-react"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 export default function InviteUserPage() {
     const router = useRouter()

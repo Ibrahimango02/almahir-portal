@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Textarea } from "@/components/ui/textarea"
 import { format, parse, isAfter, startOfDay } from "date-fns"
 import { CalendarIcon, Clock } from "lucide-react"
 import Link from "next/link"
@@ -182,7 +181,7 @@ export default function ReschedulePage() {
             setTimeout(() => {
                 router.push(`/teacher/classes/${classId}/${sessionId}`)
             }, 1500)
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to reschedule class. Please try again.",

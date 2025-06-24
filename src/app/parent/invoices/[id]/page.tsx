@@ -1,8 +1,6 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Calendar, User, Receipt, Clock, DollarSign, FileText } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/status-badge"
 import { BackButton } from "@/components/back-button"
@@ -15,7 +13,7 @@ export const metadata: Metadata = {
     description: "View invoice details",
 }
 
-export default async function InvoiceDetailPage({ params }: { params: { id: string } }) {
+export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
     const invoice = await getInvoiceById(id)
 

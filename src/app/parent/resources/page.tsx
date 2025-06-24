@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Download, Calendar, HardDrive, User } from "lucide-react"
 import { getResourcesByParentStudentsTeachers } from "@/lib/get/get-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
-import { ResourceType, ProfileType } from "@/types"
+import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { createClient } from "@/utils/supabase/client"
@@ -23,25 +23,7 @@ export default function ParentResourcesPage() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const { toast } = useToast()
 
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setCurrentUserId(user.id)
-            }
-        }
-
-        getCurrentUser()
-    }, [])
-
-    useEffect(() => {
-        if (currentUserId) {
-            fetchResources()
-        }
-    }, [currentUserId])
-
-    const fetchResources = async () => {
+    const fetchResources = useCallback(async () => {
         if (!currentUserId) return
 
         try {
@@ -60,8 +42,8 @@ export default function ParentResourcesPage() {
                                     last_name: profile.last_name
                                 }
                             }
-                        } catch (error) {
-                            console.error(`Failed to fetch uploader for resource ${resource.resource_id}:`, error)
+                        } catch {
+                            console.error(`Failed to fetch uploader for resource ${resource.resource_id}`)
                             return resource
                         }
                     }
@@ -70,7 +52,7 @@ export default function ParentResourcesPage() {
             )
 
             setResources(resourcesWithUploaders)
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to fetch resources",
@@ -79,7 +61,25 @@ export default function ParentResourcesPage() {
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [currentUserId, toast])
+
+    useEffect(() => {
+        const getCurrentUser = async () => {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                setCurrentUserId(user.id)
+            }
+        }
+
+        getCurrentUser()
+    }, [])
+
+    useEffect(() => {
+        if (currentUserId) {
+            fetchResources()
+        }
+    }, [currentUserId, fetchResources])
 
     const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes'
@@ -110,8 +110,8 @@ export default function ParentResourcesPage() {
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Children's Resources</h1>
-                    <p className="text-muted-foreground">Educational materials shared by your children's teachers</p>
+                    <h1 className="text-3xl font-bold tracking-tight">My Children&apos;s Resources</h1>
+                    <p className="text-muted-foreground">Educational materials shared by your children&apos;s teachers</p>
                 </div>
             </div>
 
@@ -126,7 +126,7 @@ export default function ParentResourcesPage() {
                     <CardContent className="p-12 text-center">
                         <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium mb-2">No resources available</h3>
-                        <p className="text-muted-foreground mb-6">Your children's teachers haven't shared any resources yet</p>
+                        <p className="text-muted-foreground mb-6">Your children&apos;s teachers haven&apos;t shared any resources yet</p>
                     </CardContent>
                 </Card>
             ) : (

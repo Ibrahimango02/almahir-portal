@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { InvoiceLineItems } from "@/components/invoice-line-items"
 import { InvoicePreview } from "@/components/invoice-preview"
 import { getStudents } from "@/lib/get/get-students"
 import { getParents } from "@/lib/get/get-parents"
@@ -172,7 +171,7 @@ export function InvoiceForm() {
                       <FormField
                         control={form.control}
                         name="invoice_id"
-                        render={({ field }) => (
+                        render={() => (
                           <FormItem>
                             <FormLabel>Invoice ID</FormLabel>
                             <FormControl>
@@ -381,12 +380,6 @@ export function InvoiceForm() {
         <TabsContent value="preview">
           <InvoicePreview
             formData={form.getValues()}
-            lineItems={[]}
-            subtotal={form.getValues().amount}
-            tax={0}
-            discount={0}
-            total={form.getValues().amount}
-            onBack={() => setActiveTab("form")}
             students={students}
             parents={parents}
           />

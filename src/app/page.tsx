@@ -3,17 +3,14 @@
 import type React from "react"
 
 import { useState } from "react"
-import Link from "next/link"
 import { Eye, EyeOff, Loader2 } from "lucide-react"
-import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 
-import { login, signup } from "../lib/auth/auth-actions"
+import { login } from "../lib/auth/auth-actions"
 import Image from "next/image"
 
 export default function LoginPage() {

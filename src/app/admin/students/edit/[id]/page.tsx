@@ -111,7 +111,7 @@ export default function EditStudentPage() {
         <CardHeader>
           <CardTitle>Edit Student Information</CardTitle>
           <CardDescription>
-            Update {student.first_name} {student.last_name}'s information
+            Update {student.first_name} {student.last_name}&apos;s information
           </CardDescription>
         </CardHeader>
         <CardContent>

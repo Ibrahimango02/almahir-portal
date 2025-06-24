@@ -1,3 +1,4 @@
+import Image from "next/image"
 
 export default function AvatarIcon({ url, size = 'medium' }: { url: string, size: 'small' | 'medium' | 'large' }) {
     const sizeClasses = {
@@ -6,12 +7,20 @@ export default function AvatarIcon({ url, size = 'medium' }: { url: string, size
         large: 'h-24 w-24',
     };
 
+    const sizeValues = {
+        small: 32,
+        medium: 40,
+        large: 96,
+    };
+
     return (
         <div className={`${sizeClasses[size]} rounded-full overflow-hidden bg-gray-200`}>
             {url ? (
-                <img
+                <Image
                     src={url}
                     alt="Avatar"
+                    width={sizeValues[size]}
+                    height={sizeValues[size]}
                     className="h-full w-full object-cover"
                 />
             ) : (
