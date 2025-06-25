@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format, startOfDay } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText, GraduationCap } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,6 +27,7 @@ import { TeacherType, StudentType, ClassType } from "@/types"
 import { localToUtc, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useToast } from "@/hooks/use-toast"
+import { Separator } from "@/components/ui/separator"
 
 // Form schema for editing class
 const formSchema = z.object({
@@ -178,7 +179,10 @@ export default function EditClassPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
-                <p>Loading class information...</p>
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3d8f5b]"></div>
+                    <p className="text-muted-foreground">Loading class information...</p>
+                </div>
             </div>
         )
     }
@@ -198,313 +202,395 @@ export default function EditClassPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <BackButton href="/admin/classes" label="Back to Classes" />
-            </div>
+        <div className="min-h-screen py-8">
+            <BackButton href="/admin/classes" label="Back to Classes" />
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Header Section */}
+                <div className="mb-8">
+                    <div className="mt-6 text-center">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Class</h1>
+                    </div>
+                </div>
 
-            <Card className="max-w-4xl mx-auto">
-                <CardHeader>
-                    <CardTitle>Edit Class</CardTitle>
-                    <CardDescription>
-                        Update the class information, assign teachers, and enroll students.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} id="edit-class-form" className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="title"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Class Title</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="e.g. Advanced Quran Recitation" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="subject"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Subject</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
+                <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+                    <CardHeader className="text-center pb-8">
+                        <div className="mx-auto w-16 h-16 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center mb-4">
+                            <BookOpen className="w-8 h-8 text-[#3d8f5b]" />
+                        </div>
+                        <CardTitle className="text-2xl font-semibold text-gray-900">Class Information</CardTitle>
+                        <CardDescription className="text-base text-gray-600">
+                            Update the class information, assign teachers, and enroll students
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="px-8 pb-8">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} id="edit-class-form" className="space-y-8">
+                                {/* Basic Information Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <FileText className="w-4 h-4 text-[#3d8f5b]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormField
+                                            control={form.control}
+                                            name="title"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-sm font-medium text-gray-700">Class Title</FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            placeholder="e.g. Advanced Quran Recitation"
+                                                            className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                            {...field}
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="subject"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="text-sm font-medium text-gray-700">Subject</FormLabel>
+                                                    <Select onValueChange={field.onChange} value={field.value}>
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                                                                <SelectValue placeholder="Select a subject" />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            {subjects.map((subject) => (
+                                                                <SelectItem key={subject} value={subject}>
+                                                                    {subject}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="description"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Description (Optional)</FormLabel>
                                                 <FormControl>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select a subject" />
-                                                    </SelectTrigger>
+                                                    <Textarea
+                                                        placeholder="Brief description of the class content and objectives"
+                                                        className="min-h-[100px] border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20 resize-none"
+                                                        {...field}
+                                                    />
                                                 </FormControl>
-                                                <SelectContent>
-                                                    {subjects.map((subject) => (
-                                                        <SelectItem key={subject} value={subject}>
-                                                            {subject}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
 
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Description (Optional)</FormLabel>
-                                        <FormControl>
-                                            <Textarea
-                                                placeholder="Brief description of the class content and objectives"
-                                                className="min-h-[80px]"
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                <Separator className="my-8" />
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                    control={form.control}
-                                    name="startDate"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>Start Date</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                            variant={"outline"}
-                                                            className={cn(
-                                                                "w-full pl-3 text-left font-normal",
-                                                                !field.value && "text-muted-foreground",
-                                                            )}
-                                                        >
-                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabled={(date) => startOfDay(date) < startOfDay(new Date())}
-                                                        initialFocus
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="endDate"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>End Date</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                        <Button
-                                                            variant={"outline"}
-                                                            className={cn(
-                                                                "w-full pl-3 text-left font-normal",
-                                                                !field.value && "text-muted-foreground",
-                                                            )}
-                                                        >
-                                                            {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                        </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar
-                                                        mode="single"
-                                                        selected={field.value}
-                                                        onSelect={field.onChange}
-                                                        disabled={(date) => {
-                                                            const startDate = form.getValues("startDate")
-                                                            return startDate && startOfDay(date) < startOfDay(startDate)
-                                                        }}
-                                                        initialFocus
-                                                    />
-                                                </PopoverContent>
-                                            </Popover>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-
-                            <FormField
-                                control={form.control}
-                                name="teacherIds"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Assign Teachers</FormLabel>
-                                        <Select
-                                            onValueChange={(value) => {
-                                                const currentValues = field.value || [];
-                                                if (!currentValues.includes(value)) {
-                                                    field.onChange([...currentValues, value]);
-                                                }
-                                            }}
-                                            value={field.value?.[field.value.length - 1] || ""}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select teachers" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {teachers.map((teacher) => (
-                                                    <SelectItem
-                                                        key={teacher.teacher_id}
-                                                        value={teacher.teacher_id}
-                                                        disabled={field.value?.includes(teacher.teacher_id)}
-                                                    >
-                                                        {teacher.first_name} {teacher.last_name} ({teacher.specialization || "No specialization"})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="mt-2">
-                                            {field.value && field.value.length > 0 && (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {field.value.map((teacherId) => {
-                                                        const teacher = teachers.find(t => t.teacher_id === teacherId);
-                                                        return teacher ? (
-                                                            <div
-                                                                key={teacherId}
-                                                                className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md text-sm"
-                                                            >
-                                                                <span>{teacher.first_name} {teacher.last_name}</span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        field.onChange(field.value.filter(id => id !== teacherId));
-                                                                    }}
-                                                                    className="text-muted-foreground hover:text-foreground"
-                                                                >
-                                                                    ×
-                                                                </button>
-                                                            </div>
-                                                        ) : null;
-                                                    })}
-                                                </div>
-                                            )}
+                                {/* Schedule Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <Clock className="w-4 h-4 text-[#3d8f5b]" />
                                         </div>
-                                        <FormDescription>Select one or more teachers for this class</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                        <h3 className="text-lg font-semibold text-gray-900">Schedule & Duration</h3>
+                                    </div>
 
-                            <FormField
-                                control={form.control}
-                                name="studentIds"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Enroll Students (Optional)</FormLabel>
-                                        <Select
-                                            onValueChange={(value) => {
-                                                const currentValues = field.value || [];
-                                                if (!currentValues.includes(value)) {
-                                                    field.onChange([...currentValues, value]);
-                                                }
-                                            }}
-                                            value={field.value?.[field.value.length - 1] || ""}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select students" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent>
-                                                {students.map((student) => (
-                                                    <SelectItem
-                                                        key={student.student_id}
-                                                        value={student.student_id}
-                                                        disabled={field.value?.includes(student.student_id)}
-                                                    >
-                                                        {student.first_name} {student.last_name} (Age: {student.age}, Grade: {student.grade_level || "N/A"})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <div className="mt-2">
-                                            {field.value && field.value.length > 0 && (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {field.value.map((studentId) => {
-                                                        const student = students.find(s => s.student_id === studentId);
-                                                        return student ? (
-                                                            <div
-                                                                key={studentId}
-                                                                className="flex items-center gap-1 bg-secondary px-2 py-1 rounded-md text-sm"
-                                                            >
-                                                                <span>{student.first_name} {student.last_name}</span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        field.onChange(field.value?.filter(id => id !== studentId));
-                                                                    }}
-                                                                    className="text-muted-foreground hover:text-foreground"
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <FormField
+                                            control={form.control}
+                                            name="startDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel className="text-sm font-medium text-gray-700">Start Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button
+                                                                    variant={"outline"}
+                                                                    className={cn(
+                                                                        "w-full h-11 pl-3 text-left font-normal border-gray-200 hover:border-[#3d8f5b] focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20",
+                                                                        !field.value && "text-muted-foreground",
+                                                                    )}
                                                                 >
-                                                                    ×
-                                                                </button>
-                                                            </div>
-                                                        ) : null;
-                                                    })}
-                                                </div>
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
                                             )}
-                                        </div>
-                                        <FormDescription>Select students to enroll in this class</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="endDate"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-col">
+                                                    <FormLabel className="text-sm font-medium text-gray-700">End Date</FormLabel>
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <FormControl>
+                                                                <Button
+                                                                    variant={"outline"}
+                                                                    className={cn(
+                                                                        "w-full h-11 pl-3 text-left font-normal border-gray-200 hover:border-[#3d8f5b] focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20",
+                                                                        !field.value && "text-muted-foreground",
+                                                                    )}
+                                                                >
+                                                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                                </Button>
+                                                            </FormControl>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-auto p-0" align="start">
+                                                            <Calendar
+                                                                mode="single"
+                                                                selected={field.value}
+                                                                onSelect={field.onChange}
+                                                                disabled={(date) => {
+                                                                    const startDate = form.getValues("startDate")
+                                                                    return startDate && startOfDay(date) < startOfDay(startDate)
+                                                                }}
+                                                                initialFocus
+                                                            />
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
 
-                            <FormField
-                                control={form.control}
-                                name="classLink"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Class Link (Optional)</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="https://meet.google.com/..." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </form>
-                    </Form>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button variant="outline" asChild>
-                        <Link href="/admin/classes">Cancel</Link>
-                    </Button>
-                    <Button
-                        type="submit"
-                        form="edit-class-form"
-                        disabled={isSubmitting}
-                        style={{ backgroundColor: "#3d8f5b", color: "white" }}
-                    >
-                        {isSubmitting ? "Updating..." : "Update Class"}
-                    </Button>
-                </CardFooter>
-            </Card>
+                                {/* Teachers Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <Users className="w-4 h-4 text-[#3d8f5b]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Assign Teachers</h3>
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="teacherIds"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Select Teachers</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        const currentValues = field.value || [];
+                                                        if (!currentValues.includes(value)) {
+                                                            field.onChange([...currentValues, value]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                                                            <SelectValue placeholder="Select teacher" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {teachers.map((teacher) => (
+                                                            <SelectItem
+                                                                key={teacher.teacher_id}
+                                                                value={teacher.teacher_id}
+                                                                disabled={field.value?.includes(teacher.teacher_id)}
+                                                            >
+                                                                {teacher.first_name} {teacher.last_name} {teacher.specialization ? `(${teacher.specialization})` : ""}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="mt-3">
+                                                    {field.value && field.value.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {field.value.map((teacherId) => {
+                                                                const teacher = teachers.find(t => t.teacher_id === teacherId);
+                                                                return teacher ? (
+                                                                    <div
+                                                                        key={teacherId}
+                                                                        className="flex items-center gap-2 bg-[#3d8f5b]/10 border border-[#3d8f5b]/20 px-3 py-2 rounded-lg text-sm"
+                                                                    >
+                                                                        <span className="text-[#3d8f5b] font-medium">{teacher.first_name} {teacher.last_name}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                field.onChange(field.value.filter(id => id !== teacherId));
+                                                                            }}
+                                                                            className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                ) : null;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <FormDescription className="text-sm text-gray-600">Select one or more teachers for this class</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <Separator className="my-8" />
+
+                                {/* Students Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <GraduationCap className="w-4 h-4 text-[#3d8f5b]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Enroll Students</h3>
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="studentIds"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Select Students (Optional)</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        const currentValues = field.value || [];
+                                                        if (!currentValues.includes(value)) {
+                                                            field.onChange([...currentValues, value]);
+                                                        }
+                                                    }}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                                                            <SelectValue placeholder="Select student" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {students.map((student) => (
+                                                            <SelectItem
+                                                                key={student.student_id}
+                                                                value={student.student_id}
+                                                                disabled={field.value?.includes(student.student_id)}
+                                                            >
+                                                                {student.first_name} {student.last_name} (Age: {student.age}, Grade: {student.grade_level || "N/A"})
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="mt-3">
+                                                    {field.value && field.value.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {field.value.map((studentId) => {
+                                                                const student = students.find(s => s.student_id === studentId);
+                                                                return student ? (
+                                                                    <div
+                                                                        key={studentId}
+                                                                        className="flex items-center gap-2 bg-[#3d8f5b]/10 border border-[#3d8f5b]/20 px-3 py-2 rounded-lg text-sm"
+                                                                    >
+                                                                        <span className="text-[#3d8f5b] font-medium">{student.first_name} {student.last_name}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                field.onChange(field.value?.filter(id => id !== studentId));
+                                                                            }}
+                                                                            className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                ) : null;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <FormDescription className="text-sm text-gray-600">Select students to enroll in this class</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <Separator className="my-8" />
+
+                                {/* Additional Settings Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <LinkIcon className="w-4 h-4 text-[#3d8f5b]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Additional Settings</h3>
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="classLink"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Class Link (Optional)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="https://meet.google.com/..."
+                                                        className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-sm text-gray-600">
+                                                    Meeting link for online classes
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            </form>
+                        </Form>
+                    </CardContent>
+
+                    <CardFooter className="flex justify-between px-8 py-6 bg-gray-50/50 border-t">
+                        <Button variant="outline" asChild className="h-11 px-6 border-gray-200 hover:border-gray-300">
+                            <Link href="/admin/classes">Cancel</Link>
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="edit-class-form"
+                            disabled={isSubmitting}
+                            className="h-11 px-8 bg-[#3d8f5b] hover:bg-[#3d8f5b]/90 text-white font-medium transition-colors"
+                        >
+                            {isSubmitting ? (
+                                <div className="flex items-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    Updating...
+                                </div>
+                            ) : (
+                                "Update Class"
+                            )}
+                        </Button>
+                    </CardFooter>
+                </Card>
+            </div>
         </div>
     )
 }
