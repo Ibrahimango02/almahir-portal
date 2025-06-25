@@ -320,7 +320,7 @@ export async function updateClassSession(params: {
 
                 // Create a record in class history for the reschedule
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .upsert({
                         session_id: sessionId,
                         notes: 'Class rescheduled'
@@ -335,7 +335,7 @@ export async function updateClassSession(params: {
             case 'initiate': {
                 // Create class history record and update session status
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .upsert({
                         session_id: sessionId,
                         notes: 'Class initiated'
@@ -359,7 +359,7 @@ export async function updateClassSession(params: {
 
                 // Update class history with start time
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .update({ actual_start_time: now, notes: 'Class started' })
                     .eq('session_id', sessionId)
 
@@ -380,7 +380,7 @@ export async function updateClassSession(params: {
 
                 // Update class history with end time
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .update({
                         actual_end_time: now,
                         notes: 'Class ended'
@@ -401,7 +401,7 @@ export async function updateClassSession(params: {
 
             case 'leave': {
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .upsert({
                         session_id: sessionId,
                         notes: 'Class cancelled'
@@ -424,7 +424,7 @@ export async function updateClassSession(params: {
                 const now = new Date().toISOString()
                 // Update class history with end time
                 const { error: historyError } = await supabase
-                    .from('class_history')
+                    .from('session_history')
                     .update({
                         actual_end_time: now,
                         notes: 'Class absence'
@@ -453,43 +453,51 @@ export async function updateClassSession(params: {
     }
 }
 
-export async function updateClassSessionAttendance(params: { sessionId: string; attendance: Record<string, boolean> }) {
+export async function updateSessionAttendance(params: { sessionId: string; attendance: Record<string, boolean> }) {
     const supabase = createClient()
     const { sessionId, attendance } = params
 
     try {
-        // First get the class_history_id for this session
-        const { data: classHistory, error: historyError } = await supabase
-            .from('class_history')
-            .select('id')
-            .eq('session_id', sessionId)
-            .single()
+        // Validate input
+        if (!sessionId) {
+            throw new Error('Session ID is required')
+        }
 
-        if (historyError) throw historyError
-        if (!classHistory) throw new Error('No class history found for this session')
+        if (!attendance || Object.keys(attendance).length === 0) {
+            throw new Error('Attendance data is required')
+        }
 
         // Prepare attendance records for upsert
         const attendanceRecords = Object.entries(attendance).map(([studentId, isPresent]) => ({
-            class_history_id: classHistory.id,
+            session_id: sessionId,
             student_id: studentId,
             attendance_status: isPresent ? 'present' : 'absent',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }))
 
+        console.log('Attempting to upsert attendance records:', attendanceRecords)
+
         // Upsert attendance records
         const { error: upsertError } = await supabase
-            .from('class_attendance')
+            .from('session_attendance')
             .upsert(attendanceRecords, {
-                onConflict: 'class_history_id,student_id',
-                ignoreDuplicates: false
+                onConflict: 'session_id,student_id'
             })
 
-        if (upsertError) throw upsertError
+        if (upsertError) {
+            console.error('Supabase upsert error:', upsertError)
+            throw new Error(`Database error: ${upsertError.message}`)
+        }
 
         return { success: true }
     } catch (error) {
         console.error('Error updating attendance:', error)
-        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
+        return {
+            success: false,
+            error: {
+                message: error instanceof Error ? error.message : String(error)
+            }
+        }
     }
 }

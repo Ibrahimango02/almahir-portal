@@ -9,7 +9,8 @@ import { format, parseISO } from "date-fns"
 import { CheckCircle, Save, X, Clock } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
-import { updateClassSessionAttendance } from "@/lib/put/put-classes"
+import { updateSessionAttendance } from "@/lib/put/put-classes"
+import { getSessionAttendance } from "@/lib/get/get-classes"
 
 type AttendanceTrackerProps = {
   sessionId: string
@@ -29,15 +30,53 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
   const [saving, setSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
   const [isAttendanceTaken, setIsAttendanceTaken] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  // Initialize attendance state when students change
+  // Load existing attendance data when component mounts or sessionId changes
   useEffect(() => {
-    const initialAttendance: Record<string, boolean> = {}
-    students.forEach((student) => {
-      initialAttendance[student.student_id] = false // Default to absent
-    })
-    setAttendance(initialAttendance)
-  }, [students])
+    const loadExistingAttendance = async () => {
+      setLoading(true)
+      try {
+        const existingAttendance = await getSessionAttendance(sessionId)
+
+        // Create attendance state from existing data
+        const attendanceState: Record<string, boolean> = {}
+
+        // Initialize all students as absent by default
+        students.forEach((student) => {
+          attendanceState[student.student_id] = false
+        })
+
+        // Update with existing attendance records
+        existingAttendance.forEach((record) => {
+          if (record.student_id in attendanceState) {
+            attendanceState[record.student_id] = record.attendance_status === 'present'
+          }
+        })
+
+        setAttendance(attendanceState)
+
+        // Check if attendance has been taken (if there are any records)
+        setIsAttendanceTaken(existingAttendance.length > 0)
+        setHasChanges(false)
+      } catch (error) {
+        console.error('Error loading existing attendance:', error)
+        // Fallback to default state
+        const defaultAttendance: Record<string, boolean> = {}
+        students.forEach((student) => {
+          defaultAttendance[student.student_id] = false
+        })
+        setAttendance(defaultAttendance)
+        setIsAttendanceTaken(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (sessionId && students.length > 0) {
+      loadExistingAttendance()
+    }
+  }, [sessionId, students])
 
   // Function to get initials from name
   const getInitials = (firstName: string, lastName: string) => {
@@ -77,13 +116,13 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
         completeAttendance[student.student_id] = attendance[student.student_id] || false
       })
 
-      const result = await updateClassSessionAttendance({
+      const result = await updateSessionAttendance({
         sessionId,
         attendance: completeAttendance
       })
 
       if (!result.success) {
-        throw new Error('Failed to save attendance')
+        throw new Error(result.error?.message || 'Failed to save attendance')
       }
 
       // Check if all students are absent
@@ -102,12 +141,16 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
 
       setHasChanges(false)
       setIsAttendanceTaken(true)
-    } catch {
+    } catch (error) {
+      console.error('Error in saveAttendance:', error)
+
+      const errorMessage = error instanceof Error ? error.message : 'There was a problem saving attendance records. Please try again.'
+
       toast({
         title: "Error saving attendance",
-        description: "There was a problem saving attendance records. Please try again.",
+        description: errorMessage,
         variant: "destructive",
-        duration: 3000,
+        duration: 5000,
       })
     } finally {
       setSaving(false)
@@ -118,6 +161,17 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
   const presentCount = Object.values(attendance).filter(Boolean).length
 
   const isAttendanceEnabled = currentStatus === "running"
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-sm text-muted-foreground">Loading attendance data...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

@@ -5,7 +5,7 @@ import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX } from "lucide-r
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { updateClassSession, updateClassSessionAttendance } from "@/lib/put/put-classes"
+import { updateClassSession, updateSessionAttendance } from "@/lib/put/put-classes"
 
 type ClassActionButtonsProps = {
   classData: {
@@ -176,7 +176,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         allAbsent[student.student_id] = false
       })
 
-      const attendanceResult = await updateClassSessionAttendance({
+      const attendanceResult = await updateSessionAttendance({
         sessionId: classData.session_id,
         attendance: allAbsent
       })

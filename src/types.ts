@@ -198,3 +198,11 @@ export type ResourceType = {
     created_at: string
     updated_at: string | null
 }
+
+export type ClassSessionAttendanceType = {
+    session_id: string
+    student_id: string
+    attendance_status: string
+    created_at: string
+    updated_at: string | null
+}
