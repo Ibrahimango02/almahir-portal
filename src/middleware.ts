@@ -32,47 +32,25 @@ export async function middleware(request: NextRequest) {
         .single();
 
     const role = profile?.role;
-    //const path = request.nextUrl.pathname;
 
-    // Define route permissions
-    const protectedRoutes = {
-        '/admin/dashboard': ['admin'],
-        '/admin/schedule': ['admin'],
-        '/admin/classes': ['admin'],
-        '/admin/admins': ['admin'],
-        '/admin/teachers': ['admin'],
-        '/admin/students': ['admin'],
-        '/admin/parents': ['admin'],
-        '/admin/invoices': ['admin'],
-        '/admin/resources': ['admin'],
-        '/admin/settings': ['admin'],
-        '/teacher/dashboard': ['teacher'],
-        '/teacher/schedule': ['teacher'],
-        '/teacher/classes': ['teacher'],
-        '/teacher/students': ['teacher'],
-        '/teacher/parents': ['teacher'],
-        '/teacher/resources': ['teacher'],
-        '/teacher/settings': ['teacher'],
-        '/student/dashboard': ['student'],
-        '/student/schedule': ['student'],
-        '/student/classes': ['student'],
-        '/student/resources': ['student'],
-        '/student/invoices': ['student'],
-        '/student/settings': ['student'],
-        '/parent/dashboard': ['parent'],
-        '/parent/schedule': ['parent'],
-        '/parent/classes': ['parent'],
-        '/parent/students': ['parent'],
-        '/parent/resources': ['parent'],
-        '/parent/invoices': ['parent'],
-        '/parent/settings': ['parent']
+    // Define route permissions with role-based access control
+    const roleBasedRoutes: Record<string, string[]> = {
+        'admin': ['/admin'],
+        'teacher': ['/teacher'],
+        'student': ['/student'],
+        'parent': ['/parent']
     };
 
-    // Check access for exact path matches
-    for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
-        if (path === route && !allowedRoles.includes(role)) {
-            return NextResponse.redirect(new URL('/error', request.url));
-        }
+    // Check if the path starts with any role-specific prefix
+    const userAllowedPrefixes = roleBasedRoutes[role as keyof typeof roleBasedRoutes] || [];
+    const pathStartsWithAllowedPrefix = userAllowedPrefixes.some((prefix: string) => path.startsWith(prefix));
+
+    // If the path starts with a role-specific prefix but not the user's role, deny access
+    const allRolePrefixes = Object.values(roleBasedRoutes).flat();
+    const pathStartsWithAnyRolePrefix = allRolePrefixes.some((prefix: string) => path.startsWith(prefix));
+
+    if (pathStartsWithAnyRolePrefix && !pathStartsWithAllowedPrefix) {
+        return NextResponse.redirect(new URL('/error', request.url));
     }
 
     return supabaseResponse;
