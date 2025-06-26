@@ -395,7 +395,7 @@ function CalendarScheduleView({
   const [mounted, setMounted] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [scrollbarWidth, setScrollbarWidth] = useState(0)
+  //const [scrollbarWidth, setScrollbarWidth] = useState(0)
 
   // Client-side only state
   useEffect(() => {
@@ -403,12 +403,12 @@ function CalendarScheduleView({
   }, [])
 
   // Calculate scrollbar width
-  useEffect(() => {
-    if (wrapperRef.current) {
-      const width = wrapperRef.current.offsetWidth - wrapperRef.current.clientWidth
-      setScrollbarWidth(width)
-    }
-  }, [mounted])
+  // useEffect(() => {
+  //   if (wrapperRef.current) {
+  //     const width = wrapperRef.current.offsetWidth - wrapperRef.current.clientWidth
+  //     setScrollbarWidth(width)
+  //   }
+  // }, [mounted])
 
   // Generate week days based on the weekStart
   const weekDays = useMemo(() => {
@@ -597,7 +597,7 @@ function CalendarScheduleView({
         {/* Calendar header - Days of the week */}
         <div
           className="grid grid-cols-8 border-b"
-          style={{ paddingRight: filter === "all" ? `${scrollbarWidth}px` : '0' }}
+          style={{ paddingRight: filter === "all" ? `15px` : '0' }}
         >
           <div className="p-2 border-r bg-muted/30 text-sm"></div>
           {weekDays.map((day) => (

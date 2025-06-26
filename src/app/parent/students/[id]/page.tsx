@@ -9,7 +9,7 @@ import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
-import { getStudentClassCount, getSessionsByStudentId } from "@/lib/get/get-classes"
+import { getSessionCountByStudentId, getSessionsByStudentId } from "@/lib/get/get-classes"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
 
@@ -30,8 +30,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         )
     }
 
-    const studentClassCount = await getStudentClassCount(student.student_id)
     const studentSessions = await getSessionsByStudentId(student.student_id)
+    const studentSessionCount = await getSessionCountByStudentId(student.student_id)
 
     return (
         <div className="flex flex-col gap-6">
@@ -91,8 +91,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     <span className="text-xs text-muted-foreground">Age</span>
                                 </div>
                                 <div className="flex flex-col items-center justify-center">
-                                    <span className="text-2xl font-bold text-primary">{studentClassCount}</span>
-                                    <span className="text-xs text-muted-foreground">Classes</span>
+                                    <span className="text-2xl font-bold text-primary">{studentSessionCount}</span>
+                                    <span className="text-xs text-muted-foreground">Sessions</span>
                                 </div>
                             </div>
 
@@ -124,7 +124,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                             {studentTeachers.map((teacher) => (
                                                 <div
                                                     key={teacher.teacher_id}
-                                                    className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm"
+                                                    className="flex items-center gap-3 p-2 rounded-lg bg-card"
                                                 >
                                                     <Avatar className="h-8 w-8">
                                                         {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
@@ -164,7 +164,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                             {studentParents.map((parent) => (
                                                 <div
                                                     key={parent.parent_id}
-                                                    className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm"
+                                                    className="flex items-center gap-3 p-2 rounded-lg bg-card"
                                                 >
                                                     <Avatar className="h-8 w-8">
                                                         {parent.avatar_url && <AvatarImage src={parent.avatar_url} alt={parent.first_name} />}
@@ -182,7 +182,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                             ))}
                                         </div>
                                     ) : (
-                                        <div className="p-4 text-center border-2 border-dashed border-muted rounded-lg">
+                                        <div className="flex items-center gap-3 p-2 rounded-lg bg-card">
                                             <Users className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
                                             <p className="text-sm text-muted-foreground">No parents assigned</p>
                                         </div>

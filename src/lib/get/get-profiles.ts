@@ -88,3 +88,19 @@ export async function getAdminById(id: string): Promise<AdminType> {
 
     return profile
 }
+
+export async function checkIfAdmin(id: string): Promise<boolean> {
+    const supabase = createClient();
+
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', id)
+        .single();
+
+    if (error || !profile) {
+        return false;
+    }
+
+    return profile.role === 'admin';
+}

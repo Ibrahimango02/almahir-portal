@@ -17,6 +17,7 @@ import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
+import React from "react"
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -125,7 +126,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
 
   // Check if links should be enabled for teachers
   const shouldEnableTeacherLink = () => {
-    return enableLinks && (userRole === 'admin' || userRole === 'teacher')
+    return enableLinks && (userRole === 'admin')
   }
 
   const handleDeleteClass = async () => {
@@ -279,13 +280,26 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                   {teachers.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {teachers.map((teacher) => (
-                        shouldEnableTeacherLink() ? (
-                          <Link
-                            key={teacher.teacher_id}
-                            href={getEntityPath('teachers', teacher.teacher_id)}
-                            className="block"
-                          >
-                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        <React.Fragment key={teacher.teacher_id}>
+                          {shouldEnableTeacherLink() ? (
+                            <Link
+                              href={getEntityPath('teachers', teacher.teacher_id)}
+                              className="block"
+                            >
+                              <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                                <Avatar className="h-8 w-8">
+                                  {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
+                                  <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-primary truncate">
+                                    {teacher.first_name} {teacher.last_name}
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-3 p-2 rounded-lg bg-card">
                               <Avatar className="h-8 w-8">
                                 {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
                                 <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
@@ -296,23 +310,8 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                                 </p>
                               </div>
                             </div>
-                          </Link>
-                        ) : (
-                          <div
-                            key={teacher.teacher_id}
-                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
-                          >
-                            <Avatar className="h-8 w-8">
-                              {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
-                              <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-muted-foreground truncate">
-                                {teacher.first_name} {teacher.last_name}
-                              </p>
-                            </div>
-                          </div>
-                        )
+                          )}
+                        </React.Fragment>
                       ))}
                     </div>
                   ) : (
@@ -333,13 +332,26 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                   {enrolledStudents.length > 0 ? (
                     <div className="space-y-2 max-h-[320px] overflow-y-auto custom-scrollbar">
                       {enrolledStudents.map((student) => (
-                        shouldEnableStudentLink(student.student_id) ? (
-                          <Link
-                            key={student.student_id}
-                            href={getEntityPath('students', student.student_id)}
-                            className="block"
-                          >
-                            <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                        <React.Fragment key={student.student_id}>
+                          {shouldEnableStudentLink(student.student_id) ? (
+                            <Link
+                              href={getEntityPath('students', student.student_id)}
+                              className="block"
+                            >
+                              <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                                <Avatar className="h-8 w-8">
+                                  {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
+                                  <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-primary truncate">
+                                    {student.first_name} {student.last_name}
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                          ) : (
+                            <div className="flex items-center gap-3 p-2 rounded-lg bg-card">
                               <Avatar className="h-8 w-8">
                                 {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
                                 <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
@@ -350,23 +362,8 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                                 </p>
                               </div>
                             </div>
-                          </Link>
-                        ) : (
-                          <div
-                            key={student.student_id}
-                            className="flex items-center gap-3 p-2 rounded-lg border bg-card opacity-60 cursor-not-allowed"
-                          >
-                            <Avatar className="h-8 w-8">
-                              {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
-                              <AvatarFallback>{student.first_name.charAt(0)}{student.last_name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-muted-foreground truncate">
-                                {student.first_name} {student.last_name}
-                              </p>
-                            </div>
-                          </div>
-                        )
+                          )}
+                        </React.Fragment>
                       ))}
                     </div>
                   ) : (

@@ -2,6 +2,7 @@ import { ClassSessionDetails } from "@/components/class-session-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
+import { createClient } from "@/utils/supabase/server"
 
 export default async function ClassSessionPage({ params }: { params: Promise<{ classId: string, sessionId: string }> }) {
     // Fetch the class data using the session ID
@@ -11,6 +12,20 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
     // If class not found, show 404 page
     if (!classSessionData) {
         notFound()
+    }
+
+    // Fetch the parent's associated students
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    let userParentStudents: string[] = []
+    if (user) {
+        const { data: parentStudents } = await supabase
+            .from('parent_students')
+            .select('student_id')
+            .eq('parent_id', user.id)
+        if (parentStudents) {
+            userParentStudents = parentStudents.map(ps => ps.student_id)
+        }
     }
 
     // Transform the data to match the expected structure for ClassSessionDetails
@@ -34,7 +49,7 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
                 <BackButton href={`/parent/classes/${classId}`} label="Back to Class" />
             </div>
 
-            <ClassSessionDetails classData={classData} disableLinks={true} />
+            <ClassSessionDetails classData={classData} userRole="parent" userParentStudents={userParentStudents} />
         </div>
     )
 }

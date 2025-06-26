@@ -34,7 +34,7 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
                 <BackButton href={`/student/classes/${classId}`} label="Back to Class" />
             </div>
 
-            <ClassSessionDetails classData={classData} disableLinks={true} />
+            <ClassSessionDetails classData={classData} userRole="student" />
         </div>
     )
 }

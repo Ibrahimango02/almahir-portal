@@ -10,7 +10,7 @@ import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
 import { getTeacherAvailability } from "@/lib/get/get-teachers"
-import { getSessionsByTeacherId } from "@/lib/get/get-classes"
+import { getSessionCountByTeacherId, getSessionsByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 
@@ -29,6 +29,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   }
 
   const teacherSessions = await getSessionsByTeacherId(teacher.teacher_id)
+  const teacherSessionCount = await getSessionCountByTeacherId(teacher.teacher_id)
   const teacherAvailability = await getTeacherAvailability(teacher.teacher_id)
 
   return (
@@ -94,7 +95,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                   <span className="text-xs text-muted-foreground">Hourly Rate</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{teacherSessions.length}</span>
+                  <span className="text-2xl font-bold text-primary">{teacherSessionCount}</span>
                   <span className="text-xs text-muted-foreground">Sessions</span>
                 </div>
               </div>

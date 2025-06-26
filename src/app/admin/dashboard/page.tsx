@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
-import { getSessionsToday, getClassesCountByStatus, getWeeklySessionsCount } from "@/lib/get/get-classes"
+import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus } from "@/lib/get/get-classes"
 import { getStudentsCount } from "@/lib/get/get-students"
 import { getTeachersCount } from "@/lib/get/get-teachers"
 import { createClient } from "@/utils/supabase/server"
@@ -33,12 +33,12 @@ export default async function AdminDashboard() {
 
   // Fetch todaysClasses inside the component to ensure fresh data on each page load
   const todaysClasses = {
-    scheduled: await getClassesCountByStatus("scheduled"),
-    running: await getClassesCountByStatus("running"),
-    pending: await getClassesCountByStatus("pending"),
-    complete: await getClassesCountByStatus("complete"),
-    cancelled: await getClassesCountByStatus("cancelled"),
-    absence: await getClassesCountByStatus("absence"),
+    scheduled: await getSessionsCountByStatus("scheduled"),
+    running: await getSessionsCountByStatus("running"),
+    pending: await getSessionsCountByStatus("pending"),
+    complete: await getSessionsCountByStatus("complete"),
+    cancelled: await getSessionsCountByStatus("cancelled"),
+    absence: await getSessionsCountByStatus("absence"),
   }
 
   const studentsCount = await getStudentsCount()

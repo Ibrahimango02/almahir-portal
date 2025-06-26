@@ -221,10 +221,41 @@ export async function getParentStudentsForTeacher(parentId: string, teacherId: s
     if (commonStudentIds.length === 0) return []
 
     // Get the student profiles
-    const { data: students } = await supabase
+    const { data: profiles } = await supabase
         .from('profiles')
         .select('*')
         .in('id', commonStudentIds)
 
-    return students || []
+    if (!profiles) return []
+
+    // Get student data from students table
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('*')
+        .in('profile_id', commonStudentIds)
+
+    // Combine the data into a single array of StudentType objects
+    const combinedStudents = profiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
+        const student = studentsData?.find((s: { profile_id: string; birth_date: string; grade_level: string | null; notes: string | null }) => s.profile_id === profile.id)
+        return {
+            student_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email,
+            phone: profile.phone || null,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            age: calculateAge(student?.birth_date),
+            grade_level: student?.grade_level || null,
+            notes: student?.notes || null,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at || null
+        }
+    })
+
+    return combinedStudents
 }

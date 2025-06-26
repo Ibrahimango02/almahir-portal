@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Mail, Phone, User, Calendar, Edit } from "lucide-react"
 import Link from "next/link"
+import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getParentById, getParentStudents } from "@/lib/get/get-parents"
 import AvatarIcon from "@/components/avatar"
@@ -104,25 +105,24 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                 </h3>
                 <div className="pl-6">
                   {parentStudents.length > 0 ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {parentStudents.map((student) => (
                         <Link
                           key={student.student_id}
                           href={`/admin/students/${student.student_id}`}
                           className="block"
                         >
-                          <div className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
-                            <Avatar className="h-10 w-10">
+                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
+                            <Avatar className="h-8 w-8">
                               {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
                               <AvatarFallback className="text-sm">
                                 {student.first_name.charAt(0)}{student.last_name.charAt(0)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-primary truncate">
+                              <p className="text-sm font-medium text-primary truncate">
                                 {student.first_name} {student.last_name}
                               </p>
-                              <p className="text-xs text-muted-foreground">Student</p>
                             </div>
                           </div>
                         </Link>
@@ -142,16 +142,9 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                   <Calendar className="h-4 w-4 mr-2 text-primary" />
                   Account Information
                 </h3>
-                <div className="pl-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium w-32">Member Since:</span>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(parent.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+                  {format(parseISO(parent.created_at), "MMMM d, yyyy")}
+                </p>
               </div>
             </div>
             {/* Edit Button */}

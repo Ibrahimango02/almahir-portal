@@ -1954,7 +1954,7 @@ export async function getWeeklySessionsCount() {
     return count
 }
 
-export async function getClassesCountByStatus(status: string) {
+export async function getSessionsCountByStatus(status: string) {
     const supabase = createClient()
 
     // Get today's date range in ISO format
@@ -2337,4 +2337,60 @@ export async function getSessionAttendance(sessionId: string): Promise<ClassSess
     }
 
     return data || []
+}
+
+export async function getSessionCountByTeacherId(teacherId: string) {
+    const supabase = createClient()
+
+    // Get class IDs for this teacher
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    if (!teacherClasses || teacherClasses.length === 0) return 0
+
+    const classIds = teacherClasses.map(tc => tc.class_id)
+
+    // Get count of active sessions for these classes
+    const { count, error } = await supabase
+        .from('class_sessions')
+        .select('*', { count: 'exact', head: true })
+        .in('class_id', classIds)
+        .in('status', ['scheduled', 'pending', 'running'])
+
+    if (error) {
+        console.error('Error fetching teacher session count:', error)
+        return 0
+    }
+
+    return count || 0
+}
+
+export async function getSessionCountByStudentId(studentId: string) {
+    const supabase = createClient()
+
+    // Get class IDs for this student
+    const { data: studentClasses } = await supabase
+        .from('class_students')
+        .select('class_id')
+        .eq('student_id', studentId)
+
+    if (!studentClasses || studentClasses.length === 0) return 0
+
+    const classIds = studentClasses.map(sc => sc.class_id)
+
+    // Get count of active sessions for these classes
+    const { count, error } = await supabase
+        .from('class_sessions')
+        .select('*', { count: 'exact', head: true })
+        .in('class_id', classIds)
+        .in('status', ['scheduled', 'pending', 'running'])
+
+    if (error) {
+        console.error('Error fetching student session count:', error)
+        return 0
+    }
+
+    return count || 0
 }

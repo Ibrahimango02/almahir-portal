@@ -10,7 +10,7 @@ import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
 import { getTeacherAvailability } from "@/lib/get/get-teachers"
-import { getSessionsByTeacherId } from "@/lib/get/get-classes"
+import { getSessionCountByTeacherId, getSessionsByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 
@@ -29,6 +29,7 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
     }
 
     const adminSessions = await getSessionsByTeacherId(admin.teacher_id)
+    const adminSessionCount = await getSessionCountByTeacherId(admin.teacher_id)
     const adminAvailability = await getTeacherAvailability(admin.teacher_id)
 
     return (
@@ -90,11 +91,11 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                             {/* Quick Stats */}
                             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                                 <div className="flex flex-col items-center justify-center">
-                                    <span className="text-2xl font-bold text-primary">${admin.hourly_rate || 'N/A'}</span>
+                                    <span className="text-2xl font-bold text-primary">N/A</span>
                                     <span className="text-xs text-muted-foreground">Hourly Rate</span>
                                 </div>
                                 <div className="flex flex-col items-center justify-center">
-                                    <span className="text-2xl font-bold text-primary">{adminSessions.length}</span>
+                                    <span className="text-2xl font-bold text-primary">{adminSessionCount}</span>
                                     <span className="text-xs text-muted-foreground">Sessions</span>
                                 </div>
                             </div>

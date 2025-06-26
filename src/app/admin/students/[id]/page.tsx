@@ -10,7 +10,7 @@ import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
-import { getStudentClassCount, getSessionsByStudentId } from "@/lib/get/get-classes"
+import { getSessionsByStudentId, getSessionCountByStudentId } from "@/lib/get/get-classes"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
 
@@ -31,8 +31,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     )
   }
 
-  const studentClassCount = await getStudentClassCount(student.student_id)
   const studentSessions = await getSessionsByStudentId(student.student_id)
+  const studentSessionCount = await getSessionCountByStudentId(student.student_id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -92,8 +92,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                   <span className="text-xs text-muted-foreground">Age</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{studentClassCount}</span>
-                  <span className="text-xs text-muted-foreground">Classes</span>
+                  <span className="text-2xl font-bold text-primary">{studentSessionCount}</span>
+                  <span className="text-xs text-muted-foreground">Sessions</span>
                 </div>
               </div>
 
