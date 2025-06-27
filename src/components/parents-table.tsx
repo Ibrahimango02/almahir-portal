@@ -100,13 +100,13 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Parent</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Contact</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Location</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Students</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
-                {isAdmin && <TableHead className="w-[50px] px-3"></TableHead>}
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parent</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[300px]">Students</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
+                {isAdmin && <TableHead className="w-[50px] px-4"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -157,14 +157,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="max-w-[120px] truncate" title={parent.email || ''}>
-                          {parent.email
-                            ? (parent.email.length > 20
-                              ? `${parent.email.substring(0, 20)}...`
-                              : parent.email)
-                            : 'N/A'
-                          }
-                        </span>
+                        <span>{parent.email || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
