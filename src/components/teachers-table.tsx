@@ -72,14 +72,14 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Teacher</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Contact</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Specialization</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Location</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Classes</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
-                <TableHead className="w-[50px] px-3"></TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Teacher</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Specialization</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[100px]">Classes</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
+                <TableHead className="w-[50px] px-4"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -130,14 +130,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="max-w-[120px] truncate" title={teacher.email || ''}>
-                          {teacher.email
-                            ? (teacher.email.length > 20
-                              ? `${teacher.email.substring(0, 20)}...`
-                              : teacher.email)
-                            : 'N/A'
-                          }
-                        </span>
+                        <span>{teacher.email || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -151,7 +144,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5">
                         <BookOpen className="h-3 w-3 text-primary" />
-                        <span className="font-medium text-sm">{teacher.specialization}</span>
+                        <span className="font-medium text-sm">{teacher.specialization || 'N/A'}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -160,7 +153,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs">{teacher.country}</span>
+                      <span className="text-xs">{teacher.country || 'N/A'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">{teacher.language}</p>
                   </TableCell>

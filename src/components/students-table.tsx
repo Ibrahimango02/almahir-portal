@@ -19,7 +19,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getStudentParents, getStudentTeachers } from "@/lib/get/get-students"
+import { getStudentParents } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
 import { format, parseISO } from "date-fns"
@@ -33,12 +33,6 @@ type ParentType = {
   last_name: string;
 }
 
-type TeacherType = {
-  teacher_id: string;
-  first_name: string;
-  last_name: string;
-}
-
 interface StudentsTableProps {
   students: StudentType[]
   userRole?: 'admin' | 'teacher' | 'parent'
@@ -47,7 +41,6 @@ interface StudentsTableProps {
 export function StudentsTable({ students, userRole }: StudentsTableProps) {
   const router = useRouter()
   const [parentData, setParentData] = useState<Record<string, ParentType[]>>({})
-  const [teacherData, setTeacherData] = useState<Record<string, TeacherType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
@@ -72,24 +65,19 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
   useEffect(() => {
     const fetchRelatedData = async () => {
       const parentResults: Record<string, ParentType[]> = {}
-      const teacherResults: Record<string, TeacherType[]> = {}
 
       for (const student of students) {
         try {
           const parents = await getStudentParents(student.student_id)
           parentResults[student.student_id] = parents || []
 
-          const teachers = await getStudentTeachers(student.student_id)
-          teacherResults[student.student_id] = teachers || []
         } catch (error) {
           console.error(`Failed to fetch related data for student ${student.student_id}:`, error)
           parentResults[student.student_id] = []
-          teacherResults[student.student_id] = []
         }
       }
 
       setParentData(parentResults)
-      setTeacherData(teacherResults)
     }
 
     if (students.length > 0) {
@@ -122,13 +110,13 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Student</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Contact</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Location</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Relations</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                <TableHead className="h-10 px-3 font-semibold text-foreground/80">Joined</TableHead>
-                {isAdmin && <TableHead className="w-[50px] px-3"></TableHead>}
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Student</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
+                {isAdmin && <TableHead className="w-[50px] px-4"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -168,7 +156,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                           {student.first_name} {student.last_name}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Age {student.age} • {student.gender}
+                          Age {student.age || ''} • {student.gender}
                         </p>
                       </div>
                     </div>
@@ -179,14 +167,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="max-w-[120px] truncate" title={student.email || ''}>
-                          {student.email
-                            ? (student.email.length > 20
-                              ? `${student.email.substring(0, 20)}...`
-                              : student.email)
-                            : 'N/A'
-                          }
-                        </span>
+                        <span>{student.email || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
@@ -200,37 +181,22 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs">{student.country}</span>
+                        <span className="text-xs">{student.country || 'N/A'}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">{student.language}</p>
                     </div>
                   </TableCell>
 
-                  {/* Relations */}
+                  {/* Parents */}
                   <TableCell className="py-2 px-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium">Parents:</span>
                         <span className="text-xs">
                           {parentData[student.student_id]?.length > 0
                             ? parentData[student.student_id].map((parent, index) => (
                               <span key={`${student.student_id}-parent-${parent.parent_id}-${index}`}>
                                 {parent.first_name} {parent.last_name}
                                 {index < parentData[student.student_id].length - 1 ? ', ' : ''}
-                              </span>
-                            ))
-                            : 'None'
-                          }
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium">Teachers:</span>
-                        <span className="text-xs">
-                          {teacherData[student.student_id]?.length > 0
-                            ? teacherData[student.student_id].map((teacher, index) => (
-                              <span key={`${student.student_id}-teacher-${teacher.teacher_id}-${index}`}>
-                                {teacher.first_name} {teacher.last_name}
-                                {index < teacherData[student.student_id].length - 1 ? ', ' : ''}
                               </span>
                             ))
                             : 'None'

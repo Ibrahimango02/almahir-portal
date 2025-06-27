@@ -23,7 +23,6 @@ import {
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 import React from "react"
-import { checkIfAdmin } from "@/lib/get/get-profiles"
 
 // Custom scrollbar styles
 const scrollbarStyles = `

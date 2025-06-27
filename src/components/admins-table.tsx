@@ -19,7 +19,7 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { AdminType } from "@/types"
@@ -29,6 +29,7 @@ import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { getTeacherClassCount } from "@/lib/get/get-classes"
 
 interface AdminsTableProps {
     admins: AdminType[]
@@ -36,13 +37,37 @@ interface AdminsTableProps {
 
 export function AdminsTable({ admins }: AdminsTableProps) {
     const router = useRouter()
+    const [classCount, setClassCount] = useState<Record<string, number>>({})
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
+    // Filter out non-admins, only show admins
+    const adminsOnly = admins.filter(admin => admin.role === 'admin')
+
+    useEffect(() => {
+        const fetchClassCounts = async () => {
+            const counts: Record<string, number> = {}
+            for (const admin of adminsOnly) {
+                try {
+                    const count = await getTeacherClassCount(admin.admin_id)
+                    counts[admin.admin_id] = count ?? 0
+                } catch (error) {
+                    console.error(`Failed to fetch class count for admin ${admin.admin_id}:`, error)
+                    counts[admin.admin_id] = 0
+                }
+            }
+            setClassCount(counts)
+        }
+
+        if (adminsOnly.length > 0) {
+            fetchClassCounts()
+        }
+    }, [adminsOnly])
+
     // Calculate pagination
-    const totalItems = admins.length
+    const totalItems = adminsOnly.length
     const totalPages = Math.ceil(totalItems / pageSize)
-    const paginatedAdmins = admins.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    const paginatedAdmins = adminsOnly.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     return (
         <div className="space-y-4">
@@ -52,11 +77,12 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                     <Table>
                         <TableHeader>
                             <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[180px]">Admin</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[200px]">Contact</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[140px]">Location</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[200px]">Status</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[120px]">Joined</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[230px]">Admin</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[100px]">Classes</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
+                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[100px]">Joined</TableHead>
                                 <TableHead className="w-[50px] px-4"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -108,11 +134,11 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Mail className="h-3 w-3 text-muted-foreground" />
-                                                <span className="max-w-[120px]">{admin.email}</span>
+                                                <span>{admin.email || 'N/A'}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Phone className="h-3 w-3 text-muted-foreground" />
-                                                <span>{admin.phone}</span>
+                                                <span>{admin.phone || 'N/A'}</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -121,9 +147,18 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     <TableCell className="py-2 px-3">
                                         <div className="flex items-center gap-1.5">
                                             <MapPin className="h-3 w-3 text-muted-foreground" />
-                                            <span className="text-xs">{admin.country}</span>
+                                            <span className="text-xs">{admin.country || 'N/A'}</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground">{admin.language}</p>
+                                    </TableCell>
+
+                                    {/* Classes Count */}
+                                    <TableCell className="py-2 px-3 text-center">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <span className="font-semibold text-primary text-sm">
+                                                {classCount[admin.admin_id] || 0}
+                                            </span>
+                                        </div>
                                     </TableCell>
 
                                     {/* Status */}
