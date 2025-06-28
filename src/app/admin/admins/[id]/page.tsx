@@ -151,20 +151,6 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                                     <p className="text-sm text-muted-foreground leading-relaxed pl-6">{admin.notes}</p>
                                 </div>
                             )}
-
-                            <Separator />
-
-                            {/* Edit Button */}
-                            <Button
-                                asChild
-                                className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
-                                style={{ backgroundColor: "#3d8f5b", color: "white" }}
-                            >
-                                <Link href={`/admin/admins/edit/${admin.teacher_id}`} className="flex items-center justify-center gap-2">
-                                    <Edit className="h-4 w-4" />
-                                    Edit Admin Information
-                                </Link>
-                            </Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -178,7 +164,7 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                                 <CardDescription>View {admin.first_name}&apos;s upcoming classes and schedule</CardDescription>
                             </div>
                             <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-                                <Link href={`/admin/teachers/assign-class/${admin.teacher_id}`}>
+                                <Link href={`/admin/admins/assign-class/${id}`}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Assign Class
                                 </Link>

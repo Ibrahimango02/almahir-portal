@@ -103,6 +103,13 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   }
 
   const getEntityPath = (entityType: 'teachers' | 'students', entityId: string) => {
+    // Check if this is a teacher entity and if the teacher is actually an admin
+    if (entityType === 'teachers') {
+      const teacher = classData.teachers.find(t => t.teacher_id === entityId)
+      if (teacher && teacher.role === 'admin') {
+        return `/${userRole}/admins/${entityId}`
+      }
+    }
     return `/${userRole}/${entityType}/${entityId}`
   }
 

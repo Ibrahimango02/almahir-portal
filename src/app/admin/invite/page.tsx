@@ -61,7 +61,7 @@ export default function InviteUserPage() {
             })
 
             // Reset form
-            setFormData({ fullName: "", email: "", role: "admin" })
+            setFormData({ fullName: "", email: "", role: "" })
 
             // Redirect back to admins list after a short delay
             setTimeout(() => {
