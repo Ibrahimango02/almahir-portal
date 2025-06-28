@@ -145,7 +145,7 @@ export default function AssignClassPage() {
     <div className="flex flex-col gap-6 max-w-6xl mx-auto">
       {/* Header Section */}
       <div className="flex items-center justify-between">
-        <BackButton href={`/admin/teachers/${id}`} label="Back to Teacher" />
+        <BackButton href={`/admin/admins/${id}`} label="Back to Admin" />
       </div>
 
       {/* Main Content */}

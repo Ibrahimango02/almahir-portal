@@ -18,7 +18,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
+import { MoreHorizontal, Mail, Phone, MapPin, CalendarPlus } from "lucide-react"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
@@ -194,9 +194,9 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                                 <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                    <Link href={`/admin/admins/edit/${admin.admin_id}`} className="flex items-center">
-                                                        <Edit className="mr-2 h-3.5 w-3.5" />
-                                                        Edit Admin
+                                                    <Link href={`/admin/admins/assign-class/${admin.admin_id}`} className="flex items-center">
+                                                        <CalendarPlus className="mr-2 h-3.5 w-3.5" />
+                                                        Assign Class
                                                     </Link>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

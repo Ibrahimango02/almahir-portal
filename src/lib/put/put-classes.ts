@@ -501,3 +501,120 @@ export async function updateSessionAttendance(params: { sessionId: string; atten
         }
     }
 }
+
+export async function updateClassAssignments(params: {
+    classId: string;
+    teacher_ids: string[];
+    student_ids: string[];
+}): Promise<{ success: boolean; error?: { message: string } }> {
+    const supabase = createClient()
+    const { classId, teacher_ids, student_ids } = params
+
+    try {
+        // Get current assignments to know what relationships to remove
+        const { data: currentTeachers } = await supabase
+            .from('class_teachers')
+            .select('teacher_id')
+            .eq('class_id', classId)
+
+        const { data: currentStudents } = await supabase
+            .from('class_students')
+            .select('student_id')
+            .eq('class_id', classId)
+
+        // First, remove all existing teacher and student assignments for this class
+        const { error: deleteTeacherError } = await supabase
+            .from('class_teachers')
+            .delete()
+            .eq('class_id', classId)
+
+        if (deleteTeacherError) throw deleteTeacherError
+
+        const { error: deleteStudentError } = await supabase
+            .from('class_students')
+            .delete()
+            .eq('class_id', classId)
+
+        if (deleteStudentError) throw deleteStudentError
+
+        // Remove teacher-student relationships that were based on this class
+        // We need to remove relationships between current teachers and current students
+        if (currentTeachers && currentStudents && currentTeachers.length > 0 && currentStudents.length > 0) {
+            const currentTeacherIds = currentTeachers.map(t => t.teacher_id)
+            const currentStudentIds = currentStudents.map(s => s.student_id)
+
+            // Remove all combinations of current teachers and current students
+            for (const teacherId of currentTeacherIds) {
+                for (const studentId of currentStudentIds) {
+                    const { error: deleteTeacherStudentError } = await supabase
+                        .from('teacher_students')
+                        .delete()
+                        .eq('teacher_id', teacherId)
+                        .eq('student_id', studentId)
+
+                    if (deleteTeacherStudentError) {
+                        console.error('Error deleting teacher-student relationship:', deleteTeacherStudentError)
+                    }
+                }
+            }
+        }
+
+        // Add new teacher assignments
+        if (teacher_ids.length > 0) {
+            const teacherAssignments = teacher_ids.map(teacherId => ({
+                class_id: classId,
+                teacher_id: teacherId
+            }))
+
+            const { error: insertTeacherError } = await supabase
+                .from('class_teachers')
+                .insert(teacherAssignments)
+
+            if (insertTeacherError) throw insertTeacherError
+        }
+
+        // Add new student assignments
+        if (student_ids.length > 0) {
+            const studentEnrollments = student_ids.map(studentId => ({
+                class_id: classId,
+                student_id: studentId
+            }))
+
+            const { error: insertStudentError } = await supabase
+                .from('class_students')
+                .insert(studentEnrollments)
+
+            if (insertStudentError) throw insertStudentError
+        }
+
+        // Create teacher-student relationships for all combinations
+        if (teacher_ids.length > 0 && student_ids.length > 0) {
+            const teacherStudentRecords: { teacher_id: string; student_id: string }[] = []
+
+            for (const teacherId of teacher_ids) {
+                for (const studentId of student_ids) {
+                    teacherStudentRecords.push({
+                        teacher_id: teacherId,
+                        student_id: studentId
+                    })
+                }
+            }
+
+            if (teacherStudentRecords.length > 0) {
+                const { error: teacherStudentsError } = await supabase
+                    .from('teacher_students')
+                    .insert(teacherStudentRecords)
+
+                if (teacherStudentsError) {
+                    console.error('Error creating teacher-student relationships:', teacherStudentsError)
+                    // Don't throw error here as the main operations were successful
+                }
+            }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating class assignments:', error)
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
+    }
+}

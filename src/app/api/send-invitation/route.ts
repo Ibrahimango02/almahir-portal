@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { sendInvitationEmail } from '@/lib/utils/email'
+import { createMiddlewareClient } from '@/utils/supabase/server'
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,6 +30,15 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+        // Get current user from request cookies
+        const supabaseResponse = NextResponse.next({ request })
+        const supabaseClient = createMiddlewareClient(request, supabaseResponse)
+        const { data: { user } } = await supabaseClient.auth.getUser()
+
+        if (!user) {
+            return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+        }
+
         // Check if user is already invited or registered
         const { data: existingInvitation } = await supabase
             .from('invitations')
@@ -59,7 +69,7 @@ export async function POST(request: NextRequest) {
                 role: role,
                 invitation_token: invitationToken,
                 expires_at: expiresAt.toISOString(),
-                // invited_by: can be added later when you have user authentication
+                invited_by: user.id, // Add the current user's ID as the inviter
             })
             .select()
             .single()

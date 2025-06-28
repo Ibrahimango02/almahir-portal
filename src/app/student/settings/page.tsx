@@ -14,6 +14,7 @@ import { updateProfile, updatePassword } from "@/lib/put/put-profiles"
 import { createClient } from "@/utils/supabase/client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Image from "next/image"
+import { CountrySelect } from "@/components/country-select"
 
 type ProfileData = {
     first_name: string
@@ -319,7 +320,7 @@ export default function SettingsPage() {
                                     <Input
                                         id="user-email"
                                         value={email}
-                                        onChange={e => setEmail(e.target.value)}
+                                        disabled
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -344,12 +345,7 @@ export default function SettingsPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="user-country">Country</Label>
-                                    <Input
-                                        id="user-country"
-                                        value={country}
-                                        onChange={e => setCountry(e.target.value)}
-                                        placeholder="Enter your country"
-                                    />
+                                    <CountrySelect value={country || ""} onValueChange={setCountry} />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="user-language">Language</Label>

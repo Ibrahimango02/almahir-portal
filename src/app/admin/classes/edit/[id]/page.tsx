@@ -22,7 +22,7 @@ import { BackButton } from "@/components/back-button"
 import { getTeachers } from "@/lib/get/get-teachers"
 import { getStudents } from "@/lib/get/get-students"
 import { getClassById } from "@/lib/get/get-classes"
-import { updateClass } from "@/lib/put/put-classes"
+import { updateClass, updateClassAssignments } from "@/lib/put/put-classes"
 import { TeacherType, StudentType, ClassType } from "@/types"
 import { localToUtc, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
@@ -138,7 +138,7 @@ export default function EditClassPage() {
         setIsSubmitting(true)
 
         try {
-            // Prepare update data
+            // Prepare update data for basic class information (excluding teacher and student assignments)
             const updateData = {
                 classId: classId,
                 title: values.title,
@@ -148,22 +148,33 @@ export default function EditClassPage() {
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
                 days_repeated: values.daysRepeated.map(day => day.charAt(0).toUpperCase() + day.slice(1)),
                 class_link: values.classLink || null,
-                teacher_ids: values.teacherIds,
-                student_ids: values.studentIds || [],
+                // Don't include teacher_ids and student_ids here as we'll handle them separately
             }
 
-            // Update class in database
+            // Update class basic information first
             const result = await updateClass(updateData)
 
-            if (result.success) {
-                toast({
-                    title: "Class updated successfully",
-                    description: `${values.title} has been updated with the new information`,
-                })
-                router.push("/admin/classes")
-            } else {
+            if (!result.success) {
                 throw new Error(result.error?.message || "Failed to update class")
             }
+
+            // Handle teacher and student assignments using the new function that populates teacher_students
+            try {
+                await updateClassAssignments({
+                    classId: classId,
+                    teacher_ids: values.teacherIds || [],
+                    student_ids: values.studentIds || []
+                })
+            } catch (error) {
+                console.error("Error updating class assignments:", error)
+                // Continue with the process even if assignment fails
+            }
+
+            toast({
+                title: "Class updated successfully",
+                description: `${values.title} has been updated with the new information`,
+            })
+            router.push("/admin/classes")
         } catch (error) {
             console.error("Error updating class:", error)
             toast({
