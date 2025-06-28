@@ -184,7 +184,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 {parent.first_name} {parent.last_name}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {parent.email}
+                                {parent.role}
                               </p>
                             </div>
                           </div>

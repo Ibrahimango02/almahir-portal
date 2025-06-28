@@ -10,6 +10,7 @@ import Link from "next/link"
 import { CalendarDays, Users, BookOpen, UserCircle2, Clock, Trash2, Edit } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
 import { deleteClass } from "@/lib/delete/delete-classes"
+import { updateClassAssignments } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
@@ -139,6 +140,20 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   const handleDeleteClass = async () => {
     setIsDeleting(true)
     try {
+      // First, clean up teacher-student relationships by removing all assignments
+      // This ensures the teacher_students table is properly cleaned up
+      const cleanupResult = await updateClassAssignments({
+        classId: classData.class_id,
+        teacher_ids: [], // Remove all teachers
+        student_ids: []  // Remove all students
+      })
+
+      if (!cleanupResult.success) {
+        console.warn('Warning: Failed to clean up teacher-student relationships:', cleanupResult.error?.message)
+        // Continue with deletion anyway
+      }
+
+      // Then delete the class
       const result = await deleteClass(classData.class_id)
 
       if (result.success) {
