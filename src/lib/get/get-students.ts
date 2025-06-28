@@ -131,26 +131,16 @@ export async function getStudentParents(id: string): Promise<ParentType[]> {
 export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
     const supabase = createClient()
 
-    // First, get all classes that this student is enrolled in
-    const { data: studentClasses } = await supabase
-        .from('class_students')
-        .select('class_id')
+    // Get all teachers directly associated with this student through teacher_students table
+    const { data: studentTeachers } = await supabase
+        .from('teacher_students')
+        .select('teacher_id')
         .eq('student_id', id)
 
-    if (!studentClasses || studentClasses.length === 0) return []
+    if (!studentTeachers || studentTeachers.length === 0) return []
 
-    const classIds = studentClasses.map(cs => cs.class_id)
-
-    // Get all teachers for these classes
-    const { data: classTeachers } = await supabase
-        .from('class_teachers')
-        .select('teacher_id')
-        .in('class_id', classIds)
-
-    if (!classTeachers || classTeachers.length === 0) return []
-
-    // Get unique teacher IDs (a teacher might teach multiple classes)
-    const teacherIds = [...new Set(classTeachers.map(ct => ct.teacher_id))]
+    // Get unique teacher IDs (a teacher might appear multiple times if they teach multiple classes with the same student)
+    const teacherIds = [...new Set(studentTeachers.map(st => st.teacher_id))]
 
     // Get teacher profiles
     const { data: teacherProfiles } = await supabase

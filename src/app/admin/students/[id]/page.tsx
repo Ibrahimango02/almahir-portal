@@ -125,7 +125,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                       {studentTeachers.map((teacher) => (
                         <Link
                           key={teacher.teacher_id}
-                          href={`/admin/teachers/${teacher.teacher_id}`}
+                          href={teacher.role === "admin"
+                            ? `/admin/admins/${teacher.teacher_id}`
+                            : `/admin/teachers/${teacher.teacher_id}`
+                          }
                           className="block"
                         >
                           <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
@@ -138,7 +141,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 {teacher.first_name} {teacher.last_name}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {teacher.specialization || 'Teacher'}
+                                {teacher.role}
                               </p>
                             </div>
                           </div>

@@ -23,6 +23,44 @@ export async function assignStudentToClasses(data: AssignmentData) {
             throw new Error(`Failed to assign student to classes: ${classStudentsError.message}`)
         }
 
+        // Get teachers for each class to create teacher-student relationships
+        const teacherStudentRecords: { teacher_id: string; student_id: string }[] = []
+
+        for (const class_id of data.class_ids) {
+            // Get teachers assigned to this class
+            const { data: classTeachers, error: classTeachersError } = await supabase
+                .from('class_teachers')
+                .select('teacher_id')
+                .eq('class_id', class_id)
+
+            if (classTeachersError) {
+                console.error(`Error fetching teachers for class ${class_id}:`, classTeachersError)
+                continue
+            }
+
+            // Create teacher-student records for each teacher in this class
+            if (classTeachers && classTeachers.length > 0) {
+                for (const classTeacher of classTeachers) {
+                    teacherStudentRecords.push({
+                        teacher_id: classTeacher.teacher_id,
+                        student_id: data.student_id
+                    })
+                }
+            }
+        }
+
+        // Insert teacher-student relationships if any exist
+        if (teacherStudentRecords.length > 0) {
+            const { error: teacherStudentsError } = await supabase
+                .from('teacher_students')
+                .insert(teacherStudentRecords)
+
+            if (teacherStudentsError) {
+                console.error('Error creating teacher-student relationships:', teacherStudentsError)
+                // Don't throw error here as the main operation (class assignment) was successful
+            }
+        }
+
         return {
             success: true,
             message: 'Student successfully assigned to classes'

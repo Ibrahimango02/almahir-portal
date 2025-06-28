@@ -6,7 +6,7 @@ import { Search } from "lucide-react"
 import { ParentsTable } from "@/components/parents-table"
 import { useState, useEffect } from "react"
 import { ParentType } from "@/types"
-import { getTeacherStudentParents } from "@/lib/get/get-parents"
+import { getStudentParentsByTeacherId } from "@/lib/get/get-parents"
 import { createClient } from "@/utils/supabase/client"
 
 export default function ParentsPage() {
@@ -33,7 +33,7 @@ export default function ParentsPage() {
             if (!currentUserId) return
 
             try {
-                const data = await getTeacherStudentParents(currentUserId)
+                const data = await getStudentParentsByTeacherId(currentUserId)
                 setParents(data)
                 setFilteredParents(data)
             } catch (error) {

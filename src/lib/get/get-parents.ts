@@ -119,7 +119,7 @@ export async function getParentStudents(id: string): Promise<StudentType[]> {
     return combinedStudents
 }
 
-export async function getTeacherStudentParents(teacherId: string): Promise<ParentType[]> {
+export async function getStudentParentsByTeacherId(teacherId: string): Promise<ParentType[]> {
     const supabase = createClient()
 
     // First, get all students that this teacher teaches
