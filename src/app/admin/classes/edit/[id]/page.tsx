@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format, startOfDay } from "date-fns"
-import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText, GraduationCap } from "lucide-react"
+import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText, GraduationCap, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,10 +24,15 @@ import { getStudents } from "@/lib/get/get-students"
 import { getClassById } from "@/lib/get/get-classes"
 import { updateClass, updateClassAssignments } from "@/lib/put/put-classes"
 import { TeacherType, StudentType, ClassType } from "@/types"
-import { localToUtc, utcToLocal } from "@/lib/utils/timezone"
+import { localToUtc, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
+import { checkMultipleTeacherConflicts, checkMultipleStudentConflicts, ConflictInfo } from "@/lib/utils/conflict-checker"
+import { TeacherConflictDisplay } from "@/components/teacher-conflict-display"
+import { StudentConflictDisplay } from "@/components/student-conflict-display"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // Form schema for editing class
 const formSchema = z.object({
@@ -37,10 +42,25 @@ const formSchema = z.object({
     startDate: z.date({ required_error: "Please select a start date" }),
     endDate: z.date({ required_error: "Please select an end date" }),
     daysRepeated: z.array(z.string()).min(1, { message: "Please select at least one day" }),
+    times: z.record(z.object({
+        start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+        end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+    })),
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
 })
+
+// Add days of the week array
+const daysOfWeek = [
+    { id: "monday", label: "Monday" },
+    { id: "tuesday", label: "Tuesday" },
+    { id: "wednesday", label: "Wednesday" },
+    { id: "thursday", label: "Thursday" },
+    { id: "friday", label: "Friday" },
+    { id: "saturday", label: "Saturday" },
+    { id: "sunday", label: "Sunday" },
+]
 
 // Define the subjects available for selection
 const subjects = [
@@ -69,6 +89,9 @@ export default function EditClassPage() {
     const [classData, setClassData] = useState<ClassType | null>(null)
     const [teachers, setTeachers] = useState<TeacherType[]>([])
     const [students, setStudents] = useState<StudentType[]>([])
+    const [teacherConflicts, setTeacherConflicts] = useState<Record<string, ConflictInfo>>({})
+    const [studentConflicts, setStudentConflicts] = useState<Record<string, ConflictInfo>>({})
+    const [checkingConflicts, setCheckingConflicts] = useState(false)
     const { timezone } = useTimezone()
 
     // Initialize form
@@ -81,11 +104,120 @@ export default function EditClassPage() {
             startDate: undefined,
             endDate: undefined,
             daysRepeated: [],
+            times: {},
             classLink: "",
             teacherIds: [],
             studentIds: [],
         },
     })
+
+    // Watch selected days
+    const selectedDays = form.watch("daysRepeated")
+
+    // Function to check conflicts for selected teachers and students
+    const checkConflicts = useCallback(async () => {
+        const selectedTeacherIds = form.getValues("teacherIds")
+        const selectedStudentIds = form.getValues("studentIds") || []
+        const startDate = form.getValues("startDate")
+        const endDate = form.getValues("endDate")
+        const times = form.getValues("times")
+        const selectedDays = form.getValues("daysRepeated")
+
+        if ((!selectedTeacherIds.length && !selectedStudentIds.length) || !startDate || !endDate || !selectedDays.length) {
+            setTeacherConflicts({})
+            setStudentConflicts({})
+            return
+        }
+
+        setCheckingConflicts(true)
+        try {
+            // Filter times to only include selected days
+            const classTimes = selectedDays.reduce((acc, day) => {
+                if (times[day]?.start && times[day]?.end) {
+                    acc[day] = times[day]
+                }
+                return acc
+            }, {} as Record<string, { start: string; end: string }>)
+
+            if (Object.keys(classTimes).length === 0) {
+                setTeacherConflicts({})
+                setStudentConflicts({})
+                return
+            }
+
+            // Check teacher conflicts
+            const teacherConflictsResult = selectedTeacherIds.length > 0
+                ? await checkMultipleTeacherConflicts(
+                    selectedTeacherIds,
+                    classTimes,
+                    startDate,
+                    endDate,
+                    timezone,
+                    classId
+                )
+                : {}
+
+            // Check student conflicts
+            const studentConflictsResult = selectedStudentIds.length > 0
+                ? await checkMultipleStudentConflicts(
+                    selectedStudentIds,
+                    classTimes,
+                    startDate,
+                    endDate,
+                    timezone,
+                    classId
+                )
+                : {}
+
+            setTeacherConflicts(teacherConflictsResult)
+            setStudentConflicts(studentConflictsResult)
+
+        } catch (error) {
+            console.error("Error checking conflicts:", error)
+            toast({
+                title: "Error",
+                description: "Failed to check conflicts. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setCheckingConflicts(false)
+        }
+    }, [form, timezone, toast, classId])
+
+    // Check conflicts when relevant form fields change
+    useEffect(() => {
+        const subscription = form.watch((value, { name }) => {
+            // Check if the change is related to times, dates, participants, or days
+            const shouldCheckConflicts = name && (
+                name === 'teacherIds' ||
+                name === 'studentIds' ||
+                name === 'startDate' ||
+                name === 'endDate' ||
+                name === 'daysRepeated' ||
+                name === 'times' ||
+                name.startsWith('times.')
+            )
+
+            if (shouldCheckConflicts) {
+                // Debounce the conflict check
+                const timeoutId = setTimeout(checkConflicts, 500)
+                return () => clearTimeout(timeoutId)
+            }
+        })
+        return () => subscription.unsubscribe()
+    }, [form, checkConflicts])
+
+    // Function to remove teacher with conflicts
+    const removeTeacherWithConflict = (teacherId: string) => {
+        const currentTeacherIds = form.getValues("teacherIds")
+        form.setValue("teacherIds", currentTeacherIds.filter(id => id !== teacherId))
+    }
+
+    // Function to remove student with conflicts
+    const removeStudentWithConflict = (studentId: string) => {
+        const currentStudentIds = form.getValues("studentIds") || []
+        form.setValue("studentIds", currentStudentIds.filter(id => id !== studentId))
+    }
 
     // Fetch data on mount
     useEffect(() => {
@@ -103,9 +235,23 @@ export default function EditClassPage() {
                 setClassData(classDataResult)
 
                 if (classDataResult) {
-                    // Populate form with existing class data
                     // Convert capital day names back to lowercase for form compatibility
                     const lowercaseDays = classDataResult.days_repeated.map(day => day.toLowerCase())
+
+                    // Convert times from UTC to local format for display
+                    const times = lowercaseDays.reduce((acc, day) => {
+                        const dayKey = day.charAt(0).toUpperCase() + day.slice(1)
+                        const classTime = classDataResult.times?.[dayKey]
+                        if (classTime) {
+                            // Convert UTC times to local times for display
+                            const startDate = new Date(classTime.start)
+                            const endDate = new Date(classTime.end)
+                            const startLocal = format(startDate, 'HH:mm')
+                            const endLocal = format(endDate, 'HH:mm')
+                            acc[day] = { start: startLocal, end: endLocal }
+                        }
+                        return acc
+                    }, {} as Record<string, { start: string; end: string }>)
 
                     form.reset({
                         title: classDataResult.title,
@@ -114,6 +260,7 @@ export default function EditClassPage() {
                         startDate: utcToLocal(classDataResult.start_date, timezone),
                         endDate: utcToLocal(classDataResult.end_date, timezone),
                         daysRepeated: lowercaseDays,
+                        times: times,
                         classLink: classDataResult.class_link || "",
                         teacherIds: classDataResult.teachers.map(t => t.teacher_id),
                         studentIds: classDataResult.enrolled_students.map(s => s.student_id),
@@ -138,6 +285,48 @@ export default function EditClassPage() {
         setIsSubmitting(true)
 
         try {
+            // Check for conflicts before updating the class
+            const hasTeacherConflicts = Object.values(teacherConflicts).some(conflict => conflict.hasConflict)
+            const hasStudentConflicts = Object.values(studentConflicts).some(conflict => conflict.hasConflict)
+
+            if (hasTeacherConflicts || hasStudentConflicts) {
+                const conflictMessages = []
+                if (hasTeacherConflicts) conflictMessages.push("teachers have schedule or availability conflicts")
+                if (hasStudentConflicts) conflictMessages.push("students have schedule conflicts")
+
+                const confirmed = window.confirm(
+                    `Some selected ${conflictMessages.join(" and ")}. Do you want to proceed with updating the class anyway?`
+                )
+                if (!confirmed) {
+                    setIsSubmitting(false)
+                    return
+                }
+            }
+
+            // Convert local times to UTC before saving
+            const timesWithUtc = Object.entries(values.times).reduce((acc, [day, time]) => {
+                // For each day, convert the local time to UTC
+                const startUtc = combineDateTimeToUtc(
+                    format(values.startDate, 'yyyy-MM-dd'),
+                    time.start + ':00',
+                    timezone
+                );
+                const endUtc = combineDateTimeToUtc(
+                    format(values.startDate, 'yyyy-MM-dd'),
+                    time.end + ':00',
+                    timezone
+                );
+
+                // Convert day key to capital first letter to match session creation logic
+                const capitalDay = day.charAt(0).toUpperCase() + day.slice(1);
+
+                acc[capitalDay] = {
+                    start: startUtc.toISOString(),
+                    end: endUtc.toISOString()
+                };
+                return acc;
+            }, {} as Record<string, { start: string; end: string }>);
+
             // Prepare update data for basic class information (excluding teacher and student assignments)
             const updateData = {
                 classId: classId,
@@ -148,6 +337,7 @@ export default function EditClassPage() {
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
                 days_repeated: values.daysRepeated.map(day => day.charAt(0).toUpperCase() + day.slice(1)),
                 class_link: values.classLink || null,
+                times: timesWithUtc,
                 // Don't include teacher_ids and student_ids here as we'll handle them separately
             }
 
@@ -174,7 +364,7 @@ export default function EditClassPage() {
                 title: "Class updated successfully",
                 description: `${values.title} has been updated with the new information`,
             })
-            router.push("/admin/classes")
+            router.push(`/admin/classes/${classId}`)
         } catch (error) {
             console.error("Error updating class:", error)
             toast({
@@ -216,19 +406,12 @@ export default function EditClassPage() {
         <div className="min-h-screen py-8">
             <BackButton href="/admin/classes" label="Back to Classes" />
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header Section */}
-                <div className="mb-8">
-                    <div className="mt-6 text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Edit Class</h1>
-                    </div>
-                </div>
-
                 <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
                     <CardHeader className="text-center pb-8">
                         <div className="mx-auto w-16 h-16 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center mb-4">
                             <BookOpen className="w-8 h-8 text-[#3d8f5b]" />
                         </div>
-                        <CardTitle className="text-2xl font-semibold text-gray-900">Class Information</CardTitle>
+                        <CardTitle className="text-2xl font-semibold text-gray-900">Edit Class</CardTitle>
                         <CardDescription className="text-base text-gray-600">
                             Update the class information, assign teachers, and enroll students
                         </CardDescription>
@@ -394,7 +577,116 @@ export default function EditClassPage() {
                                             )}
                                         />
                                     </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="daysRepeated"
+                                        render={() => (
+                                            <FormItem>
+                                                <div className="mb-4">
+                                                    <FormLabel className="text-sm font-medium text-gray-700">Days of Week</FormLabel>
+                                                    <FormDescription className="text-sm text-gray-600">Select the days when this class will occur</FormDescription>
+                                                </div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    {daysOfWeek.map((day) => (
+                                                        <FormField
+                                                            key={day.id}
+                                                            control={form.control}
+                                                            name="daysRepeated"
+                                                            render={({ field }) => {
+                                                                return (
+                                                                    <FormItem key={day.id} className="flex flex-row items-start space-x-3 space-y-0">
+                                                                        <FormControl>
+                                                                            <Checkbox
+                                                                                checked={field.value?.includes(day.id)}
+                                                                                onCheckedChange={(checked) => {
+                                                                                    return checked
+                                                                                        ? field.onChange([...field.value, day.id])
+                                                                                        : field.onChange(field.value?.filter((value) => value !== day.id))
+                                                                                }}
+                                                                                className="data-[state=checked]:bg-[#3d8f5b] data-[state=checked]:border-[#3d8f5b]"
+                                                                            />
+                                                                        </FormControl>
+                                                                        <FormLabel className="font-normal text-sm text-gray-700">{day.label}</FormLabel>
+                                                                    </FormItem>
+                                                                )
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* Per-day time fields */}
+                                    {selectedDays && selectedDays.length > 0 && (
+                                        <div className="space-y-4">
+                                            <h4 className="text-sm font-medium text-gray-700 mb-4">Class Times</h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {selectedDays.map((day: string) => (
+                                                    <div key={day} className="flex flex-col gap-3 border border-gray-200 rounded-lg p-4 bg-gray-50/50">
+                                                        <div className="font-medium text-sm text-gray-900 mb-2">
+                                                            {daysOfWeek.find((d) => d.id === day)?.label} Time
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`times.${day}.start` as keyof z.infer<typeof formSchema>}
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel className="text-xs font-medium text-gray-600">Start Time</FormLabel>
+                                                                        <FormControl>
+                                                                            <Input
+                                                                                placeholder="14:30"
+                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                                                {...field}
+                                                                                value={String(field.value || "")}
+                                                                                onChange={(e) => {
+                                                                                    field.onChange(e.target.value)
+                                                                                    // Trigger conflict check after a short delay
+                                                                                    setTimeout(checkConflicts, 300)
+                                                                                }}
+                                                                            />
+                                                                        </FormControl>
+                                                                        <FormDescription className="text-xs">24h format</FormDescription>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                            <FormField
+                                                                control={form.control}
+                                                                name={`times.${day}.end` as keyof z.infer<typeof formSchema>}
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel className="text-xs font-medium text-gray-600">End Time</FormLabel>
+                                                                        <FormControl>
+                                                                            <Input
+                                                                                placeholder="16:00"
+                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                                                {...field}
+                                                                                value={String(field.value || "")}
+                                                                                onChange={(e) => {
+                                                                                    field.onChange(e.target.value)
+                                                                                    // Trigger conflict check after a short delay
+                                                                                    setTimeout(checkConflicts, 300)
+                                                                                }}
+                                                                            />
+                                                                        </FormControl>
+                                                                        <FormDescription className="text-xs">24h format</FormDescription>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
+                                <Separator className="my-8" />
 
                                 {/* Teachers Section */}
                                 <div className="space-y-6">
@@ -418,10 +710,11 @@ export default function EditClassPage() {
                                                             field.onChange([...currentValues, value]);
                                                         }
                                                     }}
+                                                    value={field.value?.[field.value.length - 1] || ""}
                                                 >
                                                     <FormControl>
                                                         <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
-                                                            <SelectValue placeholder="Select teacher" />
+                                                            <SelectValue placeholder="Select teachers" />
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
@@ -467,6 +760,43 @@ export default function EditClassPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Conflict Checking Status */}
+                                    {checkingConflicts && (
+                                        <Alert className="border-blue-200 bg-blue-50">
+                                            <div className="flex items-center gap-2">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                <AlertDescription className="text-blue-800">
+                                                    Checking teacher and student conflicts...
+                                                </AlertDescription>
+                                            </div>
+                                        </Alert>
+                                    )}
+
+                                    {/* Teacher Conflicts Display */}
+                                    {Object.values(teacherConflicts).some(conflict => conflict.hasConflict) && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                                <h4 className="text-sm font-medium text-gray-900">Teacher Conflicts Found</h4>
+                                            </div>
+                                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                                                {Object.entries(teacherConflicts).map(([teacherId, conflictInfo]) => {
+                                                    const teacher = teachers.find(t => t.teacher_id === teacherId);
+                                                    if (!teacher) return null;
+
+                                                    return (
+                                                        <TeacherConflictDisplay
+                                                            key={teacherId}
+                                                            teacher={teacher}
+                                                            conflictInfo={conflictInfo}
+                                                            onRemoveTeacher={removeTeacherWithConflict}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator className="my-8" />
@@ -493,6 +823,7 @@ export default function EditClassPage() {
                                                             field.onChange([...currentValues, value]);
                                                         }
                                                     }}
+                                                    value={field.value?.[field.value.length - 1] || ""}
                                                 >
                                                     <FormControl>
                                                         <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
@@ -542,6 +873,31 @@ export default function EditClassPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Student Conflicts Display */}
+                                    {Object.values(studentConflicts).some(conflict => conflict.hasConflict) && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                                <h4 className="text-sm font-medium text-gray-900">Student Conflicts Found</h4>
+                                            </div>
+                                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                                                {Object.entries(studentConflicts).map(([studentId, conflictInfo]) => {
+                                                    const student = students.find(s => s.student_id === studentId);
+                                                    if (!student) return null;
+
+                                                    return (
+                                                        <StudentConflictDisplay
+                                                            key={studentId}
+                                                            student={student}
+                                                            conflictInfo={conflictInfo}
+                                                            onRemoveStudent={removeStudentWithConflict}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator className="my-8" />

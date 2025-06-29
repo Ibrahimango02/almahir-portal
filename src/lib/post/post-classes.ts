@@ -12,6 +12,7 @@ type ClassData = {
     class_link: string | null
     times: Record<string, { start: string; end: string }>
     teacher_id: string[]
+    student_ids?: string[]
 }
 
 export async function createClass(classData: ClassData) {
@@ -38,17 +39,60 @@ export async function createClass(classData: ClassData) {
             throw new Error(`Failed to create class: ${classError.message}`)
         }
 
-        // Assign teacher to class
-        for (const teacherId of classData.teacher_id) {
+        // Assign teachers to class
+        if (classData.teacher_id.length > 0) {
+            const teacherAssignments = classData.teacher_id.map(teacherId => ({
+                class_id: classRecord.id,
+                teacher_id: teacherId
+            }))
+
             const { error: teacherError } = await supabase
                 .from('class_teachers')
-                .insert({
-                    class_id: classRecord.id,
-                    teacher_id: teacherId
-                })
+                .insert(teacherAssignments)
 
             if (teacherError) {
-                throw new Error(`Failed to assign teacher: ${teacherError.message}`)
+                throw new Error(`Failed to assign teachers: ${teacherError.message}`)
+            }
+        }
+
+        // Assign students to class
+        if (classData.student_ids && classData.student_ids.length > 0) {
+            const studentEnrollments = classData.student_ids.map(studentId => ({
+                class_id: classRecord.id,
+                student_id: studentId
+            }))
+
+            const { error: studentError } = await supabase
+                .from('class_students')
+                .insert(studentEnrollments)
+
+            if (studentError) {
+                throw new Error(`Failed to enroll students: ${studentError.message}`)
+            }
+        }
+
+        // Create teacher-student relationships for all combinations
+        if (classData.teacher_id.length > 0 && classData.student_ids && classData.student_ids.length > 0) {
+            const teacherStudentRecords: { teacher_id: string; student_id: string }[] = []
+
+            for (const teacherId of classData.teacher_id) {
+                for (const studentId of classData.student_ids) {
+                    teacherStudentRecords.push({
+                        teacher_id: teacherId,
+                        student_id: studentId
+                    })
+                }
+            }
+
+            if (teacherStudentRecords.length > 0) {
+                const { error: teacherStudentsError } = await supabase
+                    .from('teacher_students')
+                    .insert(teacherStudentRecords)
+
+                if (teacherStudentsError) {
+                    console.error('Error creating teacher-student relationships:', teacherStudentsError)
+                    // Don't throw error here as the main operations were successful
+                }
             }
         }
 
@@ -121,9 +165,13 @@ export async function createClass(classData: ClassData) {
                 .insert(sessions)
 
             if (sessionsError) {
-                // If session creation fails, attempt to delete the class and teacher assignment
+                // If session creation fails, attempt to delete the class and assignments
                 await supabase
                     .from('class_teachers')
+                    .delete()
+                    .eq('class_id', classRecord.id)
+                await supabase
+                    .from('class_students')
                     .delete()
                     .eq('class_id', classRecord.id)
                 await supabase

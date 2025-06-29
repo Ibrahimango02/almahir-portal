@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType, ClassSessionAttendanceType } from '@/types'
 import { calculateAge } from '@/lib/utils'
+import { format } from 'date-fns'
 
 export async function getClasses(): Promise<ClassType[]> {
     const supabase = createClient()
@@ -743,6 +744,38 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         daysRepeated = daysRepeated.split(',').map(day => day.trim());
     }
 
+    // Extract times from sessions if times field is not available
+    let times: Record<string, { start: string; end: string }> | undefined = classData.times;
+    if (!times && classSessions && classSessions.length > 0) {
+        times = {};
+        for (const session of classSessions) {
+            const sessionDate = new Date(session.start_date);
+            const dayName = format(sessionDate, 'EEEE');
+            const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+            // Extract time components
+            const startTime = sessionDate.toTimeString().split(' ')[0];
+            const endDate = new Date(session.end_date);
+            const endTime = endDate.toTimeString().split(' ')[0];
+
+            // Create a reference date for the time (using today's date)
+            const today = new Date();
+            const startDateTime = new Date(today);
+            const endDateTime = new Date(today);
+
+            const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number);
+            const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number);
+
+            startDateTime.setHours(startHours, startMinutes, startSeconds, 0);
+            endDateTime.setHours(endHours, endMinutes, endSeconds, 0);
+
+            times[capitalizedDayName] = {
+                start: startDateTime.toISOString(),
+                end: endDateTime.toISOString()
+            };
+        }
+    }
+
     return {
         class_id: classData.id,
         title: classData.title,
@@ -756,6 +789,7 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         class_link: classData.class_link || null,
         teachers: teachers,
         enrolled_students: enrolledStudents,
+        times: times,
         created_at: classData.created_at,
         updated_at: classData.updated_at || null
     };
@@ -2389,6 +2423,22 @@ export async function getSessionCountByStudentId(studentId: string) {
 
     if (error) {
         console.error('Error fetching student session count:', error)
+        return 0
+    }
+
+    return count || 0
+}
+
+export async function getActiveClassesCount() {
+    const supabase = createClient()
+
+    const { count, error } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'active')
+
+    if (error) {
+        console.error('Error fetching active classes count:', error)
         return 0
     }
 

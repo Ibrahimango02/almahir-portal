@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format, startOfDay } from "date-fns"
-import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText } from "lucide-react"
+import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText, AlertTriangle, GraduationCap } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,14 +22,19 @@ import Link from "next/link"
 import { Checkbox } from "@/components/ui/checkbox"
 import { BackButton } from "@/components/back-button"
 import { getTeachers } from "@/lib/get/get-teachers"
-import { TeacherType } from "@/types"
+import { getStudents } from "@/lib/get/get-students"
+import { TeacherType, StudentType } from "@/types"
 import { createClass } from "@/lib/post/post-classes"
 import { combineDateTimeToUtc } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { localToUtc } from "@/lib/utils/timezone"
 import { Separator } from "@/components/ui/separator"
+import { checkMultipleTeacherConflicts, checkMultipleStudentConflicts, ConflictInfo } from "@/lib/utils/conflict-checker"
+import { TeacherConflictDisplay } from "@/components/teacher-conflict-display"
+import { StudentConflictDisplay } from "@/components/student-conflict-display"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-// Update the form schema to include teacher selection
+// Update the form schema to include teacher and student selection
 const formSchema = z.object({
     title: z.string().min(3, { message: "Title must be at least 3 characters" }),
     subject: z.string().min(1, { message: "Please select a subject" }),
@@ -43,6 +48,7 @@ const formSchema = z.object({
     })),
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
+    studentIds: z.array(z.string()).optional(),
 })
 
 // Add days of the week array
@@ -78,7 +84,11 @@ export default function CreateClassPage() {
     const { timezone } = useTimezone()
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [teachers, setTeachers] = useState<TeacherType[]>([])
+    const [students, setStudents] = useState<StudentType[]>([])
     const [loading, setLoading] = useState(true)
+    const [teacherConflicts, setTeacherConflicts] = useState<Record<string, ConflictInfo>>({})
+    const [studentConflicts, setStudentConflicts] = useState<Record<string, ConflictInfo>>({})
+    const [checkingConflicts, setCheckingConflicts] = useState(false)
 
     // Fetch teachers data on mount
     useEffect(() => {
@@ -88,6 +98,15 @@ export default function CreateClassPage() {
             setLoading(false)
         }
         fetchTeachers()
+    }, [])
+
+    // Fetch students data on mount
+    useEffect(() => {
+        async function fetchStudents() {
+            const s = await getStudents()
+            setStudents(s)
+        }
+        fetchStudents()
     }, [])
 
     // Initialize form with default values
@@ -103,18 +122,122 @@ export default function CreateClassPage() {
             times: {},
             classLink: "",
             teacherIds: [],
+            studentIds: [],
         },
     })
 
     // Watch selected days
     const selectedDays = form.watch("daysRepeated")
 
+    // Function to check conflicts for selected teachers and students
+    const checkConflicts = useCallback(async () => {
+        const selectedTeacherIds = form.getValues("teacherIds")
+        const selectedStudentIds = form.getValues("studentIds") || []
+        const startDate = form.getValues("startDate")
+        const endDate = form.getValues("endDate")
+        const times = form.getValues("times")
+        const selectedDays = form.getValues("daysRepeated")
+
+        if ((!selectedTeacherIds.length && !selectedStudentIds.length) || !startDate || !endDate || !selectedDays.length) {
+            setTeacherConflicts({})
+            setStudentConflicts({})
+            return
+        }
+
+        setCheckingConflicts(true)
+        try {
+            // Filter times to only include selected days
+            const classTimes = selectedDays.reduce((acc, day) => {
+                if (times[day]?.start && times[day]?.end) {
+                    acc[day] = times[day]
+                }
+                return acc
+            }, {} as Record<string, { start: string; end: string }>)
+
+            if (Object.keys(classTimes).length === 0) {
+                setTeacherConflicts({})
+                setStudentConflicts({})
+                return
+            }
+
+            // Check teacher conflicts
+            const teacherConflictsResult = selectedTeacherIds.length > 0
+                ? await checkMultipleTeacherConflicts(
+                    selectedTeacherIds,
+                    classTimes,
+                    startDate,
+                    endDate,
+                    timezone
+                )
+                : {}
+
+            // Check student conflicts
+            const studentConflictsResult = selectedStudentIds.length > 0
+                ? await checkMultipleStudentConflicts(
+                    selectedStudentIds,
+                    classTimes,
+                    startDate,
+                    endDate,
+                    timezone
+                )
+                : {}
+
+            setTeacherConflicts(teacherConflictsResult)
+            setStudentConflicts(studentConflictsResult)
+
+        } catch (error) {
+            console.error("Error checking conflicts:", error)
+            toast({
+                title: "Error",
+                description: "Failed to check conflicts. Please try again.",
+                variant: "destructive",
+            })
+        } finally {
+            setCheckingConflicts(false)
+        }
+    }, [form, timezone])
+
+    // Check conflicts when relevant form fields change
+    useEffect(() => {
+        const subscription = form.watch((value, { name }) => {
+            // Check if the change is related to times, dates, participants, or days
+            const shouldCheckConflicts = name && (
+                name === 'teacherIds' ||
+                name === 'studentIds' ||
+                name === 'startDate' ||
+                name === 'endDate' ||
+                name === 'daysRepeated' ||
+                name === 'times' ||
+                name.startsWith('times.')
+            )
+
+            if (shouldCheckConflicts) {
+                // Debounce the conflict check
+                const timeoutId = setTimeout(checkConflicts, 500)
+                return () => clearTimeout(timeoutId)
+            }
+        })
+        return () => subscription.unsubscribe()
+    }, [form, checkConflicts])
+
+    // Function to remove teacher with conflicts
+    const removeTeacherWithConflict = (teacherId: string) => {
+        const currentTeacherIds = form.getValues("teacherIds")
+        form.setValue("teacherIds", currentTeacherIds.filter(id => id !== teacherId))
+    }
+
+    // Function to remove student with conflicts
+    const removeStudentWithConflict = (studentId: string) => {
+        const currentStudentIds = form.getValues("studentIds") || []
+        form.setValue("studentIds", currentStudentIds.filter(id => id !== studentId))
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#3d8f5b]"></div>
-                    <p className="text-muted-foreground">Loading teachers information...</p>
+                    <p className="text-muted-foreground">Loading teachers and students information...</p>
                 </div>
             </div>
         )
@@ -124,6 +247,20 @@ export default function CreateClassPage() {
         setIsSubmitting(true)
 
         try {
+            // Check for conflicts before creating the class
+            const hasTeacherConflicts = Object.values(teacherConflicts).some(conflict => conflict.hasConflict)
+            const hasStudentConflicts = Object.values(studentConflicts).some(conflict => conflict.hasConflict)
+
+            if (hasTeacherConflicts || hasStudentConflicts) {
+                const confirmed = window.confirm(
+                    "Some selected teachers or students have schedule or availability conflicts. Do you want to proceed with creating the class anyway?"
+                )
+                if (!confirmed) {
+                    setIsSubmitting(false)
+                    return
+                }
+            }
+
             // Convert local times to UTC before saving
             const timesWithUtc = Object.entries(values.times).reduce((acc, [day, time]) => {
                 // For each day, convert the local time to UTC
@@ -159,7 +296,8 @@ export default function CreateClassPage() {
                 status: "active",
                 class_link: values.classLink || null,
                 times: timesWithUtc,
-                teacher_id: values.teacherIds
+                teacher_id: values.teacherIds,
+                student_ids: values.studentIds || []
             }
 
             // Create class and sessions in database
@@ -168,7 +306,7 @@ export default function CreateClassPage() {
             // Show success message
             toast({
                 title: "Class created successfully",
-                description: `${values.title} has been created and assigned to selected teachers`,
+                description: `${values.title} has been created and assigned to selected teachers and students`,
             })
 
             // Navigate back to the classes list
@@ -189,21 +327,14 @@ export default function CreateClassPage() {
         <div className="min-h-screen py-8">
             <BackButton href="/admin/classes" label="Back to Classes" />
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Header Section */}
-                <div className="mb-8">
-                    <div className="mt-6 text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Class</h1>
-                    </div>
-                </div>
-
                 <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
                     <CardHeader className="text-center pb-8">
                         <div className="mx-auto w-16 h-16 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center mb-4">
                             <BookOpen className="w-8 h-8 text-[#3d8f5b]" />
                         </div>
-                        <CardTitle className="text-2xl font-semibold text-gray-900">Class Information</CardTitle>
+                        <CardTitle className="text-2xl font-semibold text-gray-900">Create Class</CardTitle>
                         <CardDescription className="text-base text-gray-600">
-                            Fill in the details below to create a new class and assign teachers
+                            Fill in the details below to create a new class and assign teachers and students
                         </CardDescription>
                     </CardHeader>
 
@@ -433,6 +564,11 @@ export default function CreateClassPage() {
                                                                                 className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
                                                                                 {...field}
                                                                                 value={String(field.value || "")}
+                                                                                onChange={(e) => {
+                                                                                    field.onChange(e.target.value)
+                                                                                    // Trigger conflict check after a short delay
+                                                                                    setTimeout(checkConflicts, 300)
+                                                                                }}
                                                                             />
                                                                         </FormControl>
                                                                         <FormDescription className="text-xs">24h format</FormDescription>
@@ -452,6 +588,11 @@ export default function CreateClassPage() {
                                                                                 className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
                                                                                 {...field}
                                                                                 value={String(field.value || "")}
+                                                                                onChange={(e) => {
+                                                                                    field.onChange(e.target.value)
+                                                                                    // Trigger conflict check after a short delay
+                                                                                    setTimeout(checkConflicts, 300)
+                                                                                }}
                                                                             />
                                                                         </FormControl>
                                                                         <FormDescription className="text-xs">24h format</FormDescription>
@@ -524,7 +665,8 @@ export default function CreateClassPage() {
                                                                         <button
                                                                             type="button"
                                                                             onClick={() => {
-                                                                                field.onChange(field.value.filter(id => id !== teacherId));
+                                                                                const currentValues = field.value || [];
+                                                                                field.onChange(currentValues.filter(id => id !== teacherId));
                                                                             }}
                                                                             className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
                                                                         >
@@ -541,6 +683,145 @@ export default function CreateClassPage() {
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Conflict Checking Status */}
+                                    {checkingConflicts && (
+                                        <Alert className="border-blue-200 bg-blue-50">
+                                            <div className="flex items-center gap-2">
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                                <AlertDescription className="text-blue-800">
+                                                    Checking teacher and student availability and schedule conflicts...
+                                                </AlertDescription>
+                                            </div>
+                                        </Alert>
+                                    )}
+
+                                    {/* Teacher Conflicts Display */}
+                                    {Object.values(teacherConflicts).some(conflict => conflict.hasConflict) && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                                <h4 className="text-sm font-medium text-gray-900">Teacher Conflicts Found</h4>
+                                            </div>
+                                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                                                {Object.entries(teacherConflicts).map(([teacherId, conflictInfo]) => {
+                                                    const teacher = teachers.find(t => t.teacher_id === teacherId);
+                                                    if (!teacher) return null;
+
+                                                    return (
+                                                        <TeacherConflictDisplay
+                                                            key={teacherId}
+                                                            teacher={teacher}
+                                                            conflictInfo={conflictInfo}
+                                                            onRemoveTeacher={removeTeacherWithConflict}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <Separator className="my-8" />
+
+                                {/* Students Section */}
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
+                                            <GraduationCap className="w-4 h-4 text-[#3d8f5b]" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-900">Enroll Students</h3>
+                                    </div>
+
+                                    <FormField
+                                        control={form.control}
+                                        name="studentIds"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Select Students</FormLabel>
+                                                <Select
+                                                    onValueChange={(value) => {
+                                                        const currentValues = field.value || [];
+                                                        if (!currentValues.includes(value)) {
+                                                            field.onChange([...currentValues, value]);
+                                                        }
+                                                    }}
+                                                    value={field.value?.[field.value.length - 1] || ""}
+                                                >
+                                                    <FormControl>
+                                                        <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                                                            <SelectValue placeholder="Select students" />
+                                                        </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        {students.map((student) => (
+                                                            <SelectItem
+                                                                key={student.student_id}
+                                                                value={student.student_id}
+                                                                disabled={field.value?.includes(student.student_id)}
+                                                            >
+                                                                {student.first_name} {student.last_name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="mt-3">
+                                                    {field.value && field.value.length > 0 && (
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {field.value.map((studentId) => {
+                                                                const student = students.find(s => s.student_id === studentId);
+                                                                return student ? (
+                                                                    <div
+                                                                        key={studentId}
+                                                                        className="flex items-center gap-2 bg-[#3d8f5b]/10 border border-[#3d8f5b]/20 px-3 py-2 rounded-lg text-sm"
+                                                                    >
+                                                                        <span className="text-[#3d8f5b] font-medium">{student.first_name} {student.last_name}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const currentValues = field.value || [];
+                                                                                field.onChange(currentValues.filter(id => id !== studentId));
+                                                                            }}
+                                                                            className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
+                                                                        >
+                                                                            ×
+                                                                        </button>
+                                                                    </div>
+                                                                ) : null;
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <FormDescription className="text-sm text-gray-600">Select one or more students for this class</FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    {/* Student Conflicts Display */}
+                                    {Object.values(studentConflicts).some(conflict => conflict.hasConflict) && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                                                <h4 className="text-sm font-medium text-gray-900">Student Conflicts Found</h4>
+                                            </div>
+                                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                                                {Object.entries(studentConflicts).map(([studentId, conflictInfo]) => {
+                                                    const student = students.find(s => s.student_id === studentId);
+                                                    if (!student) return null;
+
+                                                    return (
+                                                        <StudentConflictDisplay
+                                                            key={studentId}
+                                                            student={student}
+                                                            conflictInfo={conflictInfo}
+                                                            onRemoveStudent={removeStudentWithConflict}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <Separator className="my-8" />

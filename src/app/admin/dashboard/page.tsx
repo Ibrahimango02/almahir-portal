@@ -1,5 +1,6 @@
 import {
   BookCheck,
+  BookOpen,
   BookX,
   Calendar,
   CheckCircle,
@@ -14,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
-import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus } from "@/lib/get/get-classes"
+import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus, getActiveClassesCount } from "@/lib/get/get-classes"
 import { getStudentsCount } from "@/lib/get/get-students"
 import { getTeachersCount } from "@/lib/get/get-teachers"
 import { createClient } from "@/utils/supabase/server"
@@ -44,6 +45,7 @@ export default async function AdminDashboard() {
   const studentsCount = await getStudentsCount()
   const teachersCount = await getTeachersCount()
   const weeklySessionsCount = await getWeeklySessionsCount()
+  const activeClassesCount = await getActiveClassesCount()
 
   // Fetch sessions data for today using getSessionsToday()
   const sessionsData = await getSessionsToday()
@@ -164,6 +166,8 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
 
+        {/* Academy Stats */}
+
         <Card className="col-span-2">
           <CardHeader>
             <CardTitle>Academy Stats</CardTitle>
@@ -182,9 +186,9 @@ export default async function AdminDashboard() {
                 <div className="ml-auto font-bold">{studentsCount}</div>
               </div>
 
-              <div className="flex items-center gap-4 p-2 rounded-lg">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent">
-                  <Users className="h-5 w-5 text-accent-foreground" />
+              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <Users className="h-5 w-5 text-green-700 dark:text-green-300" />
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">Total Teachers</p>
@@ -202,6 +206,17 @@ export default async function AdminDashboard() {
                   <p className="text-sm text-muted-foreground">{weeklySessionsCount} sessions this week</p>
                 </div>
                 <div className="ml-auto font-bold">{weeklySessionsCount}</div>
+              </div>
+
+              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <BookOpen className="h-5 w-5 text-green-700 dark:text-green-300" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Active Classes</p>
+                  <p className="text-sm text-muted-foreground">{activeClassesCount} active classes</p>
+                </div>
+                <div className="ml-auto font-bold">{activeClassesCount}</div>
               </div>
             </div>
           </CardContent>

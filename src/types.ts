@@ -112,6 +112,7 @@ export type ClassType = {
     class_link: string | null
     teachers: TeacherType[]
     enrolled_students: StudentType[]
+    times?: Record<string, { start: string; end: string }>
     created_at: string
     updated_at: string | null
 }
