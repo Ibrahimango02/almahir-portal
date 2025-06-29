@@ -58,7 +58,27 @@ const formSchema = z.object({
         message: "End date must be after or equal to start date",
         path: ["endDate"],
     }
-)
+).superRefine((data, ctx) => {
+    // Check if there are any times defined
+    if (!data.times || Object.keys(data.times).length === 0) return
+
+    // Validate each day's times
+    for (const [day, timeData] of Object.entries(data.times)) {
+        if (timeData.start && timeData.end) {
+            // Convert times to minutes for comparison
+            const startMinutes = parseInt(timeData.start.split(':')[0]) * 60 + parseInt(timeData.start.split(':')[1])
+            const endMinutes = parseInt(timeData.end.split(':')[0]) * 60 + parseInt(timeData.end.split(':')[1])
+
+            if (startMinutes >= endMinutes) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "End time must be after start time",
+                    path: ["times", day, "end"]
+                })
+            }
+        }
+    }
+})
 
 // Add days of the week array
 const daysOfWeek = [
