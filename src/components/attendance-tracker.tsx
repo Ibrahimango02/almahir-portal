@@ -37,6 +37,15 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
     const loadExistingAttendance = async () => {
       setLoading(true)
       try {
+        // If there are no students, we don't need to load attendance data
+        if (students.length === 0) {
+          setAttendance({})
+          setIsAttendanceTaken(false)
+          setHasChanges(false)
+          setLoading(false)
+          return
+        }
+
         const existingAttendance = await getSessionAttendance(sessionId)
 
         // Create attendance state from existing data
@@ -73,7 +82,7 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
       }
     }
 
-    if (sessionId && students.length > 0) {
+    if (sessionId) {
       loadExistingAttendance()
     }
   }, [sessionId, students])
@@ -168,6 +177,17 @@ export function AttendanceTracker({ sessionId, sessionDate, students, currentSta
       <div className="space-y-4">
         <div className="flex items-center justify-center py-8">
           <div className="text-sm text-muted-foreground">Loading attendance data...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show message when no students are enrolled
+  if (students.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-center py-8">
+          <div className="text-sm text-muted-foreground">No students are enrolled in this class.</div>
         </div>
       </div>
     )

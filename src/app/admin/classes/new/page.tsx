@@ -49,7 +49,16 @@ const formSchema = z.object({
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
-})
+}).refine(
+    (data) => {
+        if (!data.startDate || !data.endDate) return true
+        return startOfDay(data.startDate) <= startOfDay(data.endDate)
+    },
+    {
+        message: "End date must be after or equal to start date",
+        path: ["endDate"],
+    }
+)
 
 // Add days of the week array
 const daysOfWeek = [
