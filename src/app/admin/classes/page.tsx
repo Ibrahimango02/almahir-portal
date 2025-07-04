@@ -1,17 +1,18 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Users, BookOpen, Clock, Search } from "lucide-react"
+import { Plus, BookOpen, Clock, Search, Archive } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { getClasses } from "@/lib/get/get-classes"
+import { getActiveClasses, getArchivedClasses } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
 import ClassesTable from "@/components/classes-table"
 
 export default function ClassesPage() {
-    const [classes, setClasses] = useState<ClassType[]>([])
+    const [activeClasses, setActiveClasses] = useState<ClassType[]>([])
+    const [archivedClasses, setArchivedClasses] = useState<ClassType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
     const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
@@ -19,9 +20,13 @@ export default function ClassesPage() {
     useEffect(() => {
         const fetchClasses = async () => {
             try {
-                const data = await getClasses()
-                setClasses(data)
-                setFilteredClasses(data)
+                const [activeData, archivedData] = await Promise.all([
+                    getActiveClasses(),
+                    getArchivedClasses()
+                ])
+                setActiveClasses(activeData)
+                setArchivedClasses(archivedData)
+                setFilteredClasses([...activeData, ...archivedData])
             } catch (error) {
                 console.error("Error fetching classes:", error)
             } finally {
@@ -33,7 +38,8 @@ export default function ClassesPage() {
     }, [])
 
     useEffect(() => {
-        const filtered = classes.filter((classItem) => {
+        const allClasses = [...activeClasses, ...archivedClasses]
+        const filtered = allClasses.filter((classItem) => {
             const searchLower = searchQuery.toLowerCase()
             return (
                 classItem.title.toLowerCase().includes(searchLower) ||
@@ -58,12 +64,13 @@ export default function ClassesPage() {
             return a.title.localeCompare(b.title)
         })
         setFilteredClasses(filtered)
-    }, [searchQuery, classes])
+    }, [searchQuery, activeClasses, archivedClasses])
+
+    const totalClasses = activeClasses.length + archivedClasses.length
 
     return (
-        <div className="container mx-auto py-6">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
                     <p className="text-muted-foreground">Manage and view all classes</p>
@@ -95,7 +102,7 @@ export default function ClassesPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Total Classes</p>
-                                <p className="text-3xl font-bold">{classes.length}</p>
+                                <p className="text-3xl font-bold">{totalClasses}</p>
                             </div>
                             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
                                 <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -109,9 +116,7 @@ export default function ClassesPage() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Active Classes</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.filter(c => c.status === 'active').length}
-                                </p>
+                                <p className="text-3xl font-bold">{activeClasses.length}</p>
                             </div>
                             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
                                 <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
@@ -124,13 +129,11 @@ export default function ClassesPage() {
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Students</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.reduce((acc, c) => acc + c.enrolled_students.length, 0)}
-                                </p>
+                                <p className="text-sm font-medium text-muted-foreground">Archived Classes</p>
+                                <p className="text-3xl font-bold">{archivedClasses.length}</p>
                             </div>
                             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                <Archive className="h-6 w-6 text-green-600 dark:text-green-400" />
                             </div>
                         </div>
                     </CardContent>

@@ -165,10 +165,27 @@ export async function getTeachersCount() {
     const { count, error } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true })
-        .in('role', ['teacher', 'admin'])
+        .in('role', ['teacher'])
 
     if (error) {
         console.error('Error fetching teachers count:', error)
+        return 0
+    }
+
+    return count
+}
+
+export async function getActiveTeachersCount() {
+    const supabase = createClient()
+
+    const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'teacher')
+        .eq('status', 'active')
+
+    if (error) {
+        console.error('Error fetching active teachers count:', error)
         return 0
     }
 

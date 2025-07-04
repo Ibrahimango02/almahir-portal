@@ -7,8 +7,8 @@ import {
   Clock,
   GraduationCapIcon as Graduation,
   Play,
-  UserX,
-  Users,
+  UserPen,
+  UserX
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -16,8 +16,8 @@ import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
 import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus, getActiveClassesCount } from "@/lib/get/get-classes"
-import { getStudentsCount } from "@/lib/get/get-students"
-import { getTeachersCount } from "@/lib/get/get-teachers"
+import { getActiveStudentsCount } from "@/lib/get/get-students"
+import { getActiveTeachersCount } from "@/lib/get/get-teachers"
 import { createClient } from "@/utils/supabase/server"
 
 export default async function AdminDashboard() {
@@ -42,8 +42,8 @@ export default async function AdminDashboard() {
     absence: await getSessionsCountByStatus("absence"),
   }
 
-  const studentsCount = await getStudentsCount()
-  const teachersCount = await getTeachersCount()
+  const studentsCount = await getActiveStudentsCount()
+  const teachersCount = await getActiveTeachersCount()
   const weeklySessionsCount = await getWeeklySessionsCount()
   const activeClassesCount = await getActiveClassesCount()
 
@@ -180,21 +180,19 @@ export default async function AdminDashboard() {
                   <Graduation className="h-5 w-5 text-green-700 dark:text-green-300" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Total Students</p>
-                  <p className="text-sm text-muted-foreground">{studentsCount} students enrolled</p>
+                  <p className="text-sm font-medium leading-none">Active Students</p>
                 </div>
-                <div className="ml-auto font-bold">{studentsCount}</div>
+                <div className="ml-auto">{studentsCount}</div>
               </div>
 
               <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <Users className="h-5 w-5 text-green-700 dark:text-green-300" />
+                  <UserPen className="h-5 w-5 text-green-700 dark:text-green-300" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Total Teachers</p>
-                  <p className="text-sm text-muted-foreground">{teachersCount} active teachers</p>
+                  <p className="text-sm font-medium leading-none">Active Teachers</p>
                 </div>
-                <div className="ml-auto font-bold">{teachersCount}</div>
+                <div className="ml-auto">{teachersCount}</div>
               </div>
 
               <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
@@ -203,9 +201,8 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">Weekly Sessions</p>
-                  <p className="text-sm text-muted-foreground">{weeklySessionsCount} sessions this week</p>
                 </div>
-                <div className="ml-auto font-bold">{weeklySessionsCount}</div>
+                <div className="ml-auto">{weeklySessionsCount}</div>
               </div>
 
               <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
@@ -214,9 +211,8 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium leading-none">Active Classes</p>
-                  <p className="text-sm text-muted-foreground">{activeClassesCount} active classes</p>
                 </div>
-                <div className="ml-auto font-bold">{activeClassesCount}</div>
+                <div className="ml-auto">{activeClassesCount}</div>
               </div>
             </div>
           </CardContent>

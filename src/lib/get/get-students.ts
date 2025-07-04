@@ -198,5 +198,21 @@ export async function getStudentsCount() {
     return count
 }
 
+export async function getActiveStudentsCount() {
+    const supabase = createClient()
+
+    const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student')
+        .eq('status', 'active')
+
+    if (error) {
+        console.error('Error fetching active students count:', error)
+        return 0
+    }
+
+    return count
+}
 
 
