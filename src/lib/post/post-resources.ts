@@ -1,6 +1,16 @@
 import { createClient } from '@/utils/supabase/client'
 import { ResourceType } from '@/types'
 
+// Helper function to sanitize filename for storage
+function sanitizeFileName(fileName: string): string {
+    // Remove or replace problematic characters
+    return fileName
+        .replace(/[^\w\s.-]/g, '') // Remove special characters except word chars, spaces, dots, and hyphens
+        .replace(/\s+/g, '_') // Replace spaces with underscores
+        .replace(/[^a-zA-Z0-9._-]/g, '') // Keep only alphanumeric, dots, underscores, and hyphens
+        .toLowerCase() // Convert to lowercase
+}
+
 export async function createResource(formData: FormData): Promise<ResourceType> {
     const supabase = createClient()
 
@@ -20,20 +30,28 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
         throw new Error('No file provided')
     }
 
-    // Upload file to Supabase Storage
-    const fileName = `${Date.now()}-${file.name}`
+    console.log('here 0', file.name)
+
+    // Upload file to Supabase Storage with sanitized filename
+    const originalFileName = file.name
+    const fileExtension = originalFileName.split('.').pop() || ''
+    const sanitizedFileName = sanitizeFileName(originalFileName.replace(`.${fileExtension}`, ''))
+    const storageFileName = `${Date.now()}-${sanitizedFileName}.${fileExtension}`
+
     const { error: uploadError } = await supabase.storage
         .from('resources')
-        .upload(fileName, file)
+        .upload(storageFileName, file)
 
     if (uploadError) {
         throw new Error(`Failed to upload file: ${uploadError.message}`)
     }
 
+    console.log('here 1')
+
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
         .from('resources')
-        .getPublicUrl(fileName)
+        .getPublicUrl(storageFileName)
 
     // Create resource record
     const { data, error } = await supabase
@@ -41,7 +59,7 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
         .insert({
             title,
             description,
-            file_name: file.name,
+            file_name: originalFileName, // Store the original filename
             file_url: publicUrl,
             file_size: file.size,
             file_type: file.type,
@@ -54,6 +72,8 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
     if (error) {
         throw new Error(`Failed to create resource: ${error.message}`)
     }
+
+    console.log('here 2')
 
     return data
 }
