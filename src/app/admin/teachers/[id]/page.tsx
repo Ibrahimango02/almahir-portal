@@ -9,10 +9,11 @@ import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
-import { getTeacherAvailability } from "@/lib/get/get-teachers"
+import { getTeacherAvailability, getTeacherStudents } from "@/lib/get/get-teachers"
 import { getSessionCountByTeacherId, getSessionsByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
+import { TeacherStudentsSection } from "@/components/teacher-students-section"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -31,6 +32,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   const teacherSessions = await getSessionsByTeacherId(teacher.teacher_id)
   const teacherSessionCount = await getSessionCountByTeacherId(teacher.teacher_id)
   const teacherAvailability = await getTeacherAvailability(teacher.teacher_id)
+  const teacherStudents = await getTeacherStudents(teacher.teacher_id)
 
   return (
     <div className="flex flex-col gap-6">
@@ -190,6 +192,12 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
           </CardContent>
         </Card>
       </div>
+
+      {/* Students Section */}
+      <TeacherStudentsSection
+        students={teacherStudents}
+        teacherName={`${teacher.first_name} ${teacher.last_name}`}
+      />
     </div>
   )
 }

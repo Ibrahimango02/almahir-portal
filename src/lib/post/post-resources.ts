@@ -30,8 +30,6 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
         throw new Error('No file provided')
     }
 
-    console.log('here 0', file.name)
-
     // Upload file to Supabase Storage with sanitized filename
     const originalFileName = file.name
     const fileExtension = originalFileName.split('.').pop() || ''
@@ -45,8 +43,6 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
     if (uploadError) {
         throw new Error(`Failed to upload file: ${uploadError.message}`)
     }
-
-    console.log('here 1')
 
     // Get public URL
     const { data: { publicUrl } } = supabase.storage
@@ -72,8 +68,6 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
     if (error) {
         throw new Error(`Failed to create resource: ${error.message}`)
     }
-
-    console.log('here 2')
 
     return data
 }

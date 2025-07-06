@@ -134,11 +134,11 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Mail className="h-3 w-3 text-muted-foreground" />
-                                                <span>{admin.email || 'N/A'}</span>
+                                                <span>{admin.email || 'None'}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5 text-xs">
                                                 <Phone className="h-3 w-3 text-muted-foreground" />
-                                                <span>{admin.phone || 'N/A'}</span>
+                                                <span>{admin.phone || 'None'}</span>
                                             </div>
                                         </div>
                                     </TableCell>
@@ -147,7 +147,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     <TableCell className="py-2 px-3">
                                         <div className="flex items-center gap-1.5">
                                             <MapPin className="h-3 w-3 text-muted-foreground" />
-                                            <span className="text-xs">{admin.country || 'N/A'}</span>
+                                            <span className="text-xs">{admin.country || 'None'}</span>
                                         </div>
                                         <p className="text-xs text-muted-foreground">{admin.language}</p>
                                     </TableCell>

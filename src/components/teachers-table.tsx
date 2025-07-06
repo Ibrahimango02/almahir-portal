@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin, BookOpen } from "lucide-react"
+import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import Link from "next/link"
 import { useState, useEffect } from "react"
@@ -134,17 +134,16 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{teacher.phone || 'N/A'}</span>
+                        <span>{teacher.phone || 'None'}</span>
                       </div>
                     </div>
                   </TableCell>
 
                   {/* Specialization */}
                   <TableCell className="py-2 px-3">
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-1.5">
-                        <BookOpen className="h-3 w-3 text-primary" />
-                        <span className="font-medium text-sm">{teacher.specialization || 'N/A'}</span>
+                        <span>{teacher.specialization || 'None'}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -153,7 +152,7 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                   <TableCell className="py-2 px-3">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs">{teacher.country || 'N/A'}</span>
+                      <span className="text-xs">{teacher.country || 'None'}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">{teacher.language}</p>
                   </TableCell>

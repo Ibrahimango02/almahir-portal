@@ -167,11 +167,11 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 text-xs">
                         <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{student.email || 'N/A'}</span>
+                        <span>{student.email || 'None'}</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs">
                         <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{student.phone || 'N/A'}</span>
+                        <span>{student.phone || 'None'}</span>
                       </div>
                     </div>
                   </TableCell>
@@ -181,7 +181,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs">{student.country || 'N/A'}</span>
+                        <span className="text-xs">{student.country || 'None'}</span>
                       </div>
                       <p className="text-xs text-muted-foreground">{student.language}</p>
                     </div>

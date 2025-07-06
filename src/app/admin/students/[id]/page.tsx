@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, Edit, BookOpen, UserPen, Clock, Plus } from "lucide-react"
+import { Mail, User, Users, Edit, BookOpen, Clock, Plus } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -13,6 +13,7 @@ import { getStudentById, getStudentParents, getStudentTeachers } from "@/lib/get
 import { getSessionsByStudentId, getSessionCountByStudentId } from "@/lib/get/get-classes"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
+import { StudentTeachersSection } from "@/components/student-teachers-section"
 
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -108,52 +109,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     <Mail className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
                     <span className="text-sm break-all">{student.email}</span>
                   </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Teachers Section */}
-              <div>
-                <h3 className="text-base font-semibold flex items-center mb-3">
-                  <UserPen className="h-4 w-4 mr-2 text-primary" />
-                  Teachers
-                </h3>
-                <div className="space-y-3 pl-6">
-                  {studentTeachers && studentTeachers.length > 0 ? (
-                    <div className="space-y-2">
-                      {studentTeachers.map((teacher) => (
-                        <Link
-                          key={teacher.teacher_id}
-                          href={teacher.role === "admin"
-                            ? `/admin/admins/${teacher.teacher_id}`
-                            : `/admin/teachers/${teacher.teacher_id}`
-                          }
-                          className="block"
-                        >
-                          <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
-                            <Avatar className="h-8 w-8">
-                              {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
-                              <AvatarFallback>{teacher.first_name.charAt(0)}{teacher.last_name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-primary truncate">
-                                {teacher.first_name} {teacher.last_name}
-                              </p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {teacher.role}
-                              </p>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center border-2 border-dashed border-muted rounded-lg">
-                      <UserPen className="h-6 w-6 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground">No teachers assigned</p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -258,6 +213,12 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           </CardContent>
         </Card>
       </div>
+
+      {/* Teachers Section */}
+      <StudentTeachersSection
+        teachers={studentTeachers}
+        studentName={`${student.first_name} ${student.last_name}`}
+      />
     </div>
   )
 }
