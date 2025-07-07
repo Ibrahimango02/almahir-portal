@@ -93,19 +93,11 @@ const daysOfWeek = [
 
 // Define the subjects available for selection
 const subjects = [
-    "Quran",
-    "Arabic",
-    "Tafseer",
-    "Fiqh",
-    "Hadith",
-    "Imaan",
-    "Aqidah",
-    "Islamic Studies",
-    "Islamic History",
-    "Islamic Geography",
-    "Islamic Culture",
-    "Islamic Law",
-    "Islamic Ethics",
+    "Learn How to Read Arabic",
+    "Quran Recitation",
+    "Quran Memorization",
+    "Quran Tafseer",
+    "Quran Memorization",
 ]
 
 export default function CreateClassPage() {
