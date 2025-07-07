@@ -33,6 +33,7 @@ import { checkMultipleTeacherConflicts, checkMultipleStudentConflicts, ConflictI
 import { TeacherConflictDisplay } from "@/components/teacher-conflict-display"
 import { StudentConflictDisplay } from "@/components/student-conflict-display"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { SubjectsCombobox } from "@/components/subjects-combobox"
 
 // Update the form schema to include teacher and student selection
 const formSchema = z.object({
@@ -91,28 +92,7 @@ const daysOfWeek = [
     { id: "sunday", label: "Sunday" },
 ]
 
-// Define the subjects available for selection
-const subjects = [
-    "Qur'an Recitation",
-    "Qur'an Memorization",
-    "Tajweed (Beginner)",
-    "Tajweed (Advanced)",
-    "Tajweed and Recitation Certificate",
-    "Qur'an Memorization Ijaazah",
-    "Learn Ten Qura'at",
-    "Tafseer",
-    "Learn to Read Arabic",
-    "Arabic Grammar",
-    "Arabic Conversation",
-    "Modern Standard Arabic",
-    "Islamic Studies for Kids",
-    "Prayer Lessons",
-    "Azan Program",
-    "Five Pillars of Islam",
-    "Stories of the Qur'an",
-    "Stories of the Prophets",
-    "Daily Duas"
-]
+
 
 export default function CreateClassPage() {
     const router = useRouter()
@@ -409,20 +389,13 @@ export default function CreateClassPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-sm font-medium text-gray-700">Subject</FormLabel>
-                                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
-                                                                <SelectValue placeholder="Select a subject" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {subjects.map((subject) => (
-                                                                <SelectItem key={subject} value={subject}>
-                                                                    {subject}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <FormControl>
+                                                        <SubjectsCombobox
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            placeholder="Select a subject"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}

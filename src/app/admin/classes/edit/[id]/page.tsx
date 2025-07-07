@@ -33,6 +33,7 @@ import { TeacherConflictDisplay } from "@/components/teacher-conflict-display"
 import { StudentConflictDisplay } from "@/components/student-conflict-display"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
+import { SubjectsCombobox } from "@/components/subjects-combobox"
 
 // Form schema for editing class
 const formSchema = z.object({
@@ -91,22 +92,7 @@ const daysOfWeek = [
     { id: "sunday", label: "Sunday" },
 ]
 
-// Define the subjects available for selection
-const subjects = [
-    "Quran",
-    "Arabic",
-    "Tafseer",
-    "Fiqh",
-    "Hadith",
-    "Imaan",
-    "Aqidah",
-    "Islamic Studies",
-    "Islamic History",
-    "Islamic Geography",
-    "Islamic Culture",
-    "Islamic Law",
-    "Islamic Ethics",
-]
+
 
 export default function EditClassPage() {
     const router = useRouter()
@@ -481,20 +467,13 @@ export default function EditClassPage() {
                                             render={({ field }) => (
                                                 <FormItem>
                                                     <FormLabel className="text-sm font-medium text-gray-700">Subject</FormLabel>
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl>
-                                                            <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
-                                                                <SelectValue placeholder="Select a subject" />
-                                                            </SelectTrigger>
-                                                        </FormControl>
-                                                        <SelectContent>
-                                                            {subjects.map((subject) => (
-                                                                <SelectItem key={subject} value={subject}>
-                                                                    {subject}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    <FormControl>
+                                                        <SubjectsCombobox
+                                                            value={field.value}
+                                                            onValueChange={field.onChange}
+                                                            placeholder="Select a subject"
+                                                        />
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
                                             )}
