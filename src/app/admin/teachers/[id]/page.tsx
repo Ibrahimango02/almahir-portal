@@ -102,6 +102,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                 </div>
               </div>
 
+              <Separator />
+
               {/* Contact Information */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">

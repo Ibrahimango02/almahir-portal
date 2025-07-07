@@ -15,7 +15,7 @@ import {
   X,
   BookOpen,
   FolderOpen,
-  Users,
+  FileText
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -51,15 +51,15 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Parents",
-    icon: Users,
-    href: "/teacher/parents",
-    color: "text-green-600",
-  },
-  {
     label: "Resources",
     icon: FolderOpen,
     href: "/teacher/resources",
+    color: "text-green-600",
+  },
+  {
+    label: "Invoices",
+    icon: FileText,
+    href: "/teacher/invoices",
     color: "text-green-600",
   },
   {

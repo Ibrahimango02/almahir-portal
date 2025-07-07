@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, BookOpen, Clock } from "lucide-react"
+import { Users, BookOpen, Clock } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -95,20 +95,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 </div>
                             </div>
 
-                            {/* Contact Information */}
-                            <div>
-                                <h3 className="text-base font-semibold flex items-center mb-3">
-                                    <User className="h-4 w-4 mr-2 text-primary" />
-                                    Contact Information
-                                </h3>
-                                <div className="space-y-3 pl-6">
-                                    <div className="flex items-start">
-                                        <Mail className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm break-all">{student.email}</span>
-                                    </div>
-                                </div>
-                            </div>
-
                             <Separator />
 
                             {/* Parents Section */}
@@ -121,26 +107,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                     {studentParents && studentParents.length > 0 ? (
                                         <div className="space-y-2">
                                             {studentParents.map((parent) => (
-                                                <Link
-                                                    key={parent.parent_id}
-                                                    href={`/teacher/parents/${parent.parent_id}`}
-                                                    className="block"
-                                                >
-                                                    <div className="flex items-center gap-3 p-2 rounded-lg border bg-card hover:bg-muted/50 transition-all duration-200 hover:shadow-sm">
-                                                        <Avatar className="h-8 w-8">
-                                                            {parent.avatar_url && <AvatarImage src={parent.avatar_url} alt={parent.first_name} />}
-                                                            <AvatarFallback>{parent.first_name.charAt(0)}{parent.last_name.charAt(0)}</AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-sm font-medium text-primary truncate">
-                                                                {parent.first_name} {parent.last_name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground truncate">
-                                                                {parent.email}
-                                                            </p>
-                                                        </div>
+                                                <div key={parent.parent_id} className="flex items-center gap-3">
+                                                    <Avatar className="h-8 w-8">
+                                                        {parent.avatar_url && <AvatarImage src={parent.avatar_url} alt={parent.first_name} />}
+                                                        <AvatarFallback>{parent.first_name.charAt(0)}{parent.last_name.charAt(0)}</AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-primary truncate">
+                                                            {parent.first_name} {parent.last_name}
+                                                        </p>
                                                     </div>
-                                                </Link>
+                                                </div>
                                             ))}
                                         </div>
                                     ) : (

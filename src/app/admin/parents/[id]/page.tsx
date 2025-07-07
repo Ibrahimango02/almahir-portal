@@ -75,6 +75,8 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
             </div>
           </CardHeader>
 
+          <Separator />
+
           <CardContent className="pt-6">
             <div className="space-y-6">
               {/* Contact Information */}

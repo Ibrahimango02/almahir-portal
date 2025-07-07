@@ -9,7 +9,7 @@ import {
   FolderOpen,
   FileText,
   GraduationCapIcon as Graduation,
-  LayoutDashboard,
+  Home,
   LogOut,
   Menu,
   MoreVertical,
@@ -28,7 +28,7 @@ import { ProfileType } from "@/types"
 const routes = [
   {
     label: "Dashboard",
-    icon: LayoutDashboard,
+    icon: Home,
     href: "/parent/dashboard",
     color: "text-green-600",
   },

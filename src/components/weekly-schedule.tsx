@@ -14,9 +14,14 @@ import {
   startOfDay,
   differenceInMinutes,
   isToday,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  addMonths,
+  subMonths
 } from "date-fns"
 import { Button } from "@/components/ui/button"
-import { List, CalendarDays, ChevronLeft, ChevronRight, Plus, Clock, Users } from "lucide-react"
+import { List, CalendarDays, ChevronLeft, ChevronRight, Plus, Clock, Users, Calendar, Play, CheckCircle, BookX, UserX } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
 import { ClassSessionType } from "@/types"
@@ -24,6 +29,7 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "./table-pagination"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 
@@ -45,8 +51,9 @@ const parseClassDateTime = (
 }
 
 export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSessionType[], assignClassUrl?: string }) {
-  const [view, setView] = useState<"list" | "calendar">("calendar")
+  const [view, setView] = useState<"list" | "calendar" | "monthly">("calendar")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
   const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(sessions)
   const [timeFilter, setTimeFilter] = useState<"all" | "morning" | "afternoon" | "evening">("all")
   const [activeListTab, setActiveListTab] = useState<"upcoming" | "recent">("upcoming")
@@ -104,6 +111,17 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
       }
 
       setVisibleClasses(filtered)
+    } else if (view === "monthly") {
+      // For monthly view, filter classes to show only those in the current month
+      const monthEnd = endOfMonth(currentMonth)
+      const filtered = sortedClasses.filter((cls) => {
+        const classDate = parseClassDateTime(cls, "start_date")
+        return classDate && isWithinInterval(classDate, {
+          start: startOfDay(currentMonth),
+          end: endOfDay(monthEnd),
+        })
+      })
+      setVisibleClasses(filtered)
     } else if (view === "list") {
       // For list view, filter based on the week and the active tab
       const weekEnd = addDays(currentWeekStart, 6) // 6 days after Monday = Sunday
@@ -132,7 +150,7 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
 
       setVisibleClasses(filtered)
     }
-  }, [sortedClasses, view, timeFilter, currentWeekStart, activeListTab])
+  }, [sortedClasses, view, timeFilter, currentWeekStart, currentMonth, activeListTab])
 
   const navigateWeek = (direction: "next" | "prev") => {
     setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
@@ -168,84 +186,98 @@ export function WeeklySchedule({ sessions, assignClassUrl }: { sessions: ClassSe
     }
   }
 
+  const navigateMonth = (direction: "next" | "prev") => {
+    setCurrentMonth((prev) => (direction === "next" ? addMonths(prev, 1) : subMonths(prev, 1)))
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center w-full">
-        {/* Tabs on the left */}
-        <div className="flex items-center gap-2">
-          <Tabs value={view} onValueChange={(value) => setView(value as "list" | "calendar")}>
-            <TabsList className="bg-muted/80">
-              <TabsTrigger value="list" className={view === "list" ? "bg-[#3d8f5b] text-white" : ""}>
-                <List className="mr-2 h-4 w-4" /> List
-              </TabsTrigger>
-              <TabsTrigger value="calendar" className={view === "calendar" ? "bg-[#3d8f5b] text-white" : ""}>
-                <CalendarDays className="mr-2 h-4 w-4" /> Calendar
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-
-        {/* Week navigation in the center/right */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigateWeek("prev")}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium">
-            {format(currentWeekStart, "MMM d")} - {format(addDays(currentWeekStart, 6), "MMM d, yyyy")}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => navigateWeek("next")}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Assign Class button on the far right */}
-        {assignClassUrl && (
-          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            <a href={assignClassUrl}>
-              <Plus className="mr-2 h-4 w-4" /> Assign Class
-            </a>
-          </Button>
-        )}
-      </div>
-
-      {view === "calendar" && (
-        <div className="flex justify-end mb-4">
-          <Tabs
-            value={timeFilter}
-            onValueChange={(value) => setTimeFilter(value as "all" | "morning" | "afternoon" | "evening")}
-          >
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="morning">Morning</TabsTrigger>
-              <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
-              <TabsTrigger value="evening">Evening</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      )}
-
-      {view === "list" ? (
-        <>
-          <div className="flex justify-end mb-4">
-            <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as "upcoming" | "recent")}>
+    <TooltipProvider>
+      <div className="space-y-4">
+        <div className="flex justify-between items-center w-full">
+          {/* Tabs on the left */}
+          <div className="flex items-center gap-2">
+            <Tabs value={view} onValueChange={(value) => setView(value as "list" | "calendar" | "monthly")}>
               <TabsList className="bg-muted/80">
-                <TabsTrigger value="recent">Recent</TabsTrigger>
-                <TabsTrigger
-                  value="upcoming"
-                  disabled={isPastWeek}
-                  className={cn(isPastWeek && "opacity-50 cursor-not-allowed")}
-                >
-                  Upcoming
+                <TabsTrigger value="list" className={view === "list" ? "bg-[#3d8f5b] text-white" : ""}>
+                  <List className="mr-2 h-4 w-4" /> List
+                </TabsTrigger>
+                <TabsTrigger value="calendar" className={view === "calendar" ? "bg-[#3d8f5b] text-white" : ""}>
+                  <CalendarDays className="mr-2 h-4 w-4" /> Week
+                </TabsTrigger>
+                <TabsTrigger value="monthly" className={view === "monthly" ? "bg-[#3d8f5b] text-white" : ""}>
+                  <Calendar className="mr-2 h-4 w-4" /> Month
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
-          <ListScheduleView classes={visibleClasses} filter={activeListTab} />
-        </>
-      ) : (
-        <CalendarScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={timeFilter} />
-      )}
-    </div>
+
+          {/* Navigation in the center/right */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => view === "monthly" ? navigateMonth("prev") : navigateWeek("prev")}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium">
+              {view === "monthly"
+                ? format(currentMonth, "MMMM yyyy")
+                : `${format(currentWeekStart, "MMM d")} - ${format(addDays(currentWeekStart, 6), "MMM d, yyyy")}`
+              }
+            </span>
+            <Button variant="outline" size="sm" onClick={() => view === "monthly" ? navigateMonth("next") : navigateWeek("next")}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Assign Class button on the far right */}
+          {assignClassUrl && (
+            <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+              <a href={assignClassUrl}>
+                <Plus className="mr-2 h-4 w-4" /> Assign Class
+              </a>
+            </Button>
+          )}
+        </div>
+
+        {view === "calendar" && (
+          <div className="flex justify-end mb-4">
+            <Tabs
+              value={timeFilter}
+              onValueChange={(value) => setTimeFilter(value as "all" | "morning" | "afternoon" | "evening")}
+            >
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="morning">Morning</TabsTrigger>
+                <TabsTrigger value="afternoon">Afternoon</TabsTrigger>
+                <TabsTrigger value="evening">Evening</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
+        {view === "list" ? (
+          <>
+            <div className="flex justify-end mb-4">
+              <Tabs value={activeListTab} onValueChange={(value) => setActiveListTab(value as "upcoming" | "recent")}>
+                <TabsList className="bg-muted/80">
+                  <TabsTrigger value="recent">Recent</TabsTrigger>
+                  <TabsTrigger
+                    value="upcoming"
+                    disabled={isPastWeek}
+                    className={cn(isPastWeek && "opacity-50 cursor-not-allowed")}
+                  >
+                    Upcoming
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <ListScheduleView classes={visibleClasses} filter={activeListTab} />
+          </>
+        ) : view === "monthly" ? (
+          <MonthlyScheduleView classes={visibleClasses} monthStart={currentMonth} />
+        ) : (
+          <CalendarScheduleView classes={visibleClasses} weekStart={currentWeekStart} filter={timeFilter} />
+        )}
+      </div>
+    </TooltipProvider>
   )
 }
 
@@ -679,42 +711,62 @@ function CalendarScheduleView({
                         const left = extendedClass.classIndex * width
 
                         return (
-                          <div
-                            key={`${extendedClass.class_id}-${extendedClass.session_id}`}
-                            className={cn(
-                              "absolute rounded-md border p-1 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
-                              getStatusContainerStyles(extendedClass.status),
-                            )}
-                            style={{
-                              height: `${heightPx}px`,
-                              top: `${(startTime.getMinutes() / 60) * 50}px`,
-                              left: `${left}%`,
-                              width: `${width}%`,
-                              zIndex: 10,
-                            }}
-                            onClick={() => router.push(`/admin/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
-                          >
-                            <div>
-                              <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
-                              {heightPx >= 70 && (
-                                <p className="text-xs text-muted-foreground truncate">
-                                  {extendedClass.subject}
-                                </p>
-                              )}
-                              {heightPx >= 90 && (
-                                <p className="text-xs text-muted-foreground truncate">
+                          <Tooltip key={`${extendedClass.class_id}-${extendedClass.session_id}`}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={cn(
+                                  "absolute rounded-md border p-0.5 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
+                                  getStatusContainerStyles(extendedClass.status),
+                                )}
+                                style={{
+                                  height: `${heightPx}px`,
+                                  top: `${(startTime.getMinutes() / 60) * 50}px`,
+                                  left: `${left}%`,
+                                  width: `${width}%`,
+                                  zIndex: 10,
+                                }}
+                                onClick={() => router.push(`/admin/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
+                              >
+                                <div>
+                                  <p className="font-medium truncate text-[10px] leading-tight">{extendedClass.title}</p>
+                                  {heightPx >= 60 && (
+                                    <p className="text-[9px] text-muted-foreground truncate leading-tight">
+                                      {extendedClass.subject}
+                                    </p>
+                                  )}
+                                  {heightPx >= 80 && (
+                                    <p className="text-[9px] text-muted-foreground truncate leading-tight">
+                                      <ClientTimeDisplay date={startTime} format="h:mm a" /> - <ClientTimeDisplay date={endTime} format="h:mm a" />
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Always show status badge regardless of height */}
+                                <div className="flex justify-end items-center mt-auto">
+                                  <StatusBadge
+                                    status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
+                                    className="text-[8px] px-1 py-0.5"
+                                  />
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-xs">
+                              <div className="space-y-1">
+                                <div className="font-semibold">{extendedClass.title}</div>
+                                <div className="text-sm">{extendedClass.subject}</div>
+                                <div className="text-sm">
+                                  <ClientTimeDisplay date={startTime} format="EEEE, MMMM d, yyyy" />
+                                </div>
+                                <div className="text-sm">
                                   <ClientTimeDisplay date={startTime} format="h:mm a" /> - <ClientTimeDisplay date={endTime} format="h:mm a" />
-                                </p>
-                              )}
-                            </div>
-                            {/* Always show status badge regardless of height */}
-                            <div className="flex justify-end items-center mt-auto">
-                              <StatusBadge
-                                status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
-                                className="text-xs"
-                              />
-                            </div>
-                          </div>
+                                </div>
+                                {extendedClass.teachers.length > 0 && (
+                                  <div className="text-sm">
+                                    <span className="font-medium">Teachers:</span> {extendedClass.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                                  </div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
                         )
                       } catch {
                         return null
@@ -726,6 +778,199 @@ function CalendarScheduleView({
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function MonthlyScheduleView({ classes, monthStart }: { classes: ClassSessionType[], monthStart: Date }) {
+  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+
+  // Helper to get status icon for monthly view
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return <Calendar className="h-3 w-3" />
+      case "running":
+        return <Play className="h-3 w-3" />
+      case "pending":
+        return <Clock className="h-3 w-3" />
+      case "complete":
+        return <CheckCircle className="h-3 w-3" />
+      case "cancelled":
+        return <BookX className="h-3 w-3" />
+      case "absence":
+        return <UserX className="h-3 w-3" />
+      default:
+        return <Clock className="h-3 w-3" />
+    }
+  }
+
+  // Client-side only state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Generate calendar days for the month
+  const calendarDays = useMemo(() => {
+    const monthEnd = endOfMonth(monthStart)
+    const start = startOfWeek(monthStart, { weekStartsOn: 1 }) // Start from Monday
+    const end = startOfWeek(addDays(monthEnd, 6), { weekStartsOn: 1 }) // End on Sunday of the week containing month end
+
+    return eachDayOfInterval({ start, end })
+  }, [monthStart])
+
+  // Group days into weeks
+  const weeks = useMemo(() => {
+    const weeks = []
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      weeks.push(calendarDays.slice(i, i + 7))
+    }
+    return weeks
+  }, [calendarDays])
+
+  // Get classes for a specific day
+  const getClassesForDay = (day: Date) => {
+    return classes.filter((cls) => {
+      const classDate = parseClassDateTime(cls, "start_date")
+      return classDate && isSameDay(classDate, day)
+    })
+  }
+
+  // Helper to get status-specific border and background colors matching StatusBadge
+  const getStatusContainerStyles = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "border-blue-200 bg-blue-100 dark:border-blue-800/60 dark:bg-blue-950/50"
+      case "running":
+        return "border-emerald-200 bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/50"
+      case "pending":
+        return "border-indigo-200 bg-indigo-100 dark:border-indigo-800/60 dark:bg-indigo-950/50"
+      case "complete":
+        return "border-purple-200 bg-purple-100 dark:border-purple-800/60 dark:bg-purple-950/50"
+      case "rescheduled":
+        return "border-amber-200 bg-amber-100 dark:border-amber-800/60 dark:bg-amber-950/50"
+      case "cancelled":
+        return "border-rose-200 bg-rose-100 dark:border-rose-800/60 dark:bg-rose-950/50"
+      case "absence":
+        return "border-orange-200 bg-orange-100 dark:border-orange-800/60 dark:bg-orange-950/50"
+      default:
+        return "border-gray-200 bg-gray-100 dark:border-gray-800/60 dark:bg-gray-950/50"
+    }
+  }
+
+  const handleDayClick = (day: Date) => {
+    // Navigate to the weekly view for the week containing this day
+    const weekStart = startOfWeek(day, { weekStartsOn: 1 })
+    // You could implement navigation to a specific week view here
+    console.log("Navigate to week starting:", weekStart)
+  }
+
+  const handleClassClick = (classId: string, sessionId: string) => {
+    router.push(`/admin/classes/${classId}/${sessionId}`)
+  }
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      {/* Calendar header */}
+      <div className="grid grid-cols-7 bg-muted/30 border-b">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          <div key={day} className="p-2 text-center text-sm font-medium">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar body */}
+      <div className="grid grid-cols-7">
+        {weeks.map((week) =>
+          week.map((day) => {
+            const isCurrentMonth = day.getMonth() === monthStart.getMonth()
+            const isTodayDate = mounted && isToday(day)
+            const dayClasses = getClassesForDay(day)
+
+            return (
+              <div
+                key={day.toISOString()}
+                className={cn(
+                  "min-h-[120px] p-2 border-r border-b relative cursor-pointer hover:bg-accent/50 transition-colors",
+                  !isCurrentMonth && "bg-muted/20 text-muted-foreground",
+                  isTodayDate && "bg-blue-50 dark:bg-blue-950/50"
+                )}
+                onClick={() => handleDayClick(day)}
+              >
+                {/* Day number */}
+                <div className={cn(
+                  "text-sm font-medium mb-1",
+                  isTodayDate && "text-blue-700 dark:text-blue-400"
+                )}>
+                  {format(day, "d")}
+                </div>
+
+                {/* Classes for this day */}
+                <div className="space-y-0.5">
+                  {dayClasses.slice(0, 3).map((cls) => {
+                    const startTime = parseClassDateTime(cls, "start_date")
+                    const endTime = parseClassDateTime(cls, "end_date")
+
+                    if (!startTime || !endTime) return null
+
+                    return (
+                      <Tooltip key={`${cls.class_id}-${cls.session_id}`}>
+                        <TooltipTrigger asChild>
+                          <div
+                            className={cn(
+                              "p-0.5 rounded text-[10px] cursor-pointer transition-all hover:shadow-sm relative",
+                              getStatusContainerStyles(cls.status)
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleClassClick(cls.class_id, cls.session_id)
+                            }}
+                          >
+                            {/* Status icon at top right */}
+                            <div className="absolute top-0 right-0 p-0.5">
+                              {getStatusIcon(cls.status)}
+                            </div>
+                            <div className="font-medium truncate leading-tight pr-4">{cls.title}</div>
+                            <div className="text-muted-foreground truncate leading-tight">
+                              <ClientTimeDisplay date={startTime} format="h:mm a" />
+                            </div>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1">
+                            <div className="font-semibold">{cls.title}</div>
+                            <div className="text-sm">{cls.subject}</div>
+                            <div className="text-sm">
+                              <ClientTimeDisplay date={startTime} format="EEEE, MMMM d, yyyy" />
+                            </div>
+                            <div className="text-sm">
+                              <ClientTimeDisplay date={startTime} format="h:mm a" /> - <ClientTimeDisplay date={endTime} format="h:mm a" />
+                            </div>
+                            {cls.teachers.length > 0 && (
+                              <div className="text-sm">
+                                <span className="font-medium">Teachers:</span> {cls.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  })}
+
+                  {/* Show indicator if there are more classes */}
+                  {dayClasses.length > 3 && (
+                    <div className="text-xs text-muted-foreground text-center">
+                      +{dayClasses.length - 3} more
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
     </div>
   )

@@ -98,6 +98,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </div>
               </div>
 
+              <Separator />
+
               {/* Contact Information */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
@@ -139,7 +141,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 {parent.first_name} {parent.last_name}
                               </p>
                               <p className="text-xs text-muted-foreground truncate">
-                                {parent.role}
+                                {parent.email}
                               </p>
                             </div>
                           </div>

@@ -152,8 +152,8 @@ export default function TeacherClassesPage() {
                     <CardDescription>View and manage your assigned classes</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ClassesTable
-                        classes={filteredClasses}
+                    <ClassesTable 
+                        classes={filteredClasses} 
                         isLoading={isLoading}
                         userType="teacher"
                         emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "You haven't been assigned to any classes yet"}

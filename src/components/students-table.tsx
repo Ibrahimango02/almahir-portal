@@ -91,6 +91,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const isAdmin = currentUserRole === 'admin'
+  const isTeacher = currentUserRole === 'teacher'
 
   const getStudentDetailUrl = (studentId: string) => {
     if (!currentUserRole) return '/'
@@ -111,7 +112,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
             <TableHeader>
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Student</TableHead>
-                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
+                {!isTeacher && <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>}
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
@@ -163,18 +164,20 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                   </TableCell>
 
                   {/* Contact Info */}
-                  <TableCell className="py-2 px-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{student.email || 'None'}</span>
+                  {!isTeacher && (
+                    <TableCell className="py-2 px-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span>{student.email || 'None'}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span>{student.phone || 'None'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{student.phone || 'None'}</span>
-                      </div>
-                    </div>
-                  </TableCell>
+                    </TableCell>
+                  )}
 
                   {/* Location */}
                   <TableCell className="py-2 px-3">
