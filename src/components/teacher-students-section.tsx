@@ -104,7 +104,7 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
                 <div>
                     <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5" />
-                        {teacherName}&apos;s Students ({students.length})
+                        {teacherName}&apos;s Students - ({students.length})
                     </CardTitle>
                 </div>
             </CardHeader>

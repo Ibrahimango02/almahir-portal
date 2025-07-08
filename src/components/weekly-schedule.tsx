@@ -427,20 +427,12 @@ function CalendarScheduleView({
   const [mounted, setMounted] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  //const [scrollbarWidth, setScrollbarWidth] = useState(0)
 
   // Client-side only state
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Calculate scrollbar width
-  // useEffect(() => {
-  //   if (wrapperRef.current) {
-  //     const width = wrapperRef.current.offsetWidth - wrapperRef.current.clientWidth
-  //     setScrollbarWidth(width)
-  //   }
-  // }, [mounted])
 
   // Generate week days based on the weekStart
   const weekDays = useMemo(() => {
@@ -935,7 +927,7 @@ function MonthlyScheduleView({ classes, monthStart }: { classes: ClassSessionTyp
                             </div>
                             <div className="font-medium truncate leading-tight pr-4">{cls.title}</div>
                             <div className="text-muted-foreground truncate leading-tight">
-                              <ClientTimeDisplay date={startTime} format="h:mm a" />
+                              <ClientTimeDisplay date={startTime} format="HH:mm" /> - <ClientTimeDisplay date={endTime} format="HH:mm" />
                             </div>
                           </div>
                         </TooltipTrigger>
