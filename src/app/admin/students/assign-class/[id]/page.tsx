@@ -73,9 +73,9 @@ export default function AssignToClassPage() {
   const filteredClasses = classes.filter(
     (cls) =>
       cls.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cls.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cls.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cls.days_repeated.some(day => day.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          cls.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cls.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    Object.keys(cls.days_repeated || {}).join(' ').toLowerCase().includes(searchQuery.toLowerCase()) ||
       `${cls.teachers[0]?.first_name} ${cls.teachers[0]?.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
@@ -136,14 +136,14 @@ export default function AssignToClassPage() {
       return {
         dateRange: `${formattedStartDate} - ${formattedEndDate}`,
         timeRange: `${formattedStartTime} - ${formattedEndTime}`,
-        daysRepeated: cls.days_repeated.join(", ")
+        daysRepeated: Object.keys(cls.days_repeated || {}).join(", ")
       }
     } catch (error) {
       console.error("Error formatting class schedule:", error)
       return {
         dateRange: "Invalid date range",
         timeRange: "Invalid time range",
-        daysRepeated: cls.days_repeated.join(", ")
+        daysRepeated: Object.keys(cls.days_repeated || {}).join(", ")
       }
     }
   }

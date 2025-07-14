@@ -18,11 +18,12 @@ import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
-import { updateClassSession } from "@/lib/put/put-classes"
+import { updateSession } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+import { createClient } from "@/utils/supabase/client"
 
 // Create a schema for form validation
 const formSchema = z
@@ -101,12 +102,13 @@ export default function ReschedulePage() {
   const { timezone } = useTimezone()
   const [classData, setClassData] = useState<ClassSessionType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [adminId, setAdminId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchClassData() {
       try {
         const data = await getSessionById(sessionId)
-        if (!data || data.status !== "scheduled") {
+        if (!data || (data.status !== "scheduled" && data.status !== "cancelled")) {
           notFound()
         }
         setClassData(data)
@@ -120,6 +122,23 @@ export default function ReschedulePage() {
 
     fetchClassData()
   }, [sessionId])
+
+  // Get current admin ID
+  useEffect(() => {
+    async function getCurrentAdmin() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setAdminId(user.id)
+        }
+      } catch (error) {
+        console.error("Error getting current admin:", error)
+      }
+    }
+
+    getCurrentAdmin()
+  }, [])
 
   // Initialize form with default values
   const form = useForm<FormValues>({
@@ -160,11 +179,12 @@ export default function ReschedulePage() {
         timezone
       );
 
-      const result = await updateClassSession({
+      const result = await updateSession({
         sessionId: sessionId,
         action: 'reschedule',
         newStartDate: startUtc.toISOString(),
         newEndDate: endUtc.toISOString(),
+        rescheduledBy: adminId || undefined,
       })
 
       if (!result.success) {

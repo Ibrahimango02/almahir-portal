@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { CalendarDays, Users, BookOpen, UserCircle2, Clock, Trash2, Edit } from "lucide-react"
+import { CalendarDays, Users, UserPen, Clock, Trash2, Edit } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
 import { deleteClass } from "@/lib/delete/delete-classes"
 import { updateClassAssignments } from "@/lib/put/put-classes"
@@ -46,7 +46,15 @@ type ClassDetailsProps = {
     start_date: string
     end_date: string
     status: string
-    days_repeated: string[]
+    days_repeated: {
+      monday?: { start: string; end: string }
+      tuesday?: { start: string; end: string }
+      wednesday?: { start: string; end: string }
+      thursday?: { start: string; end: string }
+      friday?: { start: string; end: string }
+      saturday?: { start: string; end: string }
+      sunday?: { start: string; end: string }
+    }
     class_link: string | null
     teachers: {
       teacher_id: string
@@ -182,22 +190,29 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   // Ensure arrays are defined
   const teachers = classData.teachers || []
   const enrolledStudents = classData.enrolled_students || []
-  const daysRepeated = classData.days_repeated || []
+  const daysRepeated = classData.days_repeated || {}
 
   return (
     <>
       <style>{scrollbarStyles}</style>
       <Card>
         <CardHeader className="border-b pb-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-2xl">{classData.title}</CardTitle>
-              <CardDescription className="text-lg">{classData.subject}</CardDescription>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            {/* Title and Subject on the left */}
+            <div className="space-y-1 min-w-0 flex-1">
+              <CardTitle className="text-2xl truncate">{classData.title}</CardTitle>
+              <CardDescription className="text-lg truncate">{classData.subject}</CardDescription>
+              {classData.description && (
+                <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                  {classData.description}
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            {/* Status Badge and Action Buttons on the right */}
+            <div className="flex flex-col items-end gap-4 flex-shrink-0">
               <StatusBadge status={convertStatusToPrefixedFormat(classData.status, 'class')} />
               {showActions && (
-                <>
+                <div className="flex items-center gap-2">
                   <Button
                     size="icon"
                     className="h-9 w-9 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
@@ -251,7 +266,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -271,15 +286,15 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     <p className="text-sm font-medium">
                       {formatDateTime(classData.start_date, "MMM d, yyyy", timezone)} - {formatDateTime(classData.end_date, "MMM d, yyyy", timezone)}
                     </p>
-                    {daysRepeated.length > 0 && (
+                    {Object.keys(daysRepeated).length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {daysRepeated.map((day) => (
+                        {Object.entries(daysRepeated).map(([day, timeSlot]) => (
                           <span
                             key={day}
                             className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
                           >
                             <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
-                            {day}
+                            {day.charAt(0).toUpperCase() + day.slice(1)} {timeSlot?.start}-{timeSlot?.end}
                           </span>
                         ))}
                       </div>
@@ -295,7 +310,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                 {/* Teachers Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <UserCircle2 className="h-5 w-5" />
+                    <UserPen className="h-5 w-5" />
                     <h3 className="text-sm font-medium">Teachers</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{teachers.length}</span>
                   </div>
@@ -338,7 +353,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     </div>
                   ) : (
                     <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                      <UserCircle2 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <UserPen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No teachers assigned</p>
                     </div>
                   )}
@@ -348,7 +363,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-5 w-5" />
-                    <h3 className="text-sm font-medium">Students Enrolled</h3>
+                    <h3 className="text-sm font-medium">Students</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{enrolledStudents.length}</span>
                   </div>
                   {enrolledStudents.length > 0 ? (
@@ -398,19 +413,6 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
               </div>
             </div>
           </div>
-
-          {/* Description */}
-          {classData.description && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <BookOpen className="h-5 w-5" />
-                <h3 className="text-sm font-medium">Description</h3>
-              </div>
-              <p className="leading-relaxed">
-                {classData.description}
-              </p>
-            </div>
-          )}
 
           {/* Sessions (Scrollable) */}
           <div className="space-y-4">

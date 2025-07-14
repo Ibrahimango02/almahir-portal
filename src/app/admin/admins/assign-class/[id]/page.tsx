@@ -50,7 +50,7 @@ export default function AssignClassPage() {
     cls.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     cls.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
     cls.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cls.days_repeated.some(day => day.toLowerCase().includes(searchQuery.toLowerCase()))
+    Object.keys(cls.days_repeated || {}).join(' ').toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleAssignClasses = async () => {
@@ -103,14 +103,14 @@ export default function AssignClassPage() {
       return {
         dateRange: `${formattedStartDate} - ${formattedEndDate}`,
         timeRange: `${formattedStartTime} - ${formattedEndTime}`,
-        daysRepeated: cls.days_repeated.join(", ")
+        daysRepeated: Object.keys(cls.days_repeated || {}).join(", ")
       }
     } catch (error) {
       console.error("Error formatting class schedule:", error)
       return {
         dateRange: "Invalid date range",
         timeRange: "Invalid time range",
-        daysRepeated: cls.days_repeated.join(", ")
+        daysRepeated: Object.keys(cls.days_repeated || {}).join(", ")
       }
     }
   }

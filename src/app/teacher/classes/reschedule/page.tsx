@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
-import { updateClassSession } from "@/lib/put/put-classes"
+import { updateSession } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
@@ -160,7 +160,7 @@ export default function ReschedulePage() {
                 timezone
             );
 
-            const result = await updateClassSession({
+            const result = await updateSession({
                 sessionId: sessionId,
                 action: 'reschedule',
                 newStartDate: startUtc.toISOString(),

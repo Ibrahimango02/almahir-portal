@@ -250,23 +250,22 @@ export default function EditClassPage() {
                 setClassData(classDataResult)
 
                 if (classDataResult) {
-                    // Convert capital day names back to lowercase for form compatibility
-                    const lowercaseDays = classDataResult.days_repeated.map(day => day.toLowerCase())
+                    // Handle new object structure for days_repeated
+                    const lowercaseDays: string[] = []
+                    const times: Record<string, { start: string; end: string }> = {}
 
-                    // Convert times from UTC to local format for display
-                    const times = lowercaseDays.reduce((acc, day) => {
-                        const dayKey = day.charAt(0).toUpperCase() + day.slice(1)
-                        const classTime = classDataResult.times?.[dayKey]
-                        if (classTime) {
-                            // Convert UTC times to local times for display
-                            const startDate = new Date(classTime.start)
-                            const endDate = new Date(classTime.end)
-                            const startLocal = format(startDate, 'HH:mm')
-                            const endLocal = format(endDate, 'HH:mm')
-                            acc[day] = { start: startLocal, end: endLocal }
-                        }
-                        return acc
-                    }, {} as Record<string, { start: string; end: string }>)
+                    // Process the new object structure
+                    if (classDataResult.days_repeated && typeof classDataResult.days_repeated === 'object') {
+                        Object.entries(classDataResult.days_repeated).forEach(([day, timeSlot]) => {
+                            if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
+                                lowercaseDays.push(day)
+                                times[day] = {
+                                    start: timeSlot.start,
+                                    end: timeSlot.end
+                                }
+                            }
+                        })
+                    }
 
                     form.reset({
                         title: classDataResult.title,
@@ -342,6 +341,27 @@ export default function EditClassPage() {
                 return acc;
             }, {} as Record<string, { start: string; end: string }>);
 
+            // Transform form data to match new object structure
+            const daysRepeatedWithTimes: {
+                monday?: { start: string; end: string }
+                tuesday?: { start: string; end: string }
+                wednesday?: { start: string; end: string }
+                thursday?: { start: string; end: string }
+                friday?: { start: string; end: string }
+                saturday?: { start: string; end: string }
+                sunday?: { start: string; end: string }
+            } = {}
+
+            values.daysRepeated.forEach(day => {
+                const timeSlot = values.times[day]
+                if (timeSlot?.start && timeSlot?.end) {
+                    daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
+                        start: timeSlot.start,
+                        end: timeSlot.end
+                    }
+                }
+            })
+
             // Prepare update data for basic class information (excluding teacher and student assignments)
             const updateData = {
                 classId: classId,
@@ -350,10 +370,9 @@ export default function EditClassPage() {
                 description: values.description || null,
                 start_date: localToUtc(values.startDate, timezone).toISOString(),
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
-                days_repeated: values.daysRepeated.map(day => day.charAt(0).toUpperCase() + day.slice(1)),
+                days_repeated: daysRepeatedWithTimes,
                 class_link: values.classLink || null,
                 times: timesWithUtc,
-                // Don't include teacher_ids and student_ids here as we'll handle them separately
             }
 
             // Update class basic information first

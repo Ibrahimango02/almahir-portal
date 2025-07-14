@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { StatusBadge } from "./status-badge"
 import { TablePagination } from "./table-pagination"
 import { CalendarDays, Clock, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -14,7 +13,6 @@ import {
     isTodayInTimezone
 } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
-import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 
 interface ScheduleListViewUnifiedProps extends ScheduleListViewProps {
@@ -211,9 +209,9 @@ export function ScheduleListView({
                                 const isToday = isTodayInTimezone(session.start_date, timezone);
 
                                 return (
-                                    <Card
+                                    <div
                                         key={session.session_id}
-                                        className="p-3 cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
+                                        className="p-3 border rounded-lg cursor-pointer hover:shadow-md transition-shadow duration-200 hover:bg-accent/50"
                                         onClick={() => router.push(`${baseRoute}/classes/${session.class_id}/${session.session_id}`)}
                                     >
                                         <div className="flex items-start justify-between">
@@ -245,10 +243,20 @@ export function ScheduleListView({
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2 ml-3">
-                                                <StatusBadge status={convertStatusToPrefixedFormat(session.status, 'session')} />
+                                                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${session.status === "running" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" :
+                                                    session.status === "complete" ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" :
+                                                        session.status === "pending" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" :
+                                                            session.status === "scheduled" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
+                                                                session.status === "rescheduled" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" :
+                                                                    session.status === "cancelled" ? "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200" :
+                                                                        session.status === "absence" ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" :
+                                                                            "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                                                    }`}>
+                                                    {session.status}
+                                                </span>
                                             </div>
                                         </div>
-                                    </Card>
+                                    </div>
                                 );
                             } catch (error) {
                                 console.error('Error rendering session:', error);

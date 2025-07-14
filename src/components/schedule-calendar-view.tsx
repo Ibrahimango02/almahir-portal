@@ -4,10 +4,12 @@ import { useMemo, useState, useEffect, useCallback } from "react"
 import { format, addDays, parseISO, isSameDay, differenceInMinutes, isToday } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { WeeklyScheduleProps, ClassType } from "@/types"
+import { WeeklyScheduleProps, ClassType, DaysRepeated } from "@/types"
 import { formatDateTime } from "@/lib/utils/timezone"
 import { StatusBadge } from "./status-badge"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ClientTimeDisplay } from "./client-time-display"
 
 // Helper to get status colors for classes
 const getStatusStyles = (status: string) => {
@@ -44,7 +46,7 @@ interface CalendarSessionType {
     subject: string;
     start_date: string;
     end_date: string;
-    days_repeated: string[];
+    days_repeated: DaysRepeated;
     class_link: string | null;
     teachers: { teacher_id: string; first_name: string; last_name: string; avatar_url?: string | null; role: string }[];
     enrolled_students: { student_id: string; first_name: string; last_name: string; avatar_url?: string | null }[];
@@ -310,132 +312,154 @@ export function ScheduleCalendarView({
     }, [currentTime, timeSlots, timeRange]);
 
     return (
-        <div className="overflow-x-auto border rounded-lg">
-            <div className="min-w-[800px]">
-                {/* Calendar header - Days of the week */}
-                <div className="grid grid-cols-8 border-b">
-                    <div className="p-3 border-r bg-muted/30 font-medium text-sm"></div>
-                    {weekDays.map((day) => (
-                        <div
-                            key={day.toISOString()}
-                            className={cn(
-                                "p-3 border-r last:border-r-0 font-medium text-center",
-                                isToday(day) ? "bg-blue-50 dark:bg-blue-950" : "bg-muted/30",
-                            )}
-                        >
-                            <div className="text-sm uppercase">{format(day, "EEE")}</div>
-                            <div className={cn("text-2xl font-normal", isToday(day) ? "text-blue-700 dark:text-blue-400" : "")}>
-                                {format(day, "d")}
+        <TooltipProvider>
+            <div className="overflow-x-auto border rounded-lg">
+                <div className="min-w-[800px]">
+                    {/* Calendar header - Days of the week */}
+                    <div className="grid grid-cols-8 border-b">
+                        <div className="p-3 border-r bg-muted/30 font-medium text-sm"></div>
+                        {weekDays.map((day) => (
+                            <div
+                                key={day.toISOString()}
+                                className={cn(
+                                    "p-3 border-r last:border-r-0 font-medium text-center",
+                                    isToday(day) ? "bg-blue-50 dark:bg-blue-950" : "bg-muted/30",
+                                )}
+                            >
+                                <div className="text-sm uppercase">{format(day, "EEE")}</div>
+                                <div className={cn("text-2xl font-normal", isToday(day) ? "text-blue-700 dark:text-blue-400" : "")}>
+                                    {format(day, "d")}
+                                </div>
                             </div>
+                        ))}
+                    </div>
+
+                    {/* Time slots */}
+                    {timeSlots.map((hour, hourIndex) => (
+                        <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
+                            <div className="p-3 border-r bg-muted/20 text-sm flex items-center justify-end pr-4">
+                                {formatHour(hour)}
+                            </div>
+
+                            {weekDays.map((day, dayIndex) => {
+                                const isTodayColumn = isToday(day);
+                                const showCurrentTimeIndicator = isTodayColumn &&
+                                    currentTimeIndicator &&
+                                    currentTimeIndicator.hourIndex === hourIndex;
+
+                                return (
+                                    <div
+                                        key={day.toISOString()}
+                                        className="p-0 border-r last:border-r-0 text-sm relative min-h-[60px]"
+                                    >
+                                        {/* Current time indicator */}
+                                        {showCurrentTimeIndicator && showTimeIndicator && currentTime && (
+                                            <div
+                                                className="absolute w-full h-0.5 bg-red-500 z-30 flex items-center"
+                                                style={{
+                                                    top: `${currentTimeIndicator.top}%`,
+                                                }}
+                                            >
+                                                <div className="absolute -left-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                                <div className="absolute -right-1 w-2 h-2 rounded-full bg-red-500"></div>
+                                            </div>
+                                        )}
+
+                                        {classesByDay[dayIndex].map((extendedClass) => {
+                                            const startTime = parseISO(extendedClass.start_time)
+                                            const endTime = parseISO(extendedClass.end_time)
+                                            const classStartHour = startTime.getHours()
+
+                                            // Skip if class doesn't start in this hour
+                                            if (classStartHour !== hour) {
+                                                return null
+                                            }
+
+                                            // Calculate duration in minutes and convert to pixels (60px per hour)
+                                            const durationMinutes = differenceInMinutes(endTime, startTime)
+                                            const heightPx = Math.max(60, Math.round((durationMinutes * 60) / 60))
+
+                                            // Calculate width based on group size
+                                            const width = 100 / extendedClass.groupSize
+                                            // Calculate left offset based on index within group
+                                            const left = extendedClass.classIndex * width
+
+                                            return (
+                                                <Tooltip key={`${extendedClass.class_id}-${extendedClass.session_id}`}>
+                                                    <TooltipTrigger asChild>
+                                                        <div
+                                                            className={cn(
+                                                                "absolute rounded-md border p-2 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
+                                                                getStatusStyles(extendedClass.status),
+                                                            )}
+                                                            style={{
+                                                                height: `${heightPx}px`,
+                                                                top: `${(startTime.getMinutes() / 60) * 60}px`,
+                                                                left: `${left}%`,
+                                                                width: `${width}%`,
+                                                                zIndex: 10,
+                                                            }}
+                                                            onClick={() => router.push(`${baseRoute}/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
+                                                        >
+                                                            <div>
+                                                                <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
+                                                                {heightPx >= 80 && (
+                                                                    <p className="text-xs text-muted-foreground truncate">
+                                                                        {extendedClass.subject}
+                                                                    </p>
+                                                                )}
+                                                                {heightPx >= 100 && (
+                                                                    <p className="text-xs text-muted-foreground truncate">
+                                                                        {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            {/* Always show status badge regardless of height */}
+                                                            <div className="flex justify-end items-center mt-auto">
+                                                                <StatusBadge
+                                                                    status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
+                                                                    className="text-[10px] px-1 py-0.5"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top" className="max-w-xs">
+                                                        <div className="space-y-1">
+                                                            <div className="font-semibold">{extendedClass.title}</div>
+                                                            <div className="text-sm">{extendedClass.subject}</div>
+                                                            <div className="text-sm">
+                                                                <ClientTimeDisplay date={startTime} format="EEEE, MMMM d, yyyy" />
+                                                            </div>
+                                                            <div className="text-sm">
+                                                                <ClientTimeDisplay date={startTime} format="h:mm a" /> - <ClientTimeDisplay date={endTime} format="h:mm a" />
+                                                            </div>
+                                                            {extendedClass.teachers.length > 0 && (
+                                                                <div className="text-sm">
+                                                                    <span className="font-medium">Teachers:</span> {extendedClass.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )
+                                        })}
+                                    </div>
+                                )
+                            })}
                         </div>
                     ))}
-                </div>
 
-                {/* Time slots */}
-                {timeSlots.map((hour, hourIndex) => (
-                    <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
-                        <div className="p-3 border-r bg-muted/20 text-sm flex items-center justify-end pr-4">
-                            {formatHour(hour)}
+                    {/* Current time display at the bottom */}
+                    <div className="grid grid-cols-8 border-t bg-muted/10 text-xs">
+                        <div className="p-2 border-r bg-muted/20 flex items-center justify-end pr-4">
+                            Last updated:
                         </div>
-
-                        {weekDays.map((day, dayIndex) => {
-                            const isTodayColumn = isToday(day);
-                            const showCurrentTimeIndicator = isTodayColumn &&
-                                currentTimeIndicator &&
-                                currentTimeIndicator.hourIndex === hourIndex;
-
-                            return (
-                                <div
-                                    key={day.toISOString()}
-                                    className="p-0 border-r last:border-r-0 text-sm relative min-h-[60px]"
-                                >
-                                    {/* Current time indicator */}
-                                    {showCurrentTimeIndicator && showTimeIndicator && currentTime && (
-                                        <div
-                                            className="absolute w-full h-0.5 bg-red-500 z-30 flex items-center"
-                                            style={{
-                                                top: `${currentTimeIndicator.top}%`,
-                                            }}
-                                        >
-                                            <div className="absolute -left-1 w-2 h-2 rounded-full bg-red-500"></div>
-                                            <div className="absolute -right-1 w-2 h-2 rounded-full bg-red-500"></div>
-                                        </div>
-                                    )}
-
-                                    {classesByDay[dayIndex].map((extendedClass) => {
-                                        const startTime = parseISO(extendedClass.start_time)
-                                        const endTime = parseISO(extendedClass.end_time)
-                                        const classStartHour = startTime.getHours()
-
-                                        // Skip if class doesn't start in this hour
-                                        if (classStartHour !== hour) {
-                                            return null
-                                        }
-
-                                        // Calculate duration in minutes and convert to pixels (60px per hour)
-                                        const durationMinutes = differenceInMinutes(endTime, startTime)
-                                        const heightPx = Math.max(60, Math.round((durationMinutes * 60) / 60))
-
-                                        // Calculate width based on group size
-                                        const width = 100 / extendedClass.groupSize
-                                        // Calculate left offset based on index within group
-                                        const left = extendedClass.classIndex * width
-
-                                        return (
-                                            <div
-                                                key={`${extendedClass.class_id}-${extendedClass.session_id}`}
-                                                className={cn(
-                                                    "absolute rounded-md border p-2 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
-                                                    getStatusStyles(extendedClass.status),
-                                                )}
-                                                style={{
-                                                    height: `${heightPx}px`,
-                                                    top: `${(startTime.getMinutes() / 60) * 60}px`,
-                                                    left: `${left}%`,
-                                                    width: `${width}%`,
-                                                    zIndex: 10,
-                                                }}
-                                                onClick={() => router.push(`${baseRoute}/classes/${extendedClass.class_id}/${extendedClass.session_id}`)}
-                                            >
-                                                <div>
-                                                    <p className="font-medium truncate text-xs sm:text-sm">{extendedClass.title}</p>
-                                                    {heightPx >= 80 && (
-                                                        <p className="text-xs text-muted-foreground truncate">
-                                                            {extendedClass.subject}
-                                                        </p>
-                                                    )}
-                                                    {heightPx >= 100 && (
-                                                        <p className="text-xs text-muted-foreground truncate">
-                                                            {format(startTime, "h:mm a")} - {format(endTime, "h:mm a")}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                {/* Always show status badge regardless of height */}
-                                                <div className="flex justify-end items-center mt-auto">
-                                                    <StatusBadge
-                                                        status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
-                                                        className="text-xs"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )
-                        })}
-                    </div>
-                ))}
-
-                {/* Current time display at the bottom */}
-                <div className="grid grid-cols-8 border-t bg-muted/10 text-xs">
-                    <div className="p-2 border-r bg-muted/20 flex items-center justify-end pr-4">
-                        Last updated:
-                    </div>
-                    <div className="p-2 col-span-7 text-muted-foreground">
-                        {currentTime ? format(currentTime, "h:mm a") : "Loading..."}
+                        <div className="p-2 col-span-7 text-muted-foreground">
+                            {currentTime ? format(currentTime, "h:mm a") : "Loading..."}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </TooltipProvider>
     )
 } 

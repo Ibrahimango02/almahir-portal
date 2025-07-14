@@ -164,9 +164,6 @@ export async function checkTeacherAvailabilityConflicts(
             }
         }
 
-        // Debug: Print teacher availability
-        console.log(`Teacher ${teacherId} availability:`, availability.weekly_schedule)
-
         // Check each day of the new class
         for (const [day, time] of Object.entries(classTimes)) {
             const normalizedDay = normalizeDayName(day) as keyof WeeklySchedule

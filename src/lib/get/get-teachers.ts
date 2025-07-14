@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/client'
-import { TeacherType, StudentType, TeacherAvailabilityType } from '@/types'
+import { TeacherType, StudentType, TeacherAvailabilityType, TeacherAttendanceType } from '@/types'
 import { calculateAge } from '@/lib/utils'
 
 export async function getTeachers(): Promise<TeacherType[]> {
@@ -157,6 +157,23 @@ export async function getTeacherAvailability(id: string): Promise<TeacherAvailab
     }
 
     return data
+}
+
+export async function getTeacherAttendanceForSession(sessionId: string, teacherId: string): Promise<TeacherAttendanceType[]> {
+    const supabase = createClient()
+
+    const { data, error } = await supabase
+        .from('teacher_attendance')
+        .select('*')
+        .eq('session_id', sessionId)
+        .eq('teacher_id', teacherId)
+
+    if (error) {
+        console.error('Error fetching teacher attendance for session:', error)
+        return []
+    }
+
+    return data || []
 }
 
 export async function getTeachersCount() {

@@ -7,7 +7,15 @@ type ClassData = {
     subject: string
     start_date: string
     end_date: string
-    days_repeated: string[]
+    days_repeated: {
+        monday?: { start: string; end: string }
+        tuesday?: { start: string; end: string }
+        wednesday?: { start: string; end: string }
+        thursday?: { start: string; end: string }
+        friday?: { start: string; end: string }
+        saturday?: { start: string; end: string }
+        sunday?: { start: string; end: string }
+    }
     status: string
     class_link: string | null
     times: Record<string, { start: string; end: string }>
@@ -112,45 +120,31 @@ export async function createClass(classData: ClassData) {
         let currentDate = startDate
         while (currentDate <= endDate) {
             const dayName = getDayName(currentDate)
+            const lowercaseDayName = dayName.toLowerCase()
 
-            // Check if this day is in the days_repeated array
-            if (classData.days_repeated.includes(dayName)) {
-                const timeSlot = classData.times[dayName]
-                if (timeSlot) {
-                    try {
-                        // The times are already in ISO format, so we can use them directly
-                        const startDateTime = new Date(timeSlot.start)
-                        const endDateTime = new Date(timeSlot.end)
+            // Check if this day has a schedule in days_repeated
+            const daySchedule = classData.days_repeated[lowercaseDayName as keyof typeof classData.days_repeated]
+            if (daySchedule) {
+                try {
+                    // Create ISO datetime strings by combining the current date with the time
+                    const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
+                    const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                        // Validate the dates
-                        if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-                            throw new Error(`Invalid datetime format for ${dayName}: ${timeSlot.start} - ${timeSlot.end}`)
-                        }
+                    const sessionStartDate = new Date(currentDate)
+                    const sessionEndDate = new Date(currentDate)
 
-                        // Update the date part to match the current iteration date
-                        const sessionStartDate = new Date(currentDate)
-                        const sessionEndDate = new Date(currentDate)
+                    sessionStartDate.setHours(startHours, startMinutes, 0, 0)
+                    sessionEndDate.setHours(endHours, endMinutes, 0, 0)
 
-                        // Extract time components from the ISO strings
-                        const startTime = startDateTime.toTimeString().split(' ')[0]
-                        const endTime = endDateTime.toTimeString().split(' ')[0]
-
-                        const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
-                        const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
-
-                        sessionStartDate.setHours(startHours, startMinutes, startSeconds, 0)
-                        sessionEndDate.setHours(endHours, endMinutes, endSeconds, 0)
-
-                        sessions.push({
-                            class_id: classRecord.id,
-                            start_date: sessionStartDate.toISOString(),
-                            end_date: sessionEndDate.toISOString(),
-                            status: 'scheduled'
-                        })
-                    } catch (error) {
-                        console.error(`Error creating session for ${dayName}:`, error)
-                        throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                    }
+                    sessions.push({
+                        class_id: classRecord.id,
+                        start_date: sessionStartDate.toISOString(),
+                        end_date: sessionEndDate.toISOString(),
+                        status: 'scheduled'
+                    })
+                } catch (error) {
+                    console.error(`Error creating session for ${dayName}:`, error)
+                    throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
                 }
             }
 
@@ -160,9 +154,10 @@ export async function createClass(classData: ClassData) {
 
         // Insert all sessions
         if (sessions.length > 0) {
-            const { error: sessionsError } = await supabase
+            const { data: createdSessions, error: sessionsError } = await supabase
                 .from('class_sessions')
                 .insert(sessions)
+                .select('id')
 
             if (sessionsError) {
                 // If session creation fails, attempt to delete the class and assignments
@@ -180,6 +175,60 @@ export async function createClass(classData: ClassData) {
                     .eq('id', classRecord.id)
 
                 throw new Error(`Failed to create class sessions: ${sessionsError.message}`)
+            }
+
+            // Create attendance records for each session
+            if (createdSessions && createdSessions.length > 0) {
+                const teacherAttendanceRecords = []
+                const studentAttendanceRecords = []
+
+                for (const session of createdSessions) {
+                    // Create teacher attendance records
+                    if (classData.teacher_id.length > 0) {
+                        for (const teacherId of classData.teacher_id) {
+                            teacherAttendanceRecords.push({
+                                session_id: session.id,
+                                teacher_id: teacherId,
+                                attendance_status: 'scheduled'
+                            })
+                        }
+                    }
+
+                    // Create student attendance records
+                    if (classData.student_ids && classData.student_ids.length > 0) {
+                        for (const studentId of classData.student_ids) {
+                            studentAttendanceRecords.push({
+                                session_id: session.id,
+                                student_id: studentId,
+                                attendance_status: 'scheduled'
+                            })
+                        }
+                    }
+                }
+
+                // Insert teacher attendance records
+                if (teacherAttendanceRecords.length > 0) {
+                    const { error: teacherAttendanceError } = await supabase
+                        .from('teacher_attendance')
+                        .insert(teacherAttendanceRecords)
+
+                    if (teacherAttendanceError) {
+                        console.error('Error creating teacher attendance records:', teacherAttendanceError)
+                        // Don't throw error here as the main operations were successful
+                    }
+                }
+
+                // Insert student attendance records
+                if (studentAttendanceRecords.length > 0) {
+                    const { error: studentAttendanceError } = await supabase
+                        .from('student_attendance')
+                        .insert(studentAttendanceRecords)
+
+                    if (studentAttendanceError) {
+                        console.error('Error creating student attendance records:', studentAttendanceError)
+                        // Don't throw error here as the main operations were successful
+                    }
+                }
             }
         }
 

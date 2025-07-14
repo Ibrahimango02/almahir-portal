@@ -10,13 +10,24 @@ import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
 import { getTeacherAvailability, getTeacherStudents } from "@/lib/get/get-teachers"
-import { getSessionCountByTeacherId, getSessionsByTeacherId } from "@/lib/get/get-classes"
+import { getSessionCountByTeacherId, getSessionsByTeacherId, getClassesByTeacherId } from "@/lib/get/get-classes"
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 import { TeacherStudentsSection } from "@/components/teacher-students-section"
+import { createClient } from "@/utils/supabase/server"
 
 export default async function AdminDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+
+    // Get current user data
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user?.id)
+        .single()
+
     const admin = await getTeacherById(id)
 
     if (!admin) {
@@ -33,6 +44,7 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
     const adminSessionCount = await getSessionCountByTeacherId(admin.teacher_id)
     const adminAvailability = await getTeacherAvailability(admin.teacher_id)
     const adminStudents = await getTeacherStudents(admin.teacher_id)
+    const adminClasses = await getClassesByTeacherId(admin.teacher_id)
 
     return (
         <div className="flex flex-col gap-6">
@@ -176,10 +188,123 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <WeeklySchedule sessions={adminSessions} />
+                        <WeeklySchedule
+                            sessions={adminSessions}
+                            role={"admin"}
+                            id={id}
+                        />
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Classes Section */}
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-primary" />
+                        Classes - ({adminClasses.length})
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {adminClasses.length > 0 ? (
+                        <div className="space-y-3">
+                            {adminClasses.map((classInfo) => (
+                                <div key={classInfo.class_id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                    <div className="flex-1">
+                                        <div className="space-y-0.5">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="font-semibold text-base">{classInfo.title}</h3>
+                                                <Badge
+                                                    className={`capitalize ${classInfo.status.toLowerCase() === "active"
+                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                                        : classInfo.status.toLowerCase() === "archived"
+                                                            ? "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                                                            : classInfo.status.toLowerCase() === "completed"
+                                                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                                                : classInfo.status.toLowerCase() === "inactive"
+                                                                    ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300"
+                                                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                                                        }`}
+                                                >
+                                                    {classInfo.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-muted-foreground font-medium text-sm">
+                                                {classInfo.subject}
+                                            </p>
+                                            {classInfo.description && (
+                                                <p className="text-xs text-muted-foreground">{classInfo.description}</p>
+                                            )}
+                                            {/* Days and Times */}
+                                            {classInfo.days_repeated && (
+                                                <div className="mt-2 space-y-1">
+                                                    {Object.entries(classInfo.days_repeated).map(([day, timeSlot]) => {
+                                                        if (timeSlot) {
+                                                            const dayName = day.charAt(0).toUpperCase() + day.slice(1)
+
+                                                            // Calculate duration
+                                                            const startTime = new Date(`2000-01-01T${timeSlot.start}:00`)
+                                                            const endTime = new Date(`2000-01-01T${timeSlot.end}:00`)
+                                                            const durationMs = endTime.getTime() - startTime.getTime()
+                                                            const durationHours = Math.floor(durationMs / (1000 * 60 * 60))
+                                                            const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
+
+                                                            let durationText = ''
+                                                            if (durationHours > 0 && durationMinutes > 0) {
+                                                                durationText = `(${durationHours}h ${durationMinutes}m)`
+                                                            } else if (durationHours > 0) {
+                                                                durationText = `(${durationHours}h)`
+                                                            } else if (durationMinutes > 0) {
+                                                                durationText = `(${durationMinutes}m)`
+                                                            }
+
+                                                            return (
+                                                                <div key={day} className="text-xs text-muted-foreground">
+                                                                    {dayName}: {timeSlot.start} - {timeSlot.end} {durationText}
+                                                                </div>
+                                                            )
+                                                        }
+                                                        return null
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-right">
+                                            <div className="flex items-center gap-3">
+                                                <div className="text-center">
+                                                    <p className="text-base font-semibold text-muted-foreground">{classInfo.sessions.length}</p>
+                                                    <p className="text-xs text-muted-foreground">sessions</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-base font-semibold text-muted-foreground">{classInfo.enrolled_students.length}</p>
+                                                    <p className="text-xs text-muted-foreground">students</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <Button asChild variant="outline" size="sm">
+                                            <Link href={`/admin/classes/${classInfo.class_id}`}>
+                                                View Details
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                            <h3 className="text-base font-medium text-muted-foreground mb-1">
+                                No Classes Assigned
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                {admin.first_name} is not assigned to any classes.
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Students Section */}
             <TeacherStudentsSection

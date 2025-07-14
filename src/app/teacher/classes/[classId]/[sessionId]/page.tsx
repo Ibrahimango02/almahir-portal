@@ -2,11 +2,16 @@ import { ClassSessionDetails } from "@/components/class-session-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
+import { createClient } from "@/utils/supabase/server"
 
 export default async function ClassSessionPage({ params }: { params: Promise<{ classId: string, sessionId: string }> }) {
     // Fetch the class data using the session ID
     const { classId, sessionId } = await params
     const classSessionData = await getSessionById(sessionId)
+
+    // Get current user
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
     // If class not found, show 404 page
     if (!classSessionData) {
@@ -23,6 +28,8 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
         start_date: classSessionData.start_date,
         end_date: classSessionData.end_date,
         status: classSessionData.status,
+        cancellation_reason: classSessionData.cancellation_reason || null,
+        cancelled_by: classSessionData.cancelled_by || null,
         class_link: classSessionData.class_link,
         teachers: classSessionData.teachers || [],
         enrolled_students: classSessionData.enrolled_students || []
@@ -34,7 +41,7 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
                 <BackButton href={`/teacher/classes/${classId}`} label="Back to Class" />
             </div>
 
-            <ClassSessionDetails classData={classData} userRole="teacher" />
+            <ClassSessionDetails classData={classData} userRole="teacher" userId={user?.id} />
         </div>
     )
 }

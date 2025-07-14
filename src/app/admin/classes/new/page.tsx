@@ -300,14 +300,34 @@ export default function CreateClassPage() {
                 return acc;
             }, {} as Record<string, { start: string; end: string }>);
 
-            // Transform form data to match ClassData type
+            // Transform form data to match ClassData type with new object structure
+            const daysRepeatedWithTimes: {
+                monday?: { start: string; end: string }
+                tuesday?: { start: string; end: string }
+                wednesday?: { start: string; end: string }
+                thursday?: { start: string; end: string }
+                friday?: { start: string; end: string }
+                saturday?: { start: string; end: string }
+                sunday?: { start: string; end: string }
+            } = {}
+
+            values.daysRepeated.forEach(day => {
+                const timeSlot = values.times[day]
+                if (timeSlot?.start && timeSlot?.end) {
+                    daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
+                        start: timeSlot.start,
+                        end: timeSlot.end
+                    }
+                }
+            })
+
             const classData = {
                 title: values.title,
                 subject: values.subject,
                 description: values.description || null,
                 start_date: localToUtc(values.startDate, timezone).toISOString(),
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
-                days_repeated: values.daysRepeated.map(day => day.charAt(0).toUpperCase() + day.slice(1)),
+                days_repeated: daysRepeatedWithTimes,
                 status: "active",
                 class_link: values.classLink || null,
                 times: timesWithUtc,

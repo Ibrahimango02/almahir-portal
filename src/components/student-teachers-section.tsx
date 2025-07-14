@@ -97,7 +97,7 @@ export function StudentTeachersSection({ teachers, studentName }: StudentTeacher
                 <div>
                     <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5" />
-                        {studentName}&apos;s Teachers - ({teachers.length})
+                        Teachers <span className="text-xs bg-muted px-2 py-1 rounded-full">{teachers.length}</span>
                     </CardTitle>
                 </div>
             </CardHeader>

@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AttendanceTracker } from "@/components/attendance-tracker"
 import { ClassActionButtons } from "@/components/class-action-buttons"
 import { StatusBadge } from "@/components/status-badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -13,15 +12,23 @@ import {
 } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   CalendarDays,
   Users,
-  UserCircle2,
+  UserPen,
   Clock,
 } from "lucide-react"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
+import { SessionRemarks } from "./session-remarks"
+import { AttendanceStatusBadge } from "./attendance-status-badge"
+import { getSessionAttendanceForAll } from "@/lib/get/get-classes"
+import { CancellationReasonDisplay } from "./cancellation-reason-display"
+import { getUserNameById } from "@/lib/utils/get-user-name"
+import { getSessionHistory } from "@/lib/get/get-session-history"
+import { formatDuration as formatIntervalDuration } from "@/lib/utils/format-duration"
+import { SessionHistoryType } from "@/types"
 import React from "react"
 
 // Custom scrollbar styles
@@ -51,6 +58,8 @@ interface ClassSessionDetailsProps {
     start_date: string
     end_date: string
     status: string
+    cancellation_reason?: string | null
+    cancelled_by?: string | null
     class_link: string | null
     teachers: Array<{
       teacher_id: string
@@ -67,16 +76,77 @@ interface ClassSessionDetailsProps {
     }>
   }
   userRole: 'admin' | 'teacher' | 'parent' | 'student'
+  userId?: string
   userParentStudents?: string[] // Only needed for parent role
 }
 
-export function ClassSessionDetails({ classData, userRole, userParentStudents = [] }: ClassSessionDetailsProps) {
+export function ClassSessionDetails({ classData, userRole, userId, userParentStudents = [] }: ClassSessionDetailsProps) {
   const [currentStatus, setCurrentStatus] = useState(classData.status)
+  const [attendanceData, setAttendanceData] = useState<{
+    teacherAttendance: Array<{ teacher_id: string; attendance_status: string }>,
+    studentAttendance: Array<{ student_id: string; attendance_status: string }>
+  }>({ teacherAttendance: [], studentAttendance: [] })
+  const [loadingAttendance, setLoadingAttendance] = useState(true)
+  const [cancelledByName, setCancelledByName] = useState<string | null>(null)
+  const [sessionHistory, setSessionHistory] = useState<SessionHistoryType | null>(null)
+  const [loadingSessionHistory, setLoadingSessionHistory] = useState(false)
   const { timezone } = useTimezone()
 
   // Convert UTC times to local timezone for display
   const startDateTime = utcToLocal(classData.start_date, timezone)
   const endDateTime = utcToLocal(classData.end_date, timezone)
+
+  // Fetch attendance data
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      setLoadingAttendance(true)
+      try {
+        const data = await getSessionAttendanceForAll(classData.session_id)
+        setAttendanceData(data)
+      } catch (error) {
+        console.error('Error fetching attendance data:', error)
+      } finally {
+        setLoadingAttendance(false)
+      }
+    }
+
+    fetchAttendanceData()
+  }, [classData.session_id])
+
+  // Fetch cancelled by name if session is cancelled
+  useEffect(() => {
+    const fetchCancelledByName = async () => {
+      if (currentStatus === 'cancelled' && classData.cancelled_by && userRole === 'admin') {
+        try {
+          const name = await getUserNameById(classData.cancelled_by)
+          setCancelledByName(name)
+        } catch (error) {
+          console.error('Error fetching cancelled by name:', error)
+        }
+      }
+    }
+
+    fetchCancelledByName()
+  }, [currentStatus, classData.cancelled_by, userRole])
+
+  // Fetch session history for completed sessions
+  useEffect(() => {
+    const fetchSessionHistory = async () => {
+      if (currentStatus === 'complete') {
+        setLoadingSessionHistory(true)
+        try {
+          const history = await getSessionHistory(classData.session_id)
+          setSessionHistory(history)
+        } catch (error) {
+          console.error('Error fetching session history:', error)
+        } finally {
+          setLoadingSessionHistory(false)
+        }
+      }
+    }
+
+    fetchSessionHistory()
+  }, [currentStatus, classData.session_id])
 
   // Calculate duration
   let durationMinutes = 60 // default to 1 hour
@@ -84,7 +154,12 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
     durationMinutes = Math.max(differenceInMinutes(endDateTime, startDateTime), 0)
   }
 
-  const duration = formatDuration(durationMinutes)
+  const scheduledDuration = formatDuration(durationMinutes)
+
+  // Get actual duration from session history for completed sessions
+  const actualDuration = currentStatus === 'complete' && sessionHistory?.duration
+    ? formatIntervalDuration(sessionHistory.duration)
+    : null
 
   // Determine if actions should be shown based on user role
   const showActions = userRole === 'admin' || userRole === 'teacher'
@@ -111,6 +186,17 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
     return enableLinks && (userRole === 'admin')
   }
 
+  // Helper functions to get attendance status
+  const getTeacherAttendanceStatus = (teacherId: string) => {
+    const attendance = attendanceData.teacherAttendance.find(a => a.teacher_id === teacherId)
+    return attendance?.attendance_status || 'scheduled'
+  }
+
+  const getStudentAttendanceStatus = (studentId: string) => {
+    const attendance = attendanceData.studentAttendance.find(a => a.student_id === studentId)
+    return attendance?.attendance_status || 'scheduled'
+  }
+
   const getEntityPath = (entityType: 'teachers' | 'students', entityId: string) => {
 
     return `/${userRole}/${entityType}/${entityId}`
@@ -126,6 +212,8 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
     start_time: classData.start_date,
     end_time: classData.end_date,
     status: classData.status,
+    cancellation_reason: classData.cancellation_reason || null,
+    cancelled_by: classData.cancelled_by || null,
     class_link: classData.class_link,
     teacher: {
       teacher_id: classData.teachers?.[0]?.teacher_id || '',
@@ -164,10 +252,67 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                 currentStatus={currentStatus}
                 onStatusChange={setCurrentStatus}
                 showOnlyJoinCall={!showActions}
+                userRole={userRole}
+                userId={userId}
               />
             </div>
           </div>
         </CardHeader>
+
+        {/* Show cancellation reason at the top for cancelled sessions (admin only) */}
+        {currentStatus === 'cancelled' && userRole === 'admin' && classData.cancellation_reason && (
+          <div className="px-6 pt-4">
+            <CancellationReasonDisplay
+              cancellationReason={classData.cancellation_reason}
+              cancelledByName={cancelledByName}
+            />
+          </div>
+        )}
+
+        {/* Show actual session times and duration for completed sessions */}
+        {currentStatus === 'complete' && (
+          <div className="px-6 pt-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock className="h-4 w-4 text-green-600" />
+                <span className="text-sm font-medium text-green-800">Actual Session Times</span>
+              </div>
+              {loadingSessionHistory ? (
+                <p className="text-sm text-green-700">Loading session details...</p>
+              ) : sessionHistory ? (
+                <div className="space-y-2">
+                  {sessionHistory.actual_start_time && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700">Started:</span>
+                      <span className="text-sm font-medium text-green-800">
+                        {formatDateTime(utcToLocal(sessionHistory.actual_start_time, timezone), "MMM d, yyyy 'at' h:mm a", timezone)}
+                      </span>
+                    </div>
+                  )}
+                  {sessionHistory.actual_end_time && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-green-700">Ended:</span>
+                      <span className="text-sm font-medium text-green-800">
+                        {formatDateTime(utcToLocal(sessionHistory.actual_end_time, timezone), "MMM d, yyyy 'at' h:mm a", timezone)}
+                      </span>
+                    </div>
+                  )}
+                  {actualDuration && (
+                    <div className="flex justify-between items-center pt-2 border-t border-green-200">
+                      <span className="text-sm text-green-700">Total Duration:</span>
+                      <span className="text-sm font-medium text-green-800">
+                        {actualDuration}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-green-700">Session details not available</p>
+              )}
+            </div>
+          </div>
+        )}
+
         <CardContent className="pt-6">
 
           <div className="grid gap-8 lg:grid-cols-3">
@@ -189,7 +334,7 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                       {formatDateTime(startDateTime, "EEEE, MMMM d, yyyy", timezone)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      <ClientTimeDisplay date={startDateTime} format="h:mm a" /> - <ClientTimeDisplay date={endDateTime} format="h:mm a" /> ({duration})
+                      <ClientTimeDisplay date={startDateTime} format="h:mm a" /> - <ClientTimeDisplay date={endDateTime} format="h:mm a" /> ({scheduledDuration})
                     </p>
                   </div>
 
@@ -203,7 +348,7 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                 {/* Teachers Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <UserCircle2 className="h-5 w-5" />
+                    <UserPen className="h-5 w-5" />
                     <h3 className="text-sm font-medium">Teachers</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{teachers.length}</span>
                   </div>
@@ -226,6 +371,12 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                                     {teacher.first_name} {teacher.last_name}
                                   </p>
                                 </div>
+                                {!loadingAttendance && (
+                                  <AttendanceStatusBadge
+                                    status={getTeacherAttendanceStatus(teacher.teacher_id)}
+                                    size="sm"
+                                  />
+                                )}
                               </div>
                             </Link>
                           ) : (
@@ -239,6 +390,12 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                                   {teacher.first_name} {teacher.last_name}
                                 </p>
                               </div>
+                              {!loadingAttendance && (
+                                <AttendanceStatusBadge
+                                  status={getTeacherAttendanceStatus(teacher.teacher_id)}
+                                  size="sm"
+                                />
+                              )}
                             </div>
                           )}
                         </React.Fragment>
@@ -246,7 +403,7 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                     </div>
                   ) : (
                     <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                      <UserCircle2 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <UserPen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No teachers assigned</p>
                     </div>
                   )}
@@ -256,7 +413,7 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Users className="h-5 w-5" />
-                    <h3 className="text-sm font-medium">Students Enrolled</h3>
+                    <h3 className="text-sm font-medium">Students</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{enrolledStudents.length}</span>
                   </div>
                   {enrolledStudents.length > 0 ? (
@@ -278,6 +435,12 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                                     {student.first_name} {student.last_name}
                                   </p>
                                 </div>
+                                {!loadingAttendance && (
+                                  <AttendanceStatusBadge
+                                    status={getStudentAttendanceStatus(student.student_id)}
+                                    size="sm"
+                                  />
+                                )}
                               </div>
                             </Link>
                           ) : (
@@ -291,6 +454,12 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
                                   {student.first_name} {student.last_name}
                                 </p>
                               </div>
+                              {!loadingAttendance && (
+                                <AttendanceStatusBadge
+                                  status={getStudentAttendanceStatus(student.student_id)}
+                                  size="sm"
+                                />
+                              )}
                             </div>
                           )}
                         </React.Fragment>
@@ -308,30 +477,14 @@ export function ClassSessionDetails({ classData, userRole, userParentStudents = 
             </div>
           </div>
 
-          <div className="mt-6 pt-6">
-            {/* Description section removed - now in header */}
+          <div className="mt-6 pt-6 border-t">
+            <SessionRemarks
+              sessionId={classData.session_id}
+              sessionStatus={currentStatus}
+              students={classData.enrolled_students}
+              userRole={userRole}
+            />
           </div>
-
-          {/* Attendance Tracker */}
-          {showActions && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="h-5 w-5" />
-                  <h3 className="text-sm font-medium">Attendance</h3>
-                </div>
-                <div>
-                  <AttendanceTracker
-                    sessionId={classData.session_id}
-                    sessionDate={formatDateTime(startDateTime, 'yyyy-MM-dd', timezone)}
-                    students={classData.enrolled_students}
-                    currentStatus={currentStatus}
-                    onStatusChange={setCurrentStatus}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
         </CardContent>
       </Card>

@@ -78,3 +78,54 @@ export async function updateTeacherAvailability(teacherId: string, weeklySchedul
         throw error
     }
 }
+
+export async function updateTeacherAttendance(teacherId: string, sessionId: string, attendanceStatus: string) {
+    const supabase = createClient()
+
+    try {
+        // Check if attendance record already exists
+        const { data: existingAttendance } = await supabase
+            .from('teacher_attendance')
+            .select('id')
+            .eq('teacher_id', teacherId)
+            .eq('session_id', sessionId)
+            .single()
+
+        if (existingAttendance) {
+            // Update existing attendance record
+            const { error } = await supabase
+                .from('teacher_attendance')
+                .update({
+                    attendance_status: attendanceStatus,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('teacher_id', teacherId)
+                .eq('session_id', sessionId)
+
+            if (error) {
+                throw new Error(`Failed to update teacher attendance: ${error.message}`)
+            }
+        } else {
+            // Create new attendance record
+            const { error } = await supabase
+                .from('teacher_attendance')
+                .insert({
+                    teacher_id: teacherId,
+                    session_id: sessionId,
+                    attendance_status: attendanceStatus
+                })
+
+            if (error) {
+                throw new Error(`Failed to create teacher attendance: ${error.message}`)
+            }
+        }
+
+        return {
+            success: true,
+            message: existingAttendance ? 'Teacher attendance updated successfully' : 'Teacher attendance created successfully'
+        }
+    } catch (error) {
+        console.error('Error in updateTeacherAttendance:', error)
+        throw error
+    }
+}

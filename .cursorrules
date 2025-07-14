@@ -1,0 +1,58 @@
+# Cursor Rules for Supabase Integration
+
+## Environment Variables
+The following environment variables are available for database operations:
+- SUPABASE_URL: https://fobejjugmseyyfwzewgg.supabase.co
+- SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVqanVnbXNleXlmd3pld2dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQyNDA4ODMsImV4cCI6MjA1OTgxNjg4M30.sFOwU6ynxBZIcian5Wv20TOlWLK-VpPNKR7zFnn2mrE
+- SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZvYmVqanVnbXNleXlmd3pld2dnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NDI0MDg4MywiZXhwIjoyMDU5ODE2ODgzfQ.MTyilg63mKcFKKk1ax3Z8OVG0CMHfWCpvYseyO3Vgzg
+
+## Database Schema
+This project uses Supabase with the following main tables:
+
+### Core Tables
+- **profiles**: User profiles and authentication data (id, email, first_name, last_name, role, status, etc.)
+- **students**: Student-specific data (profile_id, birth_date, grade_level, notes, hours_per_month, fee_amount, fee_freq, fee_per_hour)
+- **teachers**: Teacher-specific data (profile_id, specialization, hourly_rate, notes)
+- **classes**: Class information (id, title, description, subject, start_date, end_date, status, days_repeated, class_link)
+- **class_sessions**: Individual class sessions (id, class_id, start_date, end_date, status)
+- **invoices**: Billing and payment information (invoice_id, student_id, parent_id, invoice_type, amount, currency, description, due_date, status, paid_at)
+- **resources**: Educational resources and materials (id, title, description, file_url, type, created_at, updated_at)
+
+### Relationship Tables
+- **class_students**: Many-to-many relationship between classes and students (class_id, student_id)
+- **class_teachers**: Many-to-many relationship between classes and teachers (class_id, teacher_id)
+- **teacher_students**: Direct teacher-student relationships (teacher_id, student_id)
+- **parent_students**: Parent-child relationships (parent_id, student_id)
+
+### Specialized Tables
+- **teacher_availability**: Teacher availability schedules (teacher_id, day_of_week, start_time, end_time, is_available)
+- **session_attendance**: Attendance tracking for class sessions (session_id, student_id, status, notes)
+- **session_history**: Historical session data and changes (session_id, action, previous_status, new_status, timestamp)
+
+### Auth Tables (Supabase Built-in)
+- **auth.users**: Supabase authentication users (managed by Supabase)
+- **auth.sessions**: User sessions (managed by Supabase)
+
+## Table Relationships
+- **profiles** is the central table linking to students, teachers, and parents via profile_id
+- **classes** connect to teachers and students through junction tables
+- **class_sessions** belong to classes and track individual session instances
+- **invoices** link students to parents for billing
+- **teacher_availability** tracks when teachers are available
+- **session_attendance** tracks student attendance for each session
+
+## Usage Guidelines
+- Use the anon key for read operations
+- Use the service role key only for admin operations
+- Always include proper error handling in database queries
+- Follow the existing patterns in src/lib/ for database operations
+- Use TypeScript types from src/types.ts for type safety
+- Implement Row Level Security (RLS) policies for data protection
+- Use the existing utility functions in src/lib/get/, src/lib/post/, and src/lib/put/
+
+## Common Query Patterns
+- Join profiles with role-specific tables (students, teachers) using profile_id
+- Use junction tables for many-to-many relationships
+- Filter by role ('student', 'teacher', 'parent', 'admin') in profiles table
+- Use status fields ('active', 'inactive', 'archived') for filtering
+- Include created_at and updated_at timestamps for audit trails

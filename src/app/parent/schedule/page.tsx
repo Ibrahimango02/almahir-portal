@@ -1,21 +1,24 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks } from "date-fns"
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, startOfMonth, addMonths, subMonths } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, List, Search, Calendar } from "lucide-react"
 import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
 import { ScheduleListView } from "@/components/schedule-list-view"
+import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
+import { MonthlyListScheduleView } from "@/components/monthly-list-schedule-view"
 import { getClassesByParentId } from "@/lib/get/get-classes"
 import { createClient } from "@/utils/supabase/client"
 import { ClassType } from "@/types"
 
 export default function ParentSchedulePage() {
-    const [view, setView] = useState<"calendar" | "list">("calendar")
+    const [view, setView] = useState<"calendar" | "list" | "monthly" | "monthly-list">("calendar")
     const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+    const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
     const [activeTab, setActiveTab] = useState("all")
     const [activeListTab, setActiveListTab] = useState("upcoming")
     const [searchQuery, setSearchQuery] = useState("")
@@ -43,14 +46,8 @@ export default function ParentSchedulePage() {
         setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
     }
 
-    const toggleView = () => {
-        if (view === "calendar") {
-            setView("list")
-            setActiveListTab("upcoming")
-        } else {
-            setView("calendar")
-            setActiveTab("all")
-        }
+    const navigateMonth = (direction: "next" | "prev") => {
+        setCurrentMonth((prev) => (direction === "next" ? addMonths(prev, 1) : subMonths(prev, 1)))
     }
 
     return (
@@ -68,58 +65,97 @@ export default function ParentSchedulePage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" size="sm" onClick={toggleView}>
-                        {view === "calendar" ? (
-                            <>
-                                <List className="mr-2 h-4 w-4" />
-                                View List
-                            </>
-                        ) : (
-                            <>
-                                <CalendarDays className="mr-2 h-4 w-4" />
-                                View Calendar
-                            </>
-                        )}
-                    </Button>
                 </div>
             </div>
 
             <Card>
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                        <CardTitle>{view === "calendar" ? "Weekly Schedule" : "Schedule List"}</CardTitle>
+                        <CardTitle>
+                            {view === "calendar" ? "Weekly Schedule" :
+                                view === "list" ? "Schedule List" :
+                                    view === "monthly" ? "Monthly Calendar" : "Monthly List"}
+                        </CardTitle>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-7 w-7"
-                                onClick={() => navigateWeek("prev")}
-                                aria-label="Previous week"
+                                onClick={() => view.includes("monthly") ? navigateMonth("prev") : navigateWeek("prev")}
+                                aria-label={view.includes("monthly") ? "Previous month" : "Previous week"}
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <p className="text-sm font-medium">
-                                {format(currentWeekStart, "MMMM d")} -{" "}
-                                {format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "MMMM d, yyyy")}
+                                {view.includes("monthly")
+                                    ? format(currentMonth, "MMMM yyyy")
+                                    : `${format(currentWeekStart, "MMM d")} - ${format(endOfWeek(currentWeekStart, { weekStartsOn: 1 }), "MMM d, yyyy")}`
+                                }
                             </p>
                             <Button
                                 variant="outline"
                                 size="icon"
                                 className="h-7 w-7"
-                                onClick={() => navigateWeek("next")}
-                                aria-label="Next week"
+                                onClick={() => view.includes("monthly") ? navigateMonth("next") : navigateWeek("next")}
+                                aria-label={view.includes("monthly") ? "Next month" : "Next week"}
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
                     </div>
                     <CardDescription>
-                        {view === "calendar"
-                            ? "View and manage your children's weekly class schedule"
-                            : "View all scheduled classes for your children in list format"}
+                        {view === "calendar" && "View and manage your children's weekly class schedule"}
+                        {view === "list" && "View all scheduled classes for your children in list format"}
+                        {view === "monthly" && "View and manage your children's monthly class schedule"}
+                        {view === "monthly-list" && "View all scheduled classes for your children for the month in list format"}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {/* Time Period Tabs */}
+                    <div className="flex items-center gap-4 mb-4">
+                        <Tabs
+                            value={view.includes("monthly") ? "monthly" : "weekly"}
+                            onValueChange={(value) => {
+                                if (value === "monthly") {
+                                    setView(view === "list" ? "monthly-list" : "monthly")
+                                } else {
+                                    setView(view === "monthly-list" ? "list" : "calendar")
+                                }
+                            }}
+                        >
+                            <TabsList className="bg-muted/80">
+                                <TabsTrigger value="weekly" className={!view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
+                                    <CalendarDays className="mr-2 h-4 w-4" /> Weekly
+                                </TabsTrigger>
+                                <TabsTrigger value="monthly" className={view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
+                                    <Calendar className="mr-2 h-4 w-4" /> Monthly
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+
+                        {/* View Type Tabs */}
+                        <Tabs
+                            value={view === "monthly-list" ? "list" : view === "monthly" ? "calendar" : view}
+                            onValueChange={(value) => {
+                                if (view.includes("monthly")) {
+                                    setView(value === "list" ? "monthly-list" : "monthly")
+                                } else {
+                                    setView(value as "list" | "calendar")
+                                }
+                            }}
+                        >
+                            <TabsList className="bg-muted/80">
+                                <TabsTrigger value="calendar" className={(view === "calendar" || view === "monthly") ? "bg-[#3d8f5b] text-white" : ""}>
+                                    <CalendarDays className="mr-2 h-4 w-4" /> Calendar
+                                </TabsTrigger>
+                                <TabsTrigger value="list" className={(view === "list" || view === "monthly-list") ? "bg-[#3d8f5b] text-white" : ""}>
+                                    <List className="mr-2 h-4 w-4" /> List
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
+
+                    {/* Content based on view */}
                     {view === "calendar" ? (
                         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
                             <TabsList className="mb-4">
@@ -176,7 +212,7 @@ export default function ParentSchedulePage() {
                                 />
                             </TabsContent>
                         </Tabs>
-                    ) : (
+                    ) : view === "list" ? (
                         <Tabs defaultValue="upcoming" value={activeListTab} onValueChange={setActiveListTab}>
                             <TabsList className="mb-4 bg-muted/80">
                                 <TabsTrigger value="recent">Recent</TabsTrigger>
@@ -203,7 +239,19 @@ export default function ParentSchedulePage() {
                                 />
                             </TabsContent>
                         </Tabs>
-                    )}
+                    ) : view === "monthly" ? (
+                        <MonthlyScheduleView
+                            classes={classData}
+                            monthStart={currentMonth}
+                            currentUserRole="parent"
+                        />
+                    ) : view === "monthly-list" ? (
+                        <MonthlyListScheduleView
+                            classes={classData}
+                            monthStart={currentMonth}
+                            currentUserRole="parent"
+                        />
+                    ) : null}
                 </CardContent>
             </Card>
         </div>

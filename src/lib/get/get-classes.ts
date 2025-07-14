@@ -1,7 +1,83 @@
 import { createClient } from '@/utils/supabase/client'
-import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType, ClassSessionAttendanceType } from '@/types'
+import { ClassType, ClassSessionType, TeacherType, StudentType, SessionType, StudentAttendanceType, TeacherAttendanceType } from '@/types'
 import { calculateAge } from '@/lib/utils'
 import { format } from 'date-fns'
+
+// Helper function to parse days_repeated field
+function parseDaysRepeated(daysRepeated: unknown): {
+    monday?: { start: string; end: string }
+    tuesday?: { start: string; end: string }
+    wednesday?: { start: string; end: string }
+    thursday?: { start: string; end: string }
+    friday?: { start: string; end: string }
+    saturday?: { start: string; end: string }
+    sunday?: { start: string; end: string }
+} {
+    if (daysRepeated && typeof daysRepeated === 'object' && !Array.isArray(daysRepeated)) {
+        // Handle new object structure
+        const daysObj = daysRepeated as Record<string, { start: string; end: string } | undefined>
+        return {
+            monday: daysObj.monday,
+            tuesday: daysObj.tuesday,
+            wednesday: daysObj.wednesday,
+            thursday: daysObj.thursday,
+            friday: daysObj.friday,
+            saturday: daysObj.saturday,
+            sunday: daysObj.sunday
+        }
+    } else if (Array.isArray(daysRepeated)) {
+        // Legacy array structure - convert to new object structure
+        const result: {
+            monday?: { start: string; end: string }
+            tuesday?: { start: string; end: string }
+            wednesday?: { start: string; end: string }
+            thursday?: { start: string; end: string }
+            friday?: { start: string; end: string }
+            saturday?: { start: string; end: string }
+            sunday?: { start: string; end: string }
+        } = {}
+
+        daysRepeated.forEach((item: unknown) => {
+            if (typeof item === 'object' && item && typeof item === 'object' && 'day' in item && 'start_time' in item && 'end_time' in item) {
+                const itemObj = item as { day: string; start_time: string; end_time: string }
+                const dayKey = itemObj.day.toLowerCase() as keyof typeof result
+                result[dayKey] = {
+                    start: itemObj.start_time,
+                    end: itemObj.end_time
+                }
+            } else if (typeof item === 'string') {
+                const dayKey = item.toLowerCase() as keyof typeof result
+                result[dayKey] = {
+                    start: "00:00",
+                    end: "01:00"
+                }
+            }
+        })
+        return result
+    } else if (typeof daysRepeated === 'string') {
+        // Legacy string format
+        const dayArray = daysRepeated.split(',').map(day => day.trim())
+        const result: {
+            monday?: { start: string; end: string }
+            tuesday?: { start: string; end: string }
+            wednesday?: { start: string; end: string }
+            thursday?: { start: string; end: string }
+            friday?: { start: string; end: string }
+            saturday?: { start: string; end: string }
+            sunday?: { start: string; end: string }
+        } = {}
+
+        dayArray.forEach(day => {
+            const dayKey = day.toLowerCase() as keyof typeof result
+            result[dayKey] = {
+                start: "00:00",
+                end: "01:00"
+            }
+        })
+        return result
+    }
+    return {}
+}
 
 export async function getClasses(): Promise<ClassType[]> {
     const supabase = createClient()
@@ -87,7 +163,6 @@ export async function getClasses(): Promise<ClassType[]> {
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -114,7 +189,6 @@ export async function getClasses(): Promise<ClassType[]> {
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -133,15 +207,13 @@ export async function getClasses(): Promise<ClassType[]> {
                 start_date: session.start_date,
                 end_date: session.end_date,
                 status: session.status,
+                cancellation_reason: session.cancellation_reason || null,
                 created_at: session.created_at,
                 updated_at: session.updated_at || null
             })) || []
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classItem.days_repeated
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim())
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(classItem.days_repeated)
 
         return {
             class_id: classItem.id,
@@ -258,7 +330,6 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -285,7 +356,6 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -304,6 +374,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 start_date: session.start_date,
                 end_date: session.end_date,
                 status: session.status,
+                cancellation_reason: session.cancellation_reason || null,
                 created_at: session.created_at,
                 updated_at: session.updated_at || null
             })) || []
@@ -419,7 +490,6 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
                     language: teacherProfile?.language,
                     email: teacherProfile?.email || null,
                     phone: teacherProfile?.phone || null,
-                    timezone: teacherProfile?.timezone,
                     status: teacherProfile?.status,
                     role: teacherProfile?.role,
                     avatar_url: teacherProfile?.avatar_url,
@@ -447,7 +517,6 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -467,6 +536,7 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
             start_date: session.start_date,
             end_date: session.end_date,
             status: session.status,
+            cancellation_reason: session.cancellation_reason || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
             enrolled_students: enrolledStudents
@@ -556,7 +626,6 @@ export async function getActiveClasses(): Promise<ClassType[]> {
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -583,7 +652,6 @@ export async function getActiveClasses(): Promise<ClassType[]> {
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -714,7 +782,6 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -741,7 +808,6 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -832,7 +898,6 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         language: teacher.language,
         email: teacher.email,
         phone: teacher.phone || null,
-        timezone: teacher.timezone,
         status: teacher.status,
         role: teacher.role,
         avatar_url: teacher.avatar_url,
@@ -870,7 +935,6 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         language: student.language,
         email: student.email || null,
         phone: student.phone || null,
-        timezone: student.timezone,
         status: student.status,
         role: student.role,
         avatar_url: student.avatar_url,
@@ -1039,7 +1103,6 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -1066,7 +1129,6 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -1202,7 +1264,6 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -1229,7 +1290,6 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -1331,7 +1391,6 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         language: teacher.language,
         email: teacher.email,
         phone: teacher.phone || null,
-        timezone: teacher.timezone,
         status: teacher.status,
         role: teacher.role,
         avatar_url: teacher.avatar_url,
@@ -1369,7 +1428,6 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         language: student.language,
         email: student.email || null,
         phone: student.phone || null,
-        timezone: student.timezone,
         status: student.status,
         role: student.role,
         avatar_url: student.avatar_url,
@@ -1389,6 +1447,8 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         start_date: sessionData.start_date,
         end_date: sessionData.end_date,
         status: sessionData.status,
+        cancellation_reason: sessionData.cancellation_reason || null,
+        cancelled_by: sessionData.cancelled_by || null,
         class_link: classData.class_link || null,
         teachers: teachers,
         enrolled_students: students
@@ -1435,8 +1495,7 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         country: teacher.country,
         language: teacher.language,
         email: teacher.email,
-        phone: teacher.phone || null,
-        timezone: teacher.timezone,
+        phone: teacher.phone || null,   
         status: teacher.status,
         role: teacher.role,
         avatar_url: teacher.avatar_url,
@@ -1474,7 +1533,6 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         language: student.language,
         email: student.email || null,
         phone: student.phone || null,
-        timezone: student.timezone,
         status: student.status,
         role: student.role,
         avatar_url: student.avatar_url,
@@ -1505,6 +1563,8 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         start_date: session.start_date,
         end_date: session.end_date,
         status: session.status,
+        cancellation_reason: session.cancellation_reason || null,
+        cancelled_by: session.cancelled_by || null,
         class_link: classData.class_link || null,
         teachers: teachers,
         enrolled_students: students
@@ -1595,7 +1655,6 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -1622,7 +1681,6 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -1741,7 +1799,6 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
                     language: teacherProfile?.language,
                     email: teacherProfile?.email || null,
                     phone: teacherProfile?.phone || null,
-                    timezone: teacherProfile?.timezone,
                     status: teacherProfile?.status,
                     role: teacherProfile?.role,
                     avatar_url: teacherProfile?.avatar_url,
@@ -1769,7 +1826,6 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -1888,7 +1944,6 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
                     language: teacherProfile?.language,
                     email: teacherProfile?.email || null,
                     phone: teacherProfile?.phone || null,
-                    timezone: teacherProfile?.timezone,
                     status: teacherProfile?.status,
                     role: teacherProfile?.role,
                     avatar_url: teacherProfile?.avatar_url,
@@ -1916,7 +1971,6 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -2027,7 +2081,6 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -2053,8 +2106,7 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
                 country: student.country,
                 language: student.language,
                 email: student.email || null,
-                phone: student.phone || null,
-                timezone: student.timezone,
+                phone: student.phone || null,   
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -2290,7 +2342,6 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
                     language: teacherProfile?.language,
                     email: teacherProfile?.email || null,
                     phone: teacherProfile?.phone || null,
-                    timezone: teacherProfile?.timezone,
                     status: teacherProfile?.status,
                     role: teacherProfile?.role,
                     avatar_url: teacherProfile?.avatar_url,
@@ -2318,7 +2369,6 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -2438,7 +2488,6 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
                 language: teacher.language,
                 email: teacher.email,
                 phone: teacher.phone || null,
-                timezone: teacher.timezone,
                 status: teacher.status,
                 role: teacher.role,
                 avatar_url: teacher.avatar_url,
@@ -2465,7 +2514,6 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
                 language: student.language,
                 email: student.email || null,
                 phone: student.phone || null,
-                timezone: student.timezone,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -2515,11 +2563,11 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
     return result
 }
 
-export async function getSessionAttendance(sessionId: string): Promise<ClassSessionAttendanceType[]> {
+export async function getSessionAttendance(sessionId: string): Promise<StudentAttendanceType[]> {
     const supabase = createClient()
 
     const { data, error } = await supabase
-        .from('session_attendance')
+        .from('student_attendance')
         .select('*')
         .eq('session_id', sessionId)
 
@@ -2602,3 +2650,45 @@ export async function getActiveClassesCount() {
 
     return count || 0
 }
+
+export async function getSessionAttendanceForAll(sessionId: string): Promise<{
+    teacherAttendance: TeacherAttendanceType[],
+    studentAttendance: StudentAttendanceType[]
+}> {
+    const supabase = createClient()
+
+    try {
+        // Get teacher attendance
+        const { data: teacherAttendance, error: teacherError } = await supabase
+            .from('teacher_attendance')
+            .select('*')
+            .eq('session_id', sessionId)
+
+        if (teacherError) {
+            console.error('Error fetching teacher attendance:', teacherError)
+        }
+
+        // Get student attendance
+        const { data: studentAttendance, error: studentError } = await supabase
+            .from('student_attendance')
+            .select('*')
+            .eq('session_id', sessionId)
+
+        if (studentError) {
+            console.error('Error fetching student attendance:', studentError)
+        }
+
+        return {
+            teacherAttendance: teacherAttendance || [],
+            studentAttendance: studentAttendance || []
+        }
+    } catch (error) {
+        console.error('Error fetching session attendance for all:', error)
+        return {
+            teacherAttendance: [],
+            studentAttendance: []
+        }
+    }
+}
+
+

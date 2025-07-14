@@ -9,10 +9,16 @@ export async function updateClass(params: {
     start_date?: string;
     end_date?: string;
     status?: string;
-    days_repeated?: string[];
+    days_repeated?: {
+        monday?: { start: string; end: string }
+        tuesday?: { start: string; end: string }
+        wednesday?: { start: string; end: string }
+        thursday?: { start: string; end: string }
+        friday?: { start: string; end: string }
+        saturday?: { start: string; end: string }
+        sunday?: { start: string; end: string }
+    };
     class_link?: string | null;
-    teacher_ids?: string[];
-    student_ids?: string[];
     times?: Record<string, { start: string; end: string }>;
 }): Promise<{ success: boolean; error?: { message: string } }> {
     const supabase = createClient()
@@ -26,8 +32,6 @@ export async function updateClass(params: {
         status,
         days_repeated,
         class_link,
-        teacher_ids,
-        student_ids,
         times
     } = params
 
@@ -49,7 +53,15 @@ export async function updateClass(params: {
             start_date?: string;
             end_date?: string;
             status?: string;
-            days_repeated?: string[];
+            days_repeated?: {
+                monday?: { start: string; end: string }
+                tuesday?: { start: string; end: string }
+                wednesday?: { start: string; end: string }
+                thursday?: { start: string; end: string }
+                friday?: { start: string; end: string }
+                saturday?: { start: string; end: string }
+                sunday?: { start: string; end: string }
+            };
             class_link?: string | null;
             updated_at: string;
         } = {
@@ -132,13 +144,32 @@ export async function updateClass(params: {
                 }
             }
 
-            // Delete all existing sessions for this class
-            const { error: deleteSessionsError } = await supabase
+            // Get existing sessions and separate them by date
+            const { data: existingSessions, error: fetchSessionsError } = await supabase
                 .from('class_sessions')
-                .delete()
+                .select('id, start_date, end_date')
                 .eq('class_id', classId)
+                .order('start_date')
 
-            if (deleteSessionsError) throw deleteSessionsError
+            if (fetchSessionsError) throw fetchSessionsError
+
+            // Separate sessions into past and future/current
+            const now = new Date()
+            const futureSessions = existingSessions?.filter(session => new Date(session.start_date) >= now) || []
+
+            // Only delete future/current sessions, preserve past sessions
+            // Attendance records will be automatically deleted due to CASCADE constraints
+            if (futureSessions.length > 0) {
+                const futureSessionIds = futureSessions.map(session => session.id)
+
+                // Delete future sessions (attendance records will cascade automatically)
+                const { error: deleteSessionsError } = await supabase
+                    .from('class_sessions')
+                    .delete()
+                    .in('id', futureSessionIds)
+
+                if (deleteSessionsError) throw deleteSessionsError
+            }
 
             // Generate new sessions
             if (finalStartDate && finalEndDate && finalDaysRepeated && Object.keys(finalTimes).length > 0) {
@@ -151,51 +182,46 @@ export async function updateClass(params: {
                     return dayName.charAt(0).toUpperCase() + dayName.slice(1)
                 }
 
-                // Generate sessions for each day in the date range
-                let currentDate = new Date(finalStartDate)
+                // Generate sessions for each day in the date range, starting from today or the start date (whichever is later)
+                const now = new Date()
+                const startDateObj = new Date(finalStartDate)
                 const endDateObj = new Date(finalEndDate)
+
+                // Use the later of today or the start date to avoid creating past sessions
+                let currentDate = now > startDateObj ? now : startDateObj
+
+                // If the start date is in the future, use that instead
+                if (startDateObj > now) {
+                    currentDate = startDateObj
+                }
 
                 while (currentDate <= endDateObj) {
                     const dayName = getDayName(currentDate)
+                    const lowercaseDayName = dayName.toLowerCase()
 
-                    // Check if this day is in the days_repeated array
-                    if (finalDaysRepeated.includes(dayName)) {
-                        const timeSlot = finalTimes[dayName]
-                        if (timeSlot) {
-                            try {
-                                // The times are already in ISO format, so we can use them directly
-                                const startDateTime = new Date(timeSlot.start)
-                                const endDateTime = new Date(timeSlot.end)
+                    // Check if this day has a schedule in days_repeated
+                    const daySchedule = finalDaysRepeated[lowercaseDayName as keyof typeof finalDaysRepeated]
+                    if (daySchedule) {
+                        try {
+                            // Create ISO datetime strings by combining the current date with the time
+                            const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
+                            const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                                // Validate the dates
-                                if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-                                    throw new Error(`Invalid datetime format for ${dayName}: ${timeSlot.start} - ${timeSlot.end}`)
-                                }
+                            const sessionStartDate = new Date(currentDate)
+                            const sessionEndDate = new Date(currentDate)
 
-                                // Update the date part to match the current iteration date
-                                const sessionStartDate = new Date(currentDate)
-                                const sessionEndDate = new Date(currentDate)
+                            sessionStartDate.setHours(startHours, startMinutes, 0, 0)
+                            sessionEndDate.setHours(endHours, endMinutes, 0, 0)
 
-                                // Extract time components from the ISO strings
-                                const startTime = startDateTime.toTimeString().split(' ')[0]
-                                const endTime = endDateTime.toTimeString().split(' ')[0]
-
-                                const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
-                                const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
-
-                                sessionStartDate.setHours(startHours, startMinutes, startSeconds, 0)
-                                sessionEndDate.setHours(endHours, endMinutes, endSeconds, 0)
-
-                                sessions.push({
-                                    class_id: classId,
-                                    start_date: sessionStartDate.toISOString(),
-                                    end_date: sessionEndDate.toISOString(),
-                                    status: 'scheduled'
-                                })
-                            } catch (error) {
-                                console.error(`Error creating session for ${dayName}:`, error)
-                                throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
-                            }
+                            sessions.push({
+                                class_id: classId,
+                                start_date: sessionStartDate.toISOString(),
+                                end_date: sessionEndDate.toISOString(),
+                                status: 'scheduled'
+                            })
+                        } catch (error) {
+                            console.error(`Error creating session for ${dayName}:`, error)
+                            throw new Error(`Failed to create session for ${dayName}: ${error instanceof Error ? error.message : 'Unknown error'}`)
                         }
                     }
 
@@ -205,64 +231,80 @@ export async function updateClass(params: {
 
                 // Insert all new sessions
                 if (sessions.length > 0) {
-                    const { error: sessionsError } = await supabase
+                    const { data: createdSessions, error: sessionsError } = await supabase
                         .from('class_sessions')
                         .insert(sessions)
+                        .select('id')
 
                     if (sessionsError) {
                         throw new Error(`Failed to create class sessions: ${sessionsError.message}`)
                     }
+
+                    // Get current teacher and student assignments for attendance records
+                    const { data: currentTeachers } = await supabase
+                        .from('class_teachers')
+                        .select('teacher_id')
+                        .eq('class_id', classId)
+
+                    const { data: currentStudents } = await supabase
+                        .from('class_students')
+                        .select('student_id')
+                        .eq('class_id', classId)
+
+                    // Create attendance records for each session
+                    if (createdSessions && createdSessions.length > 0) {
+                        const teacherAttendanceRecords = []
+                        const studentAttendanceRecords = []
+
+                        for (const session of createdSessions) {
+                            // Create teacher attendance records
+                            if (currentTeachers && currentTeachers.length > 0) {
+                                for (const teacher of currentTeachers) {
+                                    teacherAttendanceRecords.push({
+                                        session_id: session.id,
+                                        teacher_id: teacher.teacher_id,
+                                        attendance_status: 'scheduled'
+                                    })
+                                }
+                            }
+
+                            // Create student attendance records
+                            if (currentStudents && currentStudents.length > 0) {
+                                for (const student of currentStudents) {
+                                    studentAttendanceRecords.push({
+                                        session_id: session.id,
+                                        student_id: student.student_id,
+                                        attendance_status: 'scheduled'
+                                    })
+                                }
+                            }
+                        }
+
+                        // Insert teacher attendance records
+                        if (teacherAttendanceRecords.length > 0) {
+                            const { error: teacherAttendanceError } = await supabase
+                                .from('teacher_attendance')
+                                .insert(teacherAttendanceRecords)
+
+                            if (teacherAttendanceError) {
+                                console.error('Error creating teacher attendance records:', teacherAttendanceError)
+                                // Don't throw error here as the main operations were successful
+                            }
+                        }
+
+                        // Insert student attendance records
+                        if (studentAttendanceRecords.length > 0) {
+                            const { error: studentAttendanceError } = await supabase
+                                .from('student_attendance')
+                                .insert(studentAttendanceRecords)
+
+                            if (studentAttendanceError) {
+                                console.error('Error creating student attendance records:', studentAttendanceError)
+                                // Don't throw error here as the main operations were successful
+                            }
+                        }
+                    }
                 }
-            }
-        }
-
-        // Update teacher assignments if provided
-        if (teacher_ids !== undefined) {
-            // First, remove all existing teacher assignments for this class
-            const { error: deleteTeacherError } = await supabase
-                .from('class_teachers')
-                .delete()
-                .eq('class_id', classId)
-
-            if (deleteTeacherError) throw deleteTeacherError
-
-            // Then, add new teacher assignments
-            if (teacher_ids.length > 0) {
-                const teacherAssignments = teacher_ids.map(teacherId => ({
-                    class_id: classId,
-                    teacher_id: teacherId
-                }))
-
-                const { error: insertTeacherError } = await supabase
-                    .from('class_teachers')
-                    .insert(teacherAssignments)
-
-                if (insertTeacherError) throw insertTeacherError
-            }
-        }
-
-        // Update student enrollments if provided
-        if (student_ids !== undefined) {
-            // First, remove all existing student enrollments for this class
-            const { error: deleteStudentError } = await supabase
-                .from('class_students')
-                .delete()
-                .eq('class_id', classId)
-
-            if (deleteStudentError) throw deleteStudentError
-
-            // Then, add new student enrollments
-            if (student_ids.length > 0) {
-                const studentEnrollments = student_ids.map(studentId => ({
-                    class_id: classId,
-                    student_id: studentId
-                }))
-
-                const { error: insertStudentError } = await supabase
-                    .from('class_students')
-                    .insert(studentEnrollments)
-
-                if (insertStudentError) throw insertStudentError
             }
         }
 
@@ -273,63 +315,38 @@ export async function updateClass(params: {
     }
 }
 
-export async function updateClassSession(params: {
+export async function updateSession(params: {
     sessionId: string;
     action: string;
-    newDate?: string;
-    newStartTime?: string;
-    newEndTime?: string;
     newStartDate?: string;
     newEndDate?: string;
+    cancellationReason?: string;
+    cancelledBy?: string;
+    rescheduledBy?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, newDate, newStartTime, newEndTime, newStartDate, newEndDate } = params
+    const { sessionId, action, newStartDate, newEndDate, cancellationReason, cancelledBy, rescheduledBy } = params
 
     try {
         switch (action.toLowerCase()) {
             case 'reschedule': {
-                // Support both old and new schema for backward compatibility
                 if (newStartDate && newEndDate) {
-                    // New schema: use start_date and end_date
-                    const { error: sessionError } = await supabase
+                    // Update the existing session with new dates
+                    const { error: updateError } = await supabase
                         .from('class_sessions')
                         .update({
                             start_date: newStartDate,
                             end_date: newEndDate,
-                            status: 'scheduled'
+                            rescheduled_by: rescheduledBy || null,
+                            updated_at: new Date().toISOString()
                         })
                         .eq('id', sessionId)
 
-                    if (sessionError) throw sessionError
-                } else if (newDate && newStartTime && newEndTime) {
-                    // Old schema: use date, start_time, and end_time
-                    const { error: sessionError } = await supabase
-                        .from('class_sessions')
-                        .update({
-                            date: newDate,
-                            start_time: newStartTime,
-                            end_time: newEndTime,
-                            status: 'scheduled'
-                        })
-                        .eq('id', sessionId)
-
-                    if (sessionError) throw sessionError
+                    if (updateError) throw updateError
+                    break;
                 } else {
                     throw new Error('New start date and end date are required for rescheduling')
                 }
-
-                // Create a record in class history for the reschedule
-                const { error: historyError } = await supabase
-                    .from('session_history')
-                    .upsert({
-                        session_id: sessionId,
-                        notes: 'Class rescheduled'
-                    }, {
-                        onConflict: 'session_id'
-                    })
-
-                if (historyError) throw historyError
-                break
             }
 
             case 'initiate': {
@@ -338,7 +355,7 @@ export async function updateClassSession(params: {
                     .from('session_history')
                     .upsert({
                         session_id: sessionId,
-                        notes: 'Class initiated'
+                        notes: 'session initiated'
                     }, {
                         onConflict: 'session_id'
                     })
@@ -360,7 +377,7 @@ export async function updateClassSession(params: {
                 // Update class history with start time
                 const { error: historyError } = await supabase
                     .from('session_history')
-                    .update({ actual_start_time: now, notes: 'Class started' })
+                    .update({ actual_start_time: now, notes: 'session started' })
                     .eq('session_id', sessionId)
 
                 if (historyError) throw historyError
@@ -383,7 +400,7 @@ export async function updateClassSession(params: {
                     .from('session_history')
                     .update({
                         actual_end_time: now,
-                        notes: 'Class ended'
+                        notes: 'session ended'
                     })
                     .eq('session_id', sessionId)
 
@@ -404,7 +421,7 @@ export async function updateClassSession(params: {
                     .from('session_history')
                     .upsert({
                         session_id: sessionId,
-                        notes: 'Class cancelled'
+                        notes: 'session cancelled'
                     }, {
                         onConflict: 'session_id'
                     })
@@ -413,7 +430,11 @@ export async function updateClassSession(params: {
 
                 const { error: sessionError } = await supabase
                     .from('class_sessions')
-                    .update({ status: 'cancelled' })
+                    .update({
+                        status: 'cancelled',
+                        cancellation_reason: cancellationReason || null,
+                        cancelled_by: cancelledBy || null
+                    })
                     .eq('id', sessionId)
 
                 if (sessionError) throw sessionError
@@ -427,7 +448,7 @@ export async function updateClassSession(params: {
                     .from('session_history')
                     .update({
                         actual_end_time: now,
-                        notes: 'Class absence'
+                        notes: 'session absence'
                     })
                     .eq('session_id', sessionId)
 
@@ -448,14 +469,18 @@ export async function updateClassSession(params: {
 
         return { success: true }
     } catch (error) {
-        console.error('Error updating class:', error)
+        console.error('Error updating session:', error)
         return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }
 
-export async function updateSessionAttendance(params: { sessionId: string; attendance: Record<string, boolean> }) {
+export async function updateSessionAttendance(params: {
+    sessionId: string;
+    studentAttendance?: Record<string, boolean>;
+    teacherAttendance?: Record<string, boolean>;
+}) {
     const supabase = createClient()
-    const { sessionId, attendance } = params
+    const { sessionId, studentAttendance, teacherAttendance } = params
 
     try {
         // Validate input
@@ -463,31 +488,103 @@ export async function updateSessionAttendance(params: { sessionId: string; atten
             throw new Error('Session ID is required')
         }
 
-        if (!attendance || Object.keys(attendance).length === 0) {
-            throw new Error('Attendance data is required')
+        if (!studentAttendance || Object.keys(studentAttendance).length === 0) {
+            throw new Error('Student attendance data is required')
         }
 
-        // Prepare attendance records for upsert
-        const attendanceRecords = Object.entries(attendance).map(([studentId, isPresent]) => ({
+        // Get existing student attendance records for this session
+        const { data: existingStudentAttendance, error: fetchStudentError } = await supabase
+            .from('student_attendance')
+            .select('student_id, attendance_status')
+            .eq('session_id', sessionId)
+
+        if (fetchStudentError) {
+            console.error('Error fetching existing student attendance:', fetchStudentError)
+            throw new Error(`Database error: ${fetchStudentError.message}`)
+        }
+
+        // Filter to only update student records with "scheduled" status
+        const scheduledStudentIds = existingStudentAttendance
+            ?.filter(record => record.attendance_status === 'scheduled')
+            .map(record => record.student_id) || []
+
+        // Filter student attendance data to only include students with scheduled status
+        const filteredStudentAttendance = Object.entries(studentAttendance)
+            .filter(([studentId]) => scheduledStudentIds.includes(studentId))
+            .reduce((acc, [studentId, isPresent]) => {
+                acc[studentId] = isPresent
+                return acc
+            }, {} as Record<string, boolean>)
+
+        // Prepare student attendance records for update
+        const studentAttendanceRecords = Object.entries(filteredStudentAttendance).map(([studentId, isPresent]) => ({
             session_id: sessionId,
             student_id: studentId,
             attendance_status: isPresent ? 'present' : 'absent',
-            created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
         }))
 
-        console.log('Attempting to upsert attendance records:', attendanceRecords)
+        // Update student attendance records
+        if (studentAttendanceRecords.length > 0) {
+            const { error: updateStudentError } = await supabase
+                .from('student_attendance')
+                .upsert(studentAttendanceRecords, {
+                    onConflict: 'session_id,student_id'
+                })
 
-        // Upsert attendance records
-        const { error: upsertError } = await supabase
-            .from('session_attendance')
-            .upsert(attendanceRecords, {
-                onConflict: 'session_id,student_id'
-            })
+            if (updateStudentError) {
+                console.error('Supabase student attendance update error:', updateStudentError)
+                throw new Error(`Database error: ${updateStudentError.message}`)
+            }
+        }
 
-        if (upsertError) {
-            console.error('Supabase upsert error:', upsertError)
-            throw new Error(`Database error: ${upsertError.message}`)
+        // Handle teacher attendance if provided
+        if (teacherAttendance && Object.keys(teacherAttendance).length > 0) {
+            // Get existing teacher attendance records for this session
+            const { data: existingTeacherAttendance, error: fetchTeacherError } = await supabase
+                .from('teacher_attendance')
+                .select('teacher_id, attendance_status')
+                .eq('session_id', sessionId)
+
+            if (fetchTeacherError) {
+                console.error('Error fetching existing teacher attendance:', fetchTeacherError)
+                throw new Error(`Database error: ${fetchTeacherError.message}`)
+            }
+
+            // Filter to only update teacher records with "scheduled" status
+            const scheduledTeacherIds = existingTeacherAttendance
+                ?.filter(record => record.attendance_status === 'scheduled')
+                .map(record => record.teacher_id) || []
+
+            // Filter teacher attendance data to only include teachers with scheduled status
+            const filteredTeacherAttendance = Object.entries(teacherAttendance)
+                .filter(([teacherId]) => scheduledTeacherIds.includes(teacherId))
+                .reduce((acc, [teacherId, isPresent]) => {
+                    acc[teacherId] = isPresent
+                    return acc
+                }, {} as Record<string, boolean>)
+
+            // Prepare teacher attendance records for update
+            const teacherAttendanceRecords = Object.entries(filteredTeacherAttendance).map(([teacherId, isPresent]) => ({
+                session_id: sessionId,
+                teacher_id: teacherId,
+                attendance_status: isPresent ? 'present' : 'absent',
+                updated_at: new Date().toISOString()
+            }))
+
+            // Update teacher attendance records
+            if (teacherAttendanceRecords.length > 0) {
+                const { error: updateTeacherError } = await supabase
+                    .from('teacher_attendance')
+                    .upsert(teacherAttendanceRecords, {
+                        onConflict: 'session_id,teacher_id'
+                    })
+
+                if (updateTeacherError) {
+                    console.error('Supabase teacher attendance update error:', updateTeacherError)
+                    throw new Error(`Database error: ${updateTeacherError.message}`)
+                }
+            }
         }
 
         return { success: true }
@@ -499,6 +596,98 @@ export async function updateSessionAttendance(params: { sessionId: string; atten
                 message: error instanceof Error ? error.message : String(error)
             }
         }
+    }
+}
+
+export async function updateClassAttendance(params: {
+    classId: string;
+    teacher_ids: string[];
+    student_ids: string[];
+}): Promise<{ success: boolean; error?: { message: string } }> {
+    const supabase = createClient()
+    const { classId, teacher_ids, student_ids } = params
+
+    try {
+        // Get existing sessions for this class
+        const { data: existingSessions } = await supabase
+            .from('class_sessions')
+            .select('id, start_date')
+            .eq('class_id', classId)
+
+        if (existingSessions && existingSessions.length > 0) {
+            // Separate sessions into past and future/current
+            const now = new Date()
+            const futureSessions = existingSessions.filter(session => new Date(session.start_date) >= now)
+
+            if (futureSessions.length > 0) {
+                // Delete existing attendance records for future sessions only
+                // This is still needed because we're updating assignments, not deleting sessions
+                const futureSessionIds = futureSessions.map(session => session.id)
+
+                await supabase
+                    .from('teacher_attendance')
+                    .delete()
+                    .in('session_id', futureSessionIds)
+
+                await supabase
+                    .from('student_attendance')
+                    .delete()
+                    .in('session_id', futureSessionIds)
+
+                // Create new teacher attendance records for future sessions only
+                if (teacher_ids.length > 0) {
+                    const teacherAttendanceRecords = []
+                    for (const session of futureSessions) {
+                        for (const teacherId of teacher_ids) {
+                            teacherAttendanceRecords.push({
+                                session_id: session.id,
+                                teacher_id: teacherId,
+                                attendance_status: 'scheduled'
+                            })
+                        }
+                    }
+
+                    if (teacherAttendanceRecords.length > 0) {
+                        const { error: teacherAttendanceError } = await supabase
+                            .from('teacher_attendance')
+                            .insert(teacherAttendanceRecords)
+
+                        if (teacherAttendanceError) {
+                            console.error('Error updating teacher attendance records:', teacherAttendanceError)
+                        }
+                    }
+                }
+
+                // Create new student attendance records for future sessions only
+                if (student_ids.length > 0) {
+                    const studentAttendanceRecords = []
+                    for (const session of futureSessions) {
+                        for (const studentId of student_ids) {
+                            studentAttendanceRecords.push({
+                                session_id: session.id,
+                                student_id: studentId,
+                                attendance_status: 'scheduled'
+                            })
+                        }
+                    }
+
+                    if (studentAttendanceRecords.length > 0) {
+                        const { error: studentAttendanceError } = await supabase
+                            .from('student_attendance')
+                            .insert(studentAttendanceRecords)
+
+                        if (studentAttendanceError) {
+                            console.error('Error updating student attendance records:', studentAttendanceError)
+                        }
+                    }
+                }
+            }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error updating class attendance:', error)
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }
 
@@ -611,6 +800,13 @@ export async function updateClassAssignments(params: {
                 }
             }
         }
+
+        // Update attendance records for the new assignments
+        await updateClassAttendance({
+            classId,
+            teacher_ids,
+            student_ids
+        })
 
         return { success: true }
     } catch (error) {

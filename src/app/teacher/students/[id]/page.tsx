@@ -14,8 +14,10 @@ import React from "react"
 import AvatarIcon from "@/components/avatar"
 
 
+
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+
     const student = await getStudentById(id)
     const studentParents = await getStudentParents(id)
 
@@ -165,7 +167,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <WeeklySchedule sessions={studentSessions} />
+                        <WeeklySchedule sessions={studentSessions} role={"student"} id={id} />
                     </CardContent>
                 </Card>
             </div>

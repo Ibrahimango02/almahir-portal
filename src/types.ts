@@ -107,7 +107,7 @@ export type ClassType = {
     start_date: string // ISO datetime in UTC (timestamptz)
     end_date: string // ISO datetime in UTC (timestamptz)
     status: string
-    days_repeated: string[]
+    days_repeated: DaysRepeated
     sessions: SessionType[]
     class_link: string | null
     teachers: TeacherType[]
@@ -122,6 +122,8 @@ export type SessionType = {
     start_date: string // ISO datetime in UTC (timestamptz)
     end_date: string // ISO datetime in UTC (timestamptz)
     status: string
+    cancellation_reason?: string
+    cancelled_by?: string | null
     created_at: string
     updated_at: string | null
 }
@@ -135,6 +137,8 @@ export type ClassSessionType = {
     start_date: string // ISO datetime in UTC (timestamptz)
     end_date: string // ISO datetime in UTC (timestamptz)
     status: string
+    cancellation_reason?: string
+    cancelled_by?: string | null
     class_link: string | null
     teachers: TeacherType[]
     enrolled_students: StudentType[]
@@ -178,6 +182,16 @@ export type WeeklySchedule = {
     sunday: TimeSlot[]
 }
 
+export type DaysRepeated = {
+    monday?: TimeSlot
+    tuesday?: TimeSlot
+    wednesday?: TimeSlot
+    thursday?: TimeSlot
+    friday?: TimeSlot
+    saturday?: TimeSlot
+    sunday?: TimeSlot
+}
+
 export type TeacherAvailabilityType = {
     id: string
     teacher_id: string
@@ -200,10 +214,108 @@ export type ResourceType = {
     updated_at: string | null
 }
 
-export type ClassSessionAttendanceType = {
+export type StudentAttendanceType = {
     session_id: string
     student_id: string
     attendance_status: string
+    created_at: string
+    updated_at: string | null
+}
+
+export type TeacherAttendanceType = {
+    session_id: string
+    teacher_id: string
+    attendance_status: string
+    created_at: string
+    updated_at: string | null
+}
+
+// New types for subscription system
+export type SubscriptionType = {
+    id: string
+    name: string
+    hours_per_month: number
+    rate: number
+    hourly_rate: number
+    max_free_absences: number
+    total_amount: number | null
+    created_at: string
+    updated_at: string | null
+}
+
+export type StudentSubscriptionType = {
+    id: string
+    student_id: string
+    subscription_id: string
+    start_date: string
+    end_date: string
+    status: string
+    free_absences_remaining: number | null
+    created_at: string
+    updated_at: string | null
+    // Joined data
+    subscription?: SubscriptionType
+    student?: StudentType
+}
+
+// Billing calculation types
+export type BillingCalculationType = {
+    student_id: string
+    subscription_id: string
+    billing_period_start: string
+    billing_period_end: string
+    total_hours_scheduled: number
+    total_hours_attended: number
+    free_absences_used: number
+    max_free_absences: number
+    hourly_rate: number
+    total_amount: number
+    sessions_attended: number
+    sessions_scheduled: number
+}
+
+export type StudentSessionNotesType = {
+    id: string
+    session_id: string
+    student_id: string
+    notes: string | null
+    performance_rating: number | null
+    participation_level: number | null
+    created_at: string
+    updated_at: string
+}
+
+export type SessionRemarksType = {
+    id: string
+    session_id: string
+    session_summary: string
+    created_at: string
+    updated_at: string
+}
+
+export type SessionRemarksWithTeacherType = SessionRemarksType & {
+    teacher: {
+        first_name: string
+        last_name: string
+        avatar_url?: string | null
+    }
+}
+
+export type StudentSessionNotesWithStudentType = StudentSessionNotesType & {
+    student: {
+        first_name: string
+        last_name: string
+        avatar_url?: string | null
+    }
+}
+
+export type SessionHistoryType = {
+    id: string
+    session_id: string
+    actual_start_time: string | null
+    actual_end_time: string | null
+    duration: string | null // PostgreSQL interval as string
+    notes: string | null
     created_at: string
     updated_at: string | null
 }

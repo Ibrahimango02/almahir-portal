@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, BookOpen, Clock, UserPen } from "lucide-react"
+import { Users, BookOpen, Clock, User, Mail, UserPen } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -16,6 +16,7 @@ import AvatarIcon from "@/components/avatar"
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params
+
     const student = await getStudentById(id)
     const studentParents = await getStudentParents(id)
     const studentTeachers = await getStudentTeachers(id)
@@ -228,7 +229,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <WeeklySchedule sessions={studentSessions} />
+                        <WeeklySchedule sessions={studentSessions} role={"student"} id={id} />
                     </CardContent>
                 </Card>
             </div>

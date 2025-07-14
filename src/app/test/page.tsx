@@ -1,111 +1,47 @@
-"use client"
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
-import Image from "next/image"
 
-type UserProfile = {
-    id: string
-    email: string
-    first_name?: string
-    last_name?: string
-    avatar_url?: string
-    role?: string
-}
+import { getSubscriptionInfoByStudentId } from "@/lib/get/get-subscriptions"
+import { StudentSubscriptionType } from "@/types"
 
-export default function TestPage() {
-    const [profile, setProfile] = useState<UserProfile | null>(null)
-    const [loading, setLoading] = useState(true)
+export default async function TestPage() {
+    const studentId = '10a65d74-0f95-499b-93f3-11f8db38185c';
+    const subscriptionInfo: StudentSubscriptionType | null = await getSubscriptionInfoByStudentId(studentId);
 
-    useEffect(() => {
-        async function fetchProfile() {
-            setLoading(true)
-            const supabase = createClient()
-            const {
-                data: { user },
-            } = await supabase.auth.getUser()
-
-            if (!user) {
-                setProfile(null)
-                setLoading(false)
-                return
-            }
-
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("*")
-                .eq("id", user.id)
-                .single()
-
-            if (error) {
-                setProfile({
-                    id: user.id,
-                    email: user.email || "",
-                })
-            } else {
-                setProfile({
-                    id: user.id,
-                    email: user.email || "",
-                    ...data,
-                })
-            }
-            setLoading(false)
-        }
-
-        fetchProfile()
-    }, [])
-
-    if (loading) {
+    if (!subscriptionInfo) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
-                <p>Loading user info...</p>
+                <p>No subscription info found for student ID {studentId}.</p>
             </div>
-        )
-    }
-
-    if (!profile) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                <p>No user is currently logged in.</p>
-            </div>
-        )
+        );
     }
 
     return (
         <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md dark:bg-gray-900">
-            <h1 className="text-2xl font-bold mb-4">Current User Info</h1>
-            <div className="flex items-center gap-4 mb-4">
-                {profile.avatar_url ? (
-                    <Image
-                        src={profile.avatar_url}
-                        alt="User Avatar"
-                        width={64}
-                        height={64}
-                        className="rounded-full object-cover"
-                    />
-                ) : (
-                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-bold text-gray-500">
-                        {profile.first_name?.[0] || profile.email[0]}
-                    </div>
-                )}
-                <div>
-                    <p className="text-lg font-medium">
-                        {profile.first_name || ""} {profile.last_name || ""}
-                    </p>
-                    <p className="text-gray-600 dark:text-gray-300">{profile.email}</p>
+            <h1 className="text-2xl font-bold mb-4">Student Subscription Info</h1>
+            <div className="mb-4">
+                <p><span className="font-semibold">ID:</span> {subscriptionInfo.id}</p>
+                <p><span className="font-semibold">Student ID:</span> {subscriptionInfo.student_id}</p>
+                <p><span className="font-semibold">Subscription ID:</span> {subscriptionInfo.subscription_id}</p>
+                <p><span className="font-semibold">Start Date:</span> {subscriptionInfo.start_date}</p>
+                <p><span className="font-semibold">End Date:</span> {subscriptionInfo.end_date}</p>
+                <p><span className="font-semibold">Status:</span> {subscriptionInfo.status}</p>
+                <p><span className="font-semibold">Free Absences Remaining:</span> {subscriptionInfo.free_absences_remaining ?? 'N/A'}</p>
+                <p><span className="font-semibold">Created At:</span> {subscriptionInfo.created_at}</p>
+                <p><span className="font-semibold">Updated At:</span> {subscriptionInfo.updated_at ?? 'N/A'}</p>
+            </div>
+            {subscriptionInfo.subscription && (
+                <div className="mt-6">
+                    <h2 className="text-xl font-semibold mb-2">Subscription Details</h2>
+                    <p><span className="font-semibold">Name:</span> {subscriptionInfo.subscription.name}</p>
+                    <p><span className="font-semibold">Hours/Month:</span> {subscriptionInfo.subscription.hours_per_month}</p>
+                    <p><span className="font-semibold">Rate:</span> {subscriptionInfo.subscription.rate}</p>
+                    <p><span className="font-semibold">Hourly Rate:</span> {subscriptionInfo.subscription.hourly_rate}</p>
+                    <p><span className="font-semibold">Max Free Absences:</span> {subscriptionInfo.subscription.max_free_absences}</p>
+                    <p><span className="font-semibold">Total Amount:</span> {subscriptionInfo.subscription.total_amount ?? 'N/A'}</p>
+                    <p><span className="font-semibold">Created At:</span> {subscriptionInfo.subscription.created_at}</p>
+                    <p><span className="font-semibold">Updated At:</span> {subscriptionInfo.subscription.updated_at ?? 'N/A'}</p>
                 </div>
-            </div>
-            <div>
-                <p>
-                    <span className="font-semibold">User ID:</span> {profile.id}
-                </p>
-                {profile.role && (
-                    <p>
-                        <span className="font-semibold">Role:</span> {profile.role}
-                    </p>
-                )}
-            </div>
+            )}
         </div>
-    )
+    );
 }
