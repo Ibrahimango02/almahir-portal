@@ -91,10 +91,12 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
   const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const isAdmin = currentUserRole === 'admin'
+  const isModerator = currentUserRole === 'moderator'
   const isTeacher = currentUserRole === 'teacher'
 
   const getStudentDetailUrl = (studentId: string) => {
     if (!currentUserRole) return '/'
+    if (currentUserRole === 'moderator') return `/admin/students/${studentId}`
     return `/${currentUserRole}/students/${studentId}`
   }
 
@@ -117,7 +119,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
-                {isAdmin && <TableHead className="w-[50px] px-4"></TableHead>}
+                {(isAdmin || isModerator) && <TableHead className="w-[50px] px-4"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -225,8 +227,8 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     </div>
                   </TableCell>
 
-                  {/* Actions - Only show for admin */}
-                  {isAdmin && (
+                  {/* Actions - Show for admin and moderator */}
+                  {(isAdmin || isModerator) && (
                     <TableCell data-no-navigation className="py-2 px-3">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -248,12 +250,15 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                               Assign to Class
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                            <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
-                              <Edit className="mr-2 h-3.5 w-3.5" />
-                              Edit Student
-                            </Link>
-                          </DropdownMenuItem>
+                          {/* Only show edit for admin */}
+                          {isAdmin && (
+                            <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                              <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
+                                <Edit className="mr-2 h-3.5 w-3.5" />
+                                Edit Student
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

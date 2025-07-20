@@ -75,12 +75,11 @@ export default function ParentClassesPage() {
     }, [searchQuery, classes])
 
     return (
-        <div className="container mx-auto py-6">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
-                    <p className="text-muted-foreground">View and manage your assigned classes</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
+                    <p className="text-muted-foreground">Manage and view all classes</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -95,45 +94,11 @@ export default function ParentClassesPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Classes</p>
-                                <p className="text-3xl font-bold">{classes.length}</p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Active Classes</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.filter(c => c.status === 'active').length}
-                                </p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
             {/* Main Content Card */}
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle>My Classes</CardTitle>
-                    <CardDescription>View and manage your assigned classes</CardDescription>
+                    <CardTitle>All Classes</CardTitle>
+                    <CardDescription>View and manage all classes in the system</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ClassesTable

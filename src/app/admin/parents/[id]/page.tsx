@@ -11,8 +11,17 @@ import { BackButton } from "@/components/back-button"
 import { getParentById, getParentStudents } from "@/lib/get/get-parents"
 import AvatarIcon from "@/components/avatar"
 import { getInvoicesByParentId } from "@/lib/get/get-invoices"
+import { createClient } from "@/utils/supabase/server"
+import { checkIfAdmin } from "@/lib/get/get-profiles"
 
 export default async function ParentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // Get current user ID
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  // Check if admin
+  const isAdmin = userId ? await checkIfAdmin(userId) : false;
+
   const { id } = await params
   const parent = await getParentById(id)
   const parentStudents = await getParentStudents(id) ?? []
@@ -140,78 +149,80 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
 
               <Separator />
 
-              {/* Invoices Section */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <Receipt className="h-5 w-5 text-primary" />
-                    Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{parentInvoices ? parentInvoices.length : 0}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {parentInvoices && parentInvoices.length > 0 ? (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-100">
-                          {parentInvoices.map((invoice) => (
-                            <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-                              <td className="px-4 py-2 text-sm">
-                                {invoice.student ? `${invoice.student.first_name} ${invoice.student.last_name}` : "-"}
-                              </td>
-                              <td className="px-4 py-2 text-sm">
-                                <span className="inline-block bg-muted px-2 py-0.5 rounded-full text-xs font-medium text-primary">
-                                  {invoice.months || '-'}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm">
-                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
-                              </td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
-                                <span
-                                  className={
-                                    `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
-                                    (invoice.status === 'paid'
-                                      ? 'bg-green-100 text-green-800'
-                                      : invoice.status === 'pending'
-                                        ? 'bg-yellow-100 text-yellow-800'
-                                        : invoice.status === 'overdue'
-                                          ? 'bg-red-100 text-red-800'
-                                          : 'bg-gray-100 text-gray-800')
-                                  }
-                                >
-                                  {invoice.status}
-                                </span>
-                              </td>
+              {/* Invoices Section - Only for admin */}
+              {isAdmin && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5 text-primary" />
+                      Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{parentInvoices ? parentInvoices.length : 0}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {parentInvoices && parentInvoices.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                      <h3 className="text-base font-medium text-muted-foreground mb-1">
-                        No Invoices
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        No invoices found for this parent.
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-100">
+                            {parentInvoices.map((invoice) => (
+                              <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                                <td className="px-4 py-2 text-sm">
+                                  {invoice.student ? `${invoice.student.first_name} ${invoice.student.last_name}` : "-"}
+                                </td>
+                                <td className="px-4 py-2 text-sm">
+                                  <span className="inline-block bg-muted px-2 py-0.5 rounded-full text-xs font-medium text-primary">
+                                    {invoice.months || '-'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm">
+                                  {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                                </td>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
+                                <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                                  <span
+                                    className={
+                                      `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                                      (invoice.status === 'paid'
+                                        ? 'bg-green-100 text-green-800'
+                                        : invoice.status === 'pending'
+                                          ? 'bg-yellow-100 text-yellow-800'
+                                          : invoice.status === 'overdue'
+                                            ? 'bg-red-100 text-red-800'
+                                            : 'bg-gray-100 text-gray-800')
+                                    }
+                                  >
+                                    {invoice.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        <h3 className="text-base font-medium text-muted-foreground mb-1">
+                          No Invoices
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          No invoices found for this parent.
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               <Separator />
 
@@ -226,17 +237,19 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                 </p>
               </div>
             </div>
-            {/* Edit Button */}
-            <Button
-              asChild
-              className="mt-6 shadow-sm transition-all hover:shadow-md"
-              style={{ backgroundColor: "#3d8f5b", color: "white" }}
-            >
-              <Link href={`/admin/parents/edit/${parent.parent_id}`} className="flex items-center justify-center gap-2">
-                <Edit className="h-4 w-4" />
-                Edit Parent Information
-              </Link>
-            </Button>
+            {/* Edit Button - Only for admin */}
+            {isAdmin && (
+              <Button
+                asChild
+                className="mt-6 shadow-sm transition-all hover:shadow-md"
+                style={{ backgroundColor: "#3d8f5b", color: "white" }}
+              >
+                <Link href={`/admin/parents/edit/${parent.parent_id}`} className="flex items-center justify-center gap-2">
+                  <Edit className="h-4 w-4" />
+                  Edit Parent Information
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

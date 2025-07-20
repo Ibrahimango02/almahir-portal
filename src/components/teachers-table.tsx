@@ -24,16 +24,31 @@ import { getTeacherClassCount } from "@/lib/get/get-classes"
 import { TeacherType } from "@/types"
 import AvatarIcon from "./avatar"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
+import { getProfile } from "@/lib/get/get-profiles"
 
 interface TeachersTableProps {
   teachers: TeacherType[]
+  userRole?: 'admin' | 'moderator' | 'teacher' | 'parent' | 'student'
 }
 
-export function TeachersTable({ teachers }: TeachersTableProps) {
+export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
   const router = useRouter()
   const [classCount, setClassCount] = useState<Record<string, number>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const profile = await getProfile()
+        setCurrentUserRole(profile.role)
+      } catch (error) {
+        if (userRole) setCurrentUserRole(userRole)
+      }
+    }
+    fetchUserRole()
+  }, [userRole])
 
   // Filter out admins, only show teachers
   const teachersOnly = teachers.filter(teacher => teacher.role === 'teacher')
@@ -62,6 +77,8 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
   const totalItems = teachersOnly.length
   const totalPages = Math.ceil(totalItems / pageSize)
   const paginatedTeachers = teachersOnly.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+
+  const isAdmin = currentUserRole === 'admin'
 
   return (
     <div className="space-y-4">
@@ -204,12 +221,15 @@ export function TeachersTable({ teachers }: TeachersTableProps) {
                             Assign Class
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                          <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center">
-                            <Edit className="mr-2 h-3.5 w-3.5" />
-                            Edit Teacher
-                          </Link>
-                        </DropdownMenuItem>
+                        {/* Only show edit for admin */}
+                        {isAdmin && (
+                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                            <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center">
+                              <Edit className="mr-2 h-3.5 w-3.5" />
+                              Edit Teacher
+                            </Link>
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

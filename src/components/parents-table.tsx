@@ -84,6 +84,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
 
   const getParentDetailUrl = (parentId: string) => {
     if (!currentUserRole) return '/'
+    if (currentUserRole === 'moderator') return `/admin/parents/${parentId}`
     return `/${currentUserRole}/parents/${parentId}`
   }
 
@@ -222,12 +223,15 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                         <DropdownMenuContent align="end" className="w-44">
                           <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                            <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
-                              <Edit className="mr-2 h-3.5 w-3.5" />
-                              Edit Parent
-                            </Link>
-                          </DropdownMenuItem>
+                          {/* Only show edit for admin */}
+                          {isAdmin && (
+                            <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                              <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
+                                <Edit className="mr-2 h-3.5 w-3.5" />
+                                Edit Parent
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

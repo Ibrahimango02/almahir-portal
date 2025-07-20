@@ -75,9 +75,9 @@ export default function TeacherClassesPage() {
     }, [searchQuery, classes])
 
     return (
-        <div className="container mx-auto py-6">
+        <div className="flex flex-col gap-6">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
                     <p className="text-muted-foreground">View and manage your assigned classes</p>
@@ -96,55 +96,6 @@ export default function TeacherClassesPage() {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Classes</p>
-                                <p className="text-3xl font-bold">{classes.length}</p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Active Classes</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.filter(c => c.status === 'active').length}
-                                </p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Students</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.reduce((acc, c) => acc + c.students.length, 0)}
-                                </p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
             {/* Main Content Card */}
             <Card>
                 <CardHeader className="pb-3">
@@ -152,8 +103,8 @@ export default function TeacherClassesPage() {
                     <CardDescription>View and manage your assigned classes</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ClassesTable 
-                        classes={filteredClasses} 
+                    <ClassesTable
+                        classes={filteredClasses}
                         isLoading={isLoading}
                         userType="teacher"
                         emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "You haven't been assigned to any classes yet"}

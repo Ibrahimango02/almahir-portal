@@ -150,7 +150,7 @@ export function AdminSidebar() {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex-col bg-white border-r border-gray-200 shadow-sm w-60 transition-transform duration-300 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex-col bg-white border-r border-gray-200 shadow-sm w-60 transition-transform duration-300 md:translate-x-0 overflow-y-auto max-h-screen",
           "dark:bg-[#16161a] dark:border-gray-800/60 dark:shadow-gray-950/50",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -268,7 +268,7 @@ export function AdminSidebar() {
                 </Button>
               </div>
               {showLogout && (
-                <div className="absolute right-0 top-full mt-2 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
                     <Link
                       href="/admin/settings"

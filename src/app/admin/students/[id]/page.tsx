@@ -19,6 +19,8 @@ import { StudentTeachersSection } from "@/components/student-teachers-section"
 import { getStudentSessionHistory } from "@/lib/get/get-session-history"
 import { getStudentSessionNotesForStudent } from "@/lib/get/get-session-remarks"
 import { getInvoicesByStudentId } from "@/lib/get/get-invoices"
+import { createClient } from "@/utils/supabase/server"
+import { checkIfAdmin } from "@/lib/get/get-profiles"
 
 // Function to convert month numbers to month names
 const formatMonthRange = (monthRange: string): string => {
@@ -79,6 +81,14 @@ const formatMonthRange = (monthRange: string): string => {
 }
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // Get current user ID
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  // Check if admin
+  const isAdmin = userId ? await checkIfAdmin(userId) : false;
+  const isModerator = userId && !isAdmin ? true : false;
+
   const { id } = await params
 
   const student = await getStudentById(id)
@@ -281,17 +291,19 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </p>
               </div>
 
-              {/* Edit Button */}
-              <Button
-                asChild
-                className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
-                style={{ backgroundColor: "#3d8f5b", color: "white" }}
-              >
-                <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center justify-center gap-2">
-                  <Edit className="h-4 w-4" />
-                  Edit Student Information
-                </Link>
-              </Button>
+              {/* Edit Button - Only for admin */}
+              {isAdmin && (
+                <Button
+                  asChild
+                  className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
+                  style={{ backgroundColor: "#3d8f5b", color: "white" }}
+                >
+                  <Link href={`/admin/students/edit/${student.student_id}`} className="flex items-center justify-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Student Information
+                  </Link>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -551,170 +563,173 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         </CardContent>
       </Card>
 
-      {/* Subscription Information Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-primary" />
-            Subscription Information
-          </CardTitle>
-          <Button asChild size="sm" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            <Link href={`/admin/students/subscription/${student.student_id}`}>
-              {studentSubscription ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-              {studentSubscription ? "Edit Subscription" : "Add Subscription"}
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {studentSubscription ? (
-            <div className="space-y-4">
-              {/* Top Row: Status and Plan */}
-              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-muted-foreground">Status: </span>
-                  <Badge
-                    className={`capitalize px-2 py-1 text-xs ${studentSubscription.status === "active" ? "bg-green-600" :
-                      studentSubscription.status === "inactive" ? "bg-amber-500" :
-                        studentSubscription.status === "expired" ? "bg-red-600" :
-                          "bg-gray-500"
-                      }`}
-                  >
-                    {studentSubscription.status}
-                  </Badge>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold">{studentSubscription.subscription?.name}</p>
-                  <p className="text-xs text-muted-foreground">Current Plan</p>
-                </div>
-              </div>
-
-              {/* Middle Row: Dates */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-muted/20 rounded-lg">
-                  <h4 className="text-xs font-medium text-muted-foreground mb-1">Start Date</h4>
-                  <p className="text-sm font-semibold">
-                    {studentSubscription.start_date ? format(parseISO(studentSubscription.start_date), "MMM d, yyyy") : 'N/A'}
-                  </p>
-                </div>
-                <div className="p-3 bg-muted/20 rounded-lg">
-                  <h4 className="text-xs font-medium text-muted-foreground mb-1">Next Payment Date</h4>
-                  <p className="text-sm font-semibold">
-                    {studentSubscription.next_payment_date ? format(parseISO(studentSubscription.next_payment_date), "MMM d, yyyy") : 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom Row: Fee and Hours */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 border rounded-lg bg-white">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Subscription Fee</span>
+      {/* Subscription Information and Invoices only for admin */}
+      {isAdmin && <>
+        {/* Subscription Information Section */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-primary" />
+              Subscription Information
+            </CardTitle>
+            <Button asChild size="sm" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+              <Link href={`/admin/students/subscription/${student.student_id}`}>
+                {studentSubscription ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                {studentSubscription ? "Edit Subscription" : "Add Subscription"}
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {studentSubscription ? (
+              <div className="space-y-4">
+                {/* Top Row: Status and Plan */}
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">Status: </span>
+                    <Badge
+                      className={`capitalize px-2 py-1 text-xs ${studentSubscription.status === "active" ? "bg-green-600" :
+                        studentSubscription.status === "inactive" ? "bg-amber-500" :
+                          studentSubscription.status === "expired" ? "bg-red-600" :
+                            "bg-gray-500"
+                        }`}
+                    >
+                      {studentSubscription.status}
+                    </Badge>
                   </div>
-                  <p className="text-xl font-bold text-primary">
-                    {studentSubscription.subscription?.total_amount} CAD
-                  </p>
-                  <p className="text-xs text-muted-foreground">every {studentSubscription.subscription?.rate} months</p>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">{studentSubscription.subscription?.name}</p>
+                    <p className="text-xs text-muted-foreground">Current Plan</p>
+                  </div>
                 </div>
 
-                <div className={`p-3 border rounded-lg ${hoursBgColor}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Clock className={`h-4 w-4 ${hoursTextColor}`} />
-                    <span className={`text-sm font-medium ${hoursTextColor}`}>Monthly Hours</span>
+                {/* Middle Row: Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-muted/20 rounded-lg">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-1">Start Date</h4>
+                    <p className="text-sm font-semibold">
+                      {studentSubscription.start_date ? format(parseISO(studentSubscription.start_date), "MMM d, yyyy") : 'N/A'}
+                    </p>
                   </div>
-                  <p className={`text-xl font-bold ${hoursTextColor}`}>
-                    {studentTotalHours} / {monthlyHours}
-                  </p>
-                  <p className={`text-xs ${hoursTextColor}`}>used / available</p>
+                  <div className="p-3 bg-muted/20 rounded-lg">
+                    <h4 className="text-xs font-medium text-muted-foreground mb-1">Next Payment Date</h4>
+                    <p className="text-sm font-semibold">
+                      {studentSubscription.next_payment_date ? format(parseISO(studentSubscription.next_payment_date), "MMM d, yyyy") : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Bottom Row: Fee and Hours */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 border rounded-lg bg-white">
+                    <div className="flex items-center gap-2 mb-1">
+                      <DollarSign className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Subscription Fee</span>
+                    </div>
+                    <p className="text-xl font-bold text-primary">
+                      {studentSubscription.subscription?.total_amount} CAD
+                    </p>
+                    <p className="text-xs text-muted-foreground">every {studentSubscription.subscription?.rate} months</p>
+                  </div>
+
+                  <div className={`p-3 border rounded-lg ${hoursBgColor}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className={`h-4 w-4 ${hoursTextColor}`} />
+                      <span className={`text-sm font-medium ${hoursTextColor}`}>Monthly Hours</span>
+                    </div>
+                    <p className={`text-xl font-bold ${hoursTextColor}`}>
+                      {studentTotalHours} / {monthlyHours}
+                    </p>
+                    <p className={`text-xs ${hoursTextColor}`}>used / available</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="text-base font-medium text-muted-foreground mb-1">
-                No Active Subscription
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                This student doesn&apos;t have an active subscription plan.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            ) : (
+              <div className="text-center py-6">
+                <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-base font-medium text-muted-foreground mb-1">
+                  No Active Subscription
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  This student doesn&apos;t have an active subscription plan.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Invoices Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{invoices ? invoices.length : 0}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {invoices && invoices.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Parents</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {invoices.map((invoice) => (
-                    <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-                      <td className="px-4 py-2 text-sm">
-                        <span className="inline-block bg-muted px-2 py-0.5 rounded-full font-medium text-primary">
-                          {formatMonthRange(invoice.months)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
-                        <span
-                          className={
-                            `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
-                            (invoice.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : invoice.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : invoice.status === 'overdue'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800')
-                          }
-                        >
-                          {invoice.status}
-                        </span>
-                      </td>
+        {/* Invoices Section */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{invoices ? invoices.length : 0}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {invoices && invoices.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Parents</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="text-base font-medium text-muted-foreground mb-1">
-                No Invoices
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                No invoices found for this student.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                        <td className="px-4 py-2 text-sm">
+                          <span className="inline-block bg-muted px-2 py-0.5 rounded-full font-medium text-primary">
+                            {formatMonthRange(invoice.months)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                          <span
+                            className={
+                              `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                              (invoice.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : invoice.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : invoice.status === 'overdue'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800')
+                            }
+                          >
+                            {invoice.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-base font-medium text-muted-foreground mb-1">
+                  No Invoices
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  No invoices found for this student.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </>}
 
       {/* Teachers Section */}
       <StudentTeachersSection

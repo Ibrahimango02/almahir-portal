@@ -176,80 +176,72 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
                                 <SortableHeader label="Amount" sortKey="amount" />
                                 <SortableHeader label="Paid Date" sortKey="paid_date" />
                                 <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                                <TableHead className="w-[50px] px-3"></TableHead>
+                                {currentUserRole === 'admin' && (
+                                    <TableHead className="w-[50px] px-3"></TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments.length === 0 ? (
-                                // Empty state
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                        <UserPen className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                        <p>No teacher payments found</p>
-                                        <p className="text-sm">Teacher payments will appear here once created</p>
+                            {paginatedPayments.map((payment, idx) => (
+                                <TableRow
+                                    key={payment.payment_id || idx}
+                                    className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
+                                >
+                                    {/* Teacher Name */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-sm">
+                                                {payment.teacher ? `${payment.teacher.first_name} ${payment.teacher.last_name}` : 'N/A'}
+                                            </span>
+                                        </div>
                                     </TableCell>
-                                </TableRow>
-                            ) : (
-                                paginatedPayments.map((payment, idx) => (
-                                    <TableRow
-                                        key={payment.payment_id || idx}
-                                        className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
-                                    >
-                                        {/* Teacher Name */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm">
-                                                    {payment.teacher ? `${payment.teacher.first_name} ${payment.teacher.last_name}` : 'N/A'}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Class Title */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm">
-                                                    {payment.session?.class_title || 'N/A'}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Session Date */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm">
-                                                    {payment.session ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : 'N/A'}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Hours */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm">
-                                                    {payment.hours} h
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Amount */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-semibold text-sm text-green-600">
-                                                    {payment.amount.toFixed(2)} CAD
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Paid Date */}
-                                        <TableCell className="py-2 px-3">
-                                            <div className="flex items-center gap-1.5">
-                                                <span>
-                                                    {payment.paid_date ? format(parseISO(payment.paid_date), "MMM dd, yyyy") : "-"}
-                                                </span>
-                                            </div>
-                                        </TableCell>
-                                        {/* Status */}
-                                        <TableCell className="py-2 px-3 text-center">
-                                            <div className="max-w-[100px] mx-auto">
-                                                <InvoicePaymentStatusBadge status={payment.status} />
-                                            </div>
-                                        </TableCell>
-                                        {/* Actions - Always show for each row */}
+                                    {/* Class Title */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-sm">
+                                                {payment.session?.class_title || 'N/A'}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Session Date */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-sm">
+                                                {payment.session ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : 'N/A'}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Hours */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-sm">
+                                                {payment.hours} h
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Amount */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="font-semibold text-sm text-green-600">
+                                                {payment.amount.toFixed(2)} CAD
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Paid Date */}
+                                    <TableCell className="py-2 px-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <span>
+                                                {payment.paid_date ? format(parseISO(payment.paid_date), "MMM dd, yyyy") : "-"}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    {/* Status */}
+                                    <TableCell className="py-2 px-3 text-center">
+                                        <div className="max-w-[100px] mx-auto">
+                                            <InvoicePaymentStatusBadge status={payment.status} />
+                                        </div>
+                                    </TableCell>
+                                    {currentUserRole === 'admin' && (
                                         <TableCell data-no-navigation className="py-2 px-3">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -300,9 +292,11 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
+                                    )}
+                                </TableRow>
+                            ))
+
+                            }
                         </TableBody>
                     </Table>
                 </div>

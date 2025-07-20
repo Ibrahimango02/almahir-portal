@@ -31,7 +31,7 @@ const formatMonthRange = (monthRange: string): string => {
     ]
 
     const months = monthRange.split('-')
-    
+
     if (months.length === 1) {
         // Single month case (e.g., "8")
         const month = parseInt(months[0]) - 1 // Convert to 0-based index
@@ -43,22 +43,22 @@ const formatMonthRange = (monthRange: string): string => {
         // Check if this is a cross-year range (e.g., "8/2025-8/2026")
         const startPart = months[0]
         const endPart = months[1]
-        
+
         if (startPart.includes('/') && endPart.includes('/')) {
             // Cross-year format: "8/2025-8/2026"
             const [startMonth, startYear] = startPart.split('/').map(Number)
             const [endMonth, endYear] = endPart.split('/').map(Number)
-            
+
             const startMonthIndex = startMonth - 1
             const endMonthIndex = endMonth - 1
-            
+
             if (isNaN(startMonthIndex) || isNaN(endMonthIndex) || startMonthIndex < 0 || startMonthIndex > 11 || endMonthIndex < 0 || endMonthIndex > 11) {
                 return monthRange // Return original if invalid
             }
-            
+
             const startName = monthNames[startMonthIndex]
             const endName = monthNames[endMonthIndex]
-            
+
             return `${startName} ${startYear} - ${endName} ${endYear}`
         } else {
             // Same year range case (e.g., "7-8")
@@ -244,15 +244,16 @@ export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoic
                                 <SortableHeader label="Due Date" sortKey="due_date" />
                                 <SortableHeader label="Paid Date" sortKey="paid_date" />
                                 <TableHead className="h-10 px-3 font-semibold text-foreground/80 text-center">Status</TableHead>
-                                <TableHead className="w-[50px] px-3"></TableHead>
+                                {currentUserRole === 'admin' && (
+                                    <TableHead className="w-[50px] px-3"></TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {paginatedInvoices.map((invoice, idx) => (
                                 <TableRow
                                     key={invoice.invoice_id || idx}
-                                    className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                                        }`}
+                                    className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
                                 >
 
 
@@ -316,58 +317,58 @@ export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoic
                                             <InvoicePaymentStatusBadge status={invoice.status} />
                                         </div>
                                     </TableCell>
-
-                                    {/* Actions - Always show for admin */}
-                                    <TableCell data-no-navigation className="py-2 px-3">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                                >
-                                                    <MoreHorizontal className="h-3.5 w-3.5" />
-                                                    <span className="sr-only">Open menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="w-48">
-                                                <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                    <Link href={getActionUrl('edit', invoice.invoice_id)} className="flex items-center">
-                                                        <Edit className="mr-2 h-3.5 w-3.5" />
-                                                        Edit Invoice
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
-                                                <DropdownMenuItem
-                                                    data-status-update
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleStatusUpdate(invoice.invoice_id, 'paid')
-                                                    }}
-                                                    disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
-                                                    className="cursor-pointer text-xs"
-                                                >
-                                                    <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                                                    Mark as Paid
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    data-status-update
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleStatusUpdate(invoice.invoice_id, 'cancelled')
-                                                    }}
-                                                    disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
-                                                    className="cursor-pointer text-xs"
-                                                >
-                                                    <XCircle className="mr-2 h-3.5 w-3.5" />
-                                                    Cancel Invoice
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                                    {currentUserRole === 'admin' && (
+                                        <TableCell data-no-navigation className="py-2 px-3">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                                    >
+                                                        <MoreHorizontal className="h-3.5 w-3.5" />
+                                                        <span className="sr-only">Open menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="w-48">
+                                                    <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                                                        <Link href={getActionUrl('edit', invoice.invoice_id)} className="flex items-center">
+                                                            <Edit className="mr-2 h-3.5 w-3.5" />
+                                                            Edit Invoice
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
+                                                    <DropdownMenuItem
+                                                        data-status-update
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleStatusUpdate(invoice.invoice_id, 'paid')
+                                                        }}
+                                                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
+                                                        className="cursor-pointer text-xs"
+                                                    >
+                                                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                                        Mark as Paid
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        data-status-update
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleStatusUpdate(invoice.invoice_id, 'cancelled')
+                                                        }}
+                                                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
+                                                        className="cursor-pointer text-xs"
+                                                    >
+                                                        <XCircle className="mr-2 h-3.5 w-3.5" />
+                                                        Cancel Invoice
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                         </TableBody>

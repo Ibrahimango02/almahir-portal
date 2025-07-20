@@ -110,7 +110,7 @@ export default function ParentResourcesPage() {
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Children&apos;s Resources</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Resources</h1>
                     <p className="text-muted-foreground">Educational materials shared by your children&apos;s teachers</p>
                 </div>
             </div>

@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BookOpen, Clock, Search } from "lucide-react"
+import { Plus, BookOpen, Clock, Search, Archive } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 import ClassesTable from "@/components/classes-table"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default function StudentClassesPage() {
     const [classes, setClasses] = useState<ClassType[]>([])
@@ -15,6 +17,7 @@ export default function StudentClassesPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
+    const [archivedClasses, setArchivedClasses] = useState<ClassType[]>([])
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -36,6 +39,7 @@ export default function StudentClassesPage() {
                 const data = await getClassesByStudentId(currentUserId)
                 setClasses(data)
                 setFilteredClasses(data)
+                setArchivedClasses(data.filter(c => c.status === 'archived'))
             } catch (error) {
                 console.error("Error fetching classes:", error)
             } finally {
@@ -74,13 +78,15 @@ export default function StudentClassesPage() {
         setFilteredClasses(filtered)
     }, [searchQuery, classes])
 
+    const totalClasses = classes.length
+    const activeClasses = classes.filter(c => c.status === 'active')
+
     return (
-        <div className="container mx-auto py-6">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
-                    <p className="text-muted-foreground">View and manage your assigned classes</p>
+                    <p className="text-muted-foreground">Manage and view all classes</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -95,45 +101,11 @@ export default function StudentClassesPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Classes</p>
-                                <p className="text-3xl font-bold">{classes.length}</p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <BookOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Active Classes</p>
-                                <p className="text-3xl font-bold">
-                                    {classes.filter(c => c.status === 'active').length}
-                                </p>
-                            </div>
-                            <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                <Clock className="h-6 w-6 text-green-600 dark:text-green-400" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
             {/* Main Content Card */}
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle>My Classes</CardTitle>
-                    <CardDescription>View and manage your assigned classes</CardDescription>
+                    <CardTitle>All Classes</CardTitle>
+                    <CardDescription>View and manage all classes in the system</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ClassesTable

@@ -79,14 +79,12 @@ export default function StudentsPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Students</h1>
                 </div>
-                <Card>
-                    <CardContent className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                            <p className="text-muted-foreground">Loading students...</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="p-6 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                        <p className="text-muted-foreground">Loading students...</p>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -97,14 +95,12 @@ export default function StudentsPage() {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <h1 className="text-3xl font-bold tracking-tight">Students</h1>
                 </div>
-                <Card>
-                    <CardContent className="flex items-center justify-center py-8">
-                        <div className="text-center">
-                            <p className="text-destructive mb-2">Error loading students</p>
-                            <p className="text-muted-foreground text-sm">{error}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="p-6 flex items-center justify-center">
+                    <div className="text-center">
+                        <p className="text-destructive mb-2">Error loading students</p>
+                        <p className="text-muted-foreground text-sm">{error}</p>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -126,16 +122,9 @@ export default function StudentsPage() {
                     </div>
                 </div>
             </div>
-
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>My Children</CardTitle>
-                    <CardDescription>View your children enrolled in classes</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <StudentsTable students={filteredStudents} userRole="parent" />
-                </CardContent>
-            </Card>
+            <div className="p-6">
+                <StudentsTable students={filteredStudents} userRole="parent" />
+            </div>
         </div>
     )
 }

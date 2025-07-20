@@ -15,12 +15,11 @@ import {
   X,
   BookOpen,
   FolderOpen,
-  FileText
+  Receipt
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { logout } from "@/lib/auth/auth-actions"
 import { getProfile } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"
@@ -57,15 +56,9 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Invoices",
-    icon: FileText,
-    href: "/teacher/invoices",
-    color: "text-green-600",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/teacher/settings",
+    label: "Payments",
+    icon: Receipt,
+    href: "/teacher/payments",
     color: "text-green-600",
   },
 ]
@@ -114,7 +107,7 @@ export function TeacherSidebar() {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex-col bg-white border-r border-gray-200 shadow-sm w-60 transition-transform duration-300 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex-col bg-white border-r border-gray-200 shadow-sm w-60 transition-transform duration-300 md:translate-x-0 overflow-y-auto max-h-screen",
           "dark:bg-[#16161a] dark:border-gray-800/60 dark:shadow-gray-950/50",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
@@ -122,7 +115,7 @@ export function TeacherSidebar() {
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
           <Link href="/teacher/dashboard" className="flex flex-col items-center justify-center w-full">
             <div className="flex items-center justify-center w-full py-2">
-              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain shadow-md" />
+              <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain" />
             </div>
           </Link>
           <Button
@@ -154,10 +147,6 @@ export function TeacherSidebar() {
         </div>
         <div className="mt-auto">
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
-              <ThemeToggle />
-            </div>
             <div className="relative">
               <div className="flex items-center justify-between rounded-lg px-3 py-2 dark:bg-gray-800/50">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -204,8 +193,15 @@ export function TeacherSidebar() {
                 </Button>
               </div>
               {showLogout && (
-                <div className="absolute right-0 mt-1 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
+                    <Link
+                      href="/teacher/settings"
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
                     <button
                       onClick={logout}
                       className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"

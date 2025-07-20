@@ -84,7 +84,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   const { timezone } = useTimezone()
 
   // Determine if actions should be shown based on user role
-  const showActions = userRole === 'admin' || userRole === 'teacher'
+  const showActions = userRole === 'admin'
 
   // Determine if links should be enabled based on user role
   const enableLinks = userRole === 'admin' || userRole === 'teacher' || userRole === 'parent'
@@ -221,6 +221,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
+                  {/*
                   <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                     <DialogTrigger asChild>
                       <Button
@@ -266,6 +267,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                  */}
                 </div>
               )}
             </div>

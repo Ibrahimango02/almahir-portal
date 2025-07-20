@@ -18,8 +18,17 @@ import { getTeacherSessionHistory } from "@/lib/get/get-session-history"
 import { getSessionRemarks } from "@/lib/get/get-session-remarks"
 import { getTeacherPaymentsByTeacherId } from "@/lib/get/get-teacher-payments"
 import { format, parseISO } from "date-fns"
+import { createClient } from "@/utils/supabase/server"
+import { checkIfAdmin } from "@/lib/get/get-profiles"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  // Get current user ID
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+  // Check if admin
+  const isAdmin = userId ? await checkIfAdmin(userId) : false;
+
   const { id } = await params
 
   const teacher = await getTeacherById(id)
@@ -186,17 +195,19 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
               <Separator />
 
-              {/* Edit Button */}
-              <Button
-                asChild
-                className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
-                style={{ backgroundColor: "#3d8f5b", color: "white" }}
-              >
-                <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center justify-center gap-2">
-                  <Edit className="h-4 w-4" />
-                  Edit Teacher Information
-                </Link>
-              </Button>
+              {/* Edit Button - Only for admin */}
+              {isAdmin && (
+                <Button
+                  asChild
+                  className="w-full mt-6 shadow-sm transition-all hover:shadow-md"
+                  style={{ backgroundColor: "#3d8f5b", color: "white" }}
+                >
+                  <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center justify-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Teacher Information
+                  </Link>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -463,81 +474,83 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         </CardContent>
       </Card>
 
-      {/* Payments Section */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-primary" />
-            Payments <span className="text-xs bg-muted px-2 py-1 rounded-full">{teacherPayments ? teacherPayments.length : 0}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {teacherPayments && teacherPayments.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hours</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {teacherPayments.map((payment, idx) => (
-                    <tr key={payment.payment_id || idx} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {payment.session?.class_title || 'N/A'}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        <Link
-                          href={`/admin/classes/${sessionToClassMap.get(payment.session.session_id) || 'unknown'}/${payment.session.session_id}`}
-                          className="text-primary hover:underline"
-                        >
-                          {payment.session?.start_date ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : "N/A"}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">{payment.hours}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">{Number(payment.amount).toFixed(2)} CAD</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm">
-                        {payment.paid_date ? format(parseISO(payment.paid_date), "MMM d, yyyy") : "-"}
-                      </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
-                        <span
-                          className={
-                            `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
-                            (payment.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : payment.status === 'pending'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : payment.status === 'overdue'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800')
-                          }
-                        >
-                          {payment.status}
-                        </span>
-                      </td>
+      {/* Payments Section - Only for admin */}
+      {isAdmin && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" />
+              Payments <span className="text-xs bg-muted px-2 py-1 rounded-full">{teacherPayments ? teacherPayments.length : 0}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {teacherPayments && teacherPayments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hours</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-              <h3 className="text-base font-medium text-muted-foreground mb-1">
-                No Payments
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                No payments found for this teacher.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {teacherPayments.map((payment, idx) => (
+                      <tr key={payment.payment_id || idx} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          {payment.session?.class_title || 'N/A'}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          <Link
+                            href={`/admin/classes/${sessionToClassMap.get(payment.session.session_id) || 'unknown'}/${payment.session.session_id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {payment.session?.start_date ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : "N/A"}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{payment.hours}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{Number(payment.amount).toFixed(2)} CAD</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">
+                          {payment.paid_date ? format(parseISO(payment.paid_date), "MMM d, yyyy") : "-"}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                          <span
+                            className={
+                              `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                              (payment.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : payment.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : payment.status === 'overdue'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-gray-100 text-gray-800')
+                            }
+                          >
+                            {payment.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <h3 className="text-base font-medium text-muted-foreground mb-1">
+                  No Payments
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  No payments found for this teacher.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Students Section */}
       <TeacherStudentsSection

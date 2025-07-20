@@ -574,7 +574,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                   </Button>
                 </div>
                 {/* Button 5 - Delete Session (only for admins) */}
-                <div className="relative" title="Delete Session">
+                {/* <div className="relative" title="Delete Session">
                   <Button
                     size="icon"
                     className="h-10 w-10 bg-red-700 hover:bg-red-800 text-white border-red-600 hover:border-red-600"
@@ -584,7 +584,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
-                </div>
+                </div> */}
               </>
             )}
           </>
@@ -627,6 +627,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             <Button
               onClick={handleCancellationSubmit}
               disabled={isLoading || !cancellationReason.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
             >
               {isLoading ? "Cancelling..." : "Confirm Cancellation"}
             </Button>
@@ -635,7 +636,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       </Dialog>
 
       {/* Delete Session Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+      {/* <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Session</DialogTitle>
@@ -670,7 +671,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
     </div>
   )
 }
