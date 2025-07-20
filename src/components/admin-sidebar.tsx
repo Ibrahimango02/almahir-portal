@@ -19,7 +19,8 @@ import {
   BookOpen,
   FolderOpen,
   Plus,
-  ScrollText
+  ScrollText,
+  UserSearch
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -76,7 +77,7 @@ const userRoutes = [
   },
   {
     label: "Moderators",
-    icon: User,
+    icon: UserSearch,
     href: "/admin/moderators",
     color: "text-green-600",
   },
