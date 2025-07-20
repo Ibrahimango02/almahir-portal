@@ -134,7 +134,7 @@ export default function TeacherClassesPage() {
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Total Students</p>
                                 <p className="text-3xl font-bold">
-                                    {classes.reduce((acc, c) => acc + c.enrolled_students.length, 0)}
+                                    {classes.reduce((acc, c) => acc + c.students.length, 0)}
                                 </p>
                             </div>
                             <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">

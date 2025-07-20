@@ -246,7 +246,7 @@ export default function AssignClassPage() {
                           </div>
                           <Badge variant="secondary" className="flex items-center space-x-1 ml-2 flex-shrink-0">
                             <Users className="h-3 w-3" />
-                            <span>{cls.enrolled_students.length}</span>
+                            <span>{cls.students.length}</span>
                           </Badge>
                         </div>
 

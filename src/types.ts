@@ -94,6 +94,7 @@ export type TeacherType = {
     specialization: string | null
     hourly_rate: number | null
     notes: string | null
+    is_admin: boolean
     created_at: string
     updated_at: string | null
 }
@@ -111,7 +112,7 @@ export type ClassType = {
     sessions: SessionType[]
     class_link: string | null
     teachers: TeacherType[]
-    enrolled_students: StudentType[]
+    students: StudentType[]
     times?: Record<string, { start: string; end: string }>
     created_at: string
     updated_at: string | null
@@ -124,6 +125,7 @@ export type SessionType = {
     status: string
     cancellation_reason?: string
     cancelled_by?: string | null
+    rescheduled_by?: string | null
     created_at: string
     updated_at: string | null
 }
@@ -139,9 +141,10 @@ export type ClassSessionType = {
     status: string
     cancellation_reason?: string
     cancelled_by?: string | null
+    rescheduled_by?: string | null
     class_link: string | null
     teachers: TeacherType[]
-    enrolled_students: StudentType[]
+    students: StudentType[]
 }
 
 export type InvoiceType = {
@@ -237,7 +240,6 @@ export type SubscriptionType = {
     hours_per_month: number
     rate: number
     hourly_rate: number
-    max_free_absences: number
     total_amount: number | null
     created_at: string
     updated_at: string | null
@@ -248,30 +250,14 @@ export type StudentSubscriptionType = {
     student_id: string
     subscription_id: string
     start_date: string
-    end_date: string
+    next_payment_date: string // was end_date
+    every_month: boolean
     status: string
-    free_absences_remaining: number | null
     created_at: string
     updated_at: string | null
     // Joined data
     subscription?: SubscriptionType
     student?: StudentType
-}
-
-// Billing calculation types
-export type BillingCalculationType = {
-    student_id: string
-    subscription_id: string
-    billing_period_start: string
-    billing_period_end: string
-    total_hours_scheduled: number
-    total_hours_attended: number
-    free_absences_used: number
-    max_free_absences: number
-    hourly_rate: number
-    total_amount: number
-    sessions_attended: number
-    sessions_scheduled: number
 }
 
 export type StudentSessionNotesType = {
@@ -319,3 +305,52 @@ export type SessionHistoryType = {
     created_at: string
     updated_at: string | null
 }
+
+export type StudentInvoiceType = {
+    invoice_id: string;
+    student_subscription: string; // Foreign key to student_subscriptions.id
+    months: string; // Month range like "7-8" or "12-1"
+    issue_date: string;
+    due_date: string;
+    paid_date: string | null;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    // Joined data
+    student?: {
+        student_id: string;
+        first_name: string;
+        last_name: string;
+    };
+    subscription?: {
+        id: string;
+        name: string;
+        total_amount: number;
+    };
+    parent?: {
+        parent_id: string;
+        first_name: string;
+        last_name: string;
+    };
+};
+
+export type TeacherPaymentType = {
+    payment_id: string;
+    hours: number;
+    amount: number;
+    status: string;
+    paid_date?: string | null;
+    created_at: string;
+    updated_at: string;
+    teacher: {
+        teacher_id: string;
+        first_name: string;
+        last_name: string;
+    };
+    session: {
+        class_title: string;
+        session_id: string;
+        start_date: string;
+        end_date: string;
+    };
+};

@@ -3,19 +3,9 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Users } from "lucide-react"
-import Link from "next/link"
+import { Mail, Phone, MapPin, UserPen } from "lucide-react"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
@@ -64,26 +54,18 @@ export function StudentTeachersSection({ teachers, studentName }: StudentTeacher
         return `/admin/teachers/${teacherId}`
     }
 
-    const getActionUrl = (action: 'assign-class' | 'edit', teacherId: string, teacherRole: string) => {
-        if (!currentUserRole) return '/'
-        if (teacherRole === 'admin') {
-            return `/admin/admins/${action}/${teacherId}`
-        }
-        return `/admin/teachers/${action}/${teacherId}`
-    }
-
     if (teachers.length === 0) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
+                        <UserPen className="h-5 w-5" />
                         {studentName}&apos;s Teachers
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-center py-8">
-                        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <UserPen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground">No teachers are currently assigned to {studentName}&apos;s classes.</p>
                     </div>
                 </CardContent>
@@ -96,7 +78,7 @@ export function StudentTeachersSection({ teachers, studentName }: StudentTeacher
             <CardHeader>
                 <div>
                     <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
+                        <UserPen className="h-5 w-5" />
                         Teachers <span className="text-xs bg-muted px-2 py-1 rounded-full">{teachers.length}</span>
                     </CardTitle>
                 </div>
@@ -115,7 +97,6 @@ export function StudentTeachersSection({ teachers, studentName }: StudentTeacher
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[200px]">Specialization</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
-                                        <TableHead className="w-[50px] px-4"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -215,40 +196,6 @@ export function StudentTeachersSection({ teachers, studentName }: StudentTeacher
                                                     </p>
                                                 </div>
                                             </TableCell>
-
-                                            {/* Actions - Only show for admin */}
-
-                                            <TableCell data-no-navigation className="py-2 px-3">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                                        >
-                                                            <MoreHorizontal className="h-3.5 w-3.5" />
-                                                            <span className="sr-only">Open menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-44">
-                                                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                            <Link href={getActionUrl('assign-class', teacher.teacher_id, teacher.role)} className="flex items-center">
-                                                                <GraduationCap className="mr-2 h-3.5 w-3.5" />
-                                                                Assign to Class
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                            <Link href={getActionUrl('edit', teacher.teacher_id, teacher.role)} className="flex items-center">
-                                                                <Edit className="mr-2 h-3.5 w-3.5" />
-                                                                Edit {teacher.role === 'admin' ? 'Admin' : 'Teacher'}
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-
                                         </TableRow>
                                     ))}
                                 </TableBody>

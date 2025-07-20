@@ -4,17 +4,19 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, User, Calendar, Edit } from "lucide-react"
+import { Mail, Phone, User, Users, Calendar, Edit, Receipt, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getParentById, getParentStudents } from "@/lib/get/get-parents"
 import AvatarIcon from "@/components/avatar"
+import { getInvoicesByParentId } from "@/lib/get/get-invoices"
 
 export default async function ParentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const parent = await getParentById(id)
   const parentStudents = await getParentStudents(id) ?? []
+  const parentInvoices = await getInvoicesByParentId(id) ?? []
 
   if (!parent) {
     notFound()
@@ -99,11 +101,11 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
 
               <Separator />
 
-              {/* Associated Students */}
+              {/* Students Section */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <User className="h-4 w-4 mr-2 text-primary" />
-                  Associated Students
+                  <Users className="h-4 w-4 mr-2 text-primary" />
+                  Students
                 </h3>
                 <div className="pl-6">
                   {parentStudents.length > 0 ? (
@@ -135,6 +137,81 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                   )}
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Invoices Section */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="h-5 w-5 text-primary" />
+                    Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{parentInvoices ? parentInvoices.length : 0}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {parentInvoices && parentInvoices.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-100">
+                          {parentInvoices.map((invoice) => (
+                            <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                              <td className="px-4 py-2 text-sm">
+                                {invoice.student ? `${invoice.student.first_name} ${invoice.student.last_name}` : "-"}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <span className="inline-block bg-muted px-2 py-0.5 rounded-full text-xs font-medium text-primary">
+                                  {invoice.months || '-'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">
+                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                                <span
+                                  className={
+                                    `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                                    (invoice.status === 'paid'
+                                      ? 'bg-green-100 text-green-800'
+                                      : invoice.status === 'pending'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : invoice.status === 'overdue'
+                                          ? 'bg-red-100 text-red-800'
+                                          : 'bg-gray-100 text-gray-800')
+                                  }
+                                >
+                                  {invoice.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="text-base font-medium text-muted-foreground mb-1">
+                        No Invoices
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        No invoices found for this parent.
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               <Separator />
 

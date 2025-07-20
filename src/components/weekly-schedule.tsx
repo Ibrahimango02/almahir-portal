@@ -62,7 +62,7 @@ export function WeeklySchedule({
   id?: string
 }) {
   // Handle null values from context - convert null to undefined for compatibility
-  const [view, setView] = useState<"list" | "calendar" | "monthly" | "monthly-list">("calendar")
+  const [view, setView] = useState<"list" | "calendar" | "monthly" | "monthly-list">("monthly")
   const [currentWeekStart, setCurrentWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
   const [visibleClasses, setVisibleClasses] = useState<ClassSessionType[]>(sessions)
@@ -235,10 +235,10 @@ export function WeeklySchedule({
             >
               <TabsList className="bg-muted/80">
                 <TabsTrigger value="weekly" className={!view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
-                  <CalendarDays className="mr-2 h-4 w-4" /> Weekly
+                  Week
                 </TabsTrigger>
                 <TabsTrigger value="monthly" className={view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
-                  <Calendar className="mr-2 h-4 w-4" /> Monthly
+                  Month
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -450,7 +450,7 @@ function ListScheduleView({
                         classItem.status === "running" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
                         classItem.status === "complete" && "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
                         classItem.status === "pending" && "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
-                        classItem.status === "scheduled" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                        classItem.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
                         classItem.status === "rescheduled" && "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
                         classItem.status === "cancelled" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
                         classItem.status === "absence" && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
@@ -643,8 +643,6 @@ function CalendarScheduleView({
         return "border-indigo-200 bg-indigo-50/80 dark:border-indigo-800/60 dark:bg-indigo-950/50"
       case "complete":
         return "border-purple-200 bg-purple-50/80 dark:border-purple-800/60 dark:bg-purple-950/50"
-      case "rescheduled":
-        return "border-amber-200 bg-amber-50/80 dark:border-amber-800/60 dark:bg-amber-950/50"
       case "cancelled":
         return "border-rose-200 bg-rose-50/80 dark:border-rose-800/60 dark:bg-rose-950/50"
       case "absence":
@@ -888,7 +886,7 @@ function MonthlyScheduleView({
 
       try {
         for (const cls of classes) {
-          let attendanceStatus = 'scheduled' // default status
+          let attendanceStatus = 'expected' // default status
 
           if (role === 'student') {
             const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
@@ -1055,10 +1053,10 @@ function MonthlyScheduleView({
                             {role && (
                               <div className="text-sm">
                                 <span className={cn(
-                                  "ml-1 px-1.5 py-0.5 rounded text-xs font-medium",
-                                  (attendanceData[cls.session_id] || "scheduled") === "present" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                                  (attendanceData[cls.session_id] || "scheduled") === "absent" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
-                                  (attendanceData[cls.session_id] || "scheduled") === "scheduled" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                  "ml-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                  (attendanceData[cls.session_id] || "scheduled") === "present" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                  (attendanceData[cls.session_id] || "scheduled") === "absent" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                                  (attendanceData[cls.session_id] || "scheduled") === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                                 )}>
                                   {attendanceData[cls.session_id] || "scheduled"}
                                 </span>
@@ -1085,8 +1083,6 @@ function MonthlyScheduleView({
     </div>
   )
 }
-
-
 
 function MonthlyListScheduleView({
   classes,
@@ -1127,7 +1123,7 @@ function MonthlyListScheduleView({
 
       try {
         for (const cls of classes) {
-          let attendanceStatus = 'scheduled' // default status
+          let attendanceStatus = 'expected' // default status
 
           if (role === 'student') {
             const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
@@ -1243,10 +1239,10 @@ function MonthlyListScheduleView({
                       {/* Show attendance status if user has a role, otherwise show session status */}
                       {role ? (
                         <span className={cn(
-                          "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium",
-                          (attendanceData[classItem.session_id] || "scheduled") === "present" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                          (attendanceData[classItem.session_id] || "scheduled") === "absent" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
-                          (attendanceData[classItem.session_id] || "scheduled") === "scheduled" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                          "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                          (attendanceData[classItem.session_id] || "scheduled") === "present" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                          (attendanceData[classItem.session_id] || "scheduled") === "absent" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                          (attendanceData[classItem.session_id] || "scheduled") === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                         )}>
                           {getAttendanceStatusIcon(attendanceData[classItem.session_id] || "scheduled")}
                           {attendanceData[classItem.session_id] || "scheduled"}

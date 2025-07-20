@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import {
     format,
     parseISO,
@@ -12,12 +12,11 @@ import {
     isToday
 } from "date-fns"
 import { useRouter } from "next/navigation"
-import { Calendar, CheckCircle, UserX, Clock } from "lucide-react"
+import { Calendar, CheckCircle, UserX, Clock, Play, CalendarDays, BookX } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ClientTimeDisplay } from "./client-time-display"
 import { ClassType } from "@/types"
-import { createClient } from "@/utils/supabase/client"
 
 // Utility function to parse class date and time
 const parseClassDateTime = (
@@ -37,13 +36,21 @@ const parseClassDateTime = (
 }
 
 // Helper to get attendance status icon for monthly view
-const getAttendanceStatusIcon = (status: string) => {
+const getSessionStatusIcon = (status: string) => {
     switch (status) {
         case "scheduled":
             return <Calendar className="h-3 w-3" />
-        case "present":
+        case "running":
+            return <Play className="h-3 w-3" />
+        case "complete":
             return <CheckCircle className="h-3 w-3" />
-        case "absent":
+        case "pending":
+            return <Clock className="h-3 w-3" />
+        case "rescheduled":
+            return <CalendarDays className="h-3 w-3" />
+        case "cancelled":
+            return <BookX className="h-3 w-3" />
+        case "absence":
             return <UserX className="h-3 w-3" />
         default:
             return <Clock className="h-3 w-3" />
@@ -60,70 +67,39 @@ export function MonthlyScheduleView({
     currentUserRole: string | null
 }) {
     const router = useRouter()
-    const [mounted, setMounted] = useState(false)
-    const [attendanceData, setAttendanceData] = useState<Record<string, string>>({})
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
-    // Client-side only state
-    useEffect(() => {
-        setMounted(true)
-    }, [])
-
-    // Get current user ID
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            try {
-                const supabase = createClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    setCurrentUserId(user.id)
-                }
-            } catch (error) {
-                console.error("Error getting current user:", error)
-            }
+    const getSessionStatusContainerStyles = (status: string) => {
+        switch (status) {
+            case "scheduled":
+                return "border-blue-200 bg-blue-100 dark:border-blue-800/60 dark:bg-blue-950/50 dark:text-blue-200"
+            case "running":
+                return "bg-emerald-100 dark:bg-emerald-900 dark:text-emerald-200 dark:border-emerald-800/60"
+            case "pending":
+                return "bg-indigo-100 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-800/60"
+            case "complete":
+                return "bg-purple-100 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-800/60"
+            case "rescheduled":
+                return "bg-amber-100 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-800/60"
+            case "cancelled":
+                return "bg-rose-100 dark:bg-rose-900 dark:text-rose-200 dark:border-rose-800/60"
+            case "absence":
+                return "bg-orange-100 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-800/60"
+            default:
+                return "border-gray-200 bg-gray-100 dark:border-gray-800/60 dark:bg-gray-950 dark:text-gray-200"
         }
+    }
 
-        getCurrentUser()
-    }, [])
+    const handleDayClick = (day: Date) => {
+        // Navigate to the weekly view for the week containing this day
+        const weekStart = startOfWeek(day, { weekStartsOn: 1 })
+        // You could implement navigation to a specific week view here
+        console.log("Navigate to week starting:", weekStart)
+    }
 
-    // Fetch attendance data for all sessions
-    useEffect(() => {
-        const fetchAttendanceData = async () => {
-            if (!currentUserRole || !currentUserId || classes.length === 0) return
-
-            const attendanceMap: Record<string, string> = {}
-
-            try {
-                for (const cls of classes) {
-                    for (const session of cls.sessions) {
-                        let attendanceStatus = 'scheduled' // default status
-
-                        if (currentUserRole === 'student') {
-                            const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
-                            const attendance = await getStudentAttendanceForSession(session.session_id, currentUserId)
-                            if (attendance.length > 0) {
-                                attendanceStatus = attendance[0].attendance_status
-                            }
-                        } else if (currentUserRole === 'teacher' || currentUserRole === 'admin') {
-                            const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
-                            const attendance = await getTeacherAttendanceForSession(session.session_id, currentUserId)
-                            if (attendance.length > 0) {
-                                attendanceStatus = attendance[0].attendance_status
-                            }
-                        }
-
-                        attendanceMap[session.session_id] = attendanceStatus
-                    }
-                }
-
-                setAttendanceData(attendanceMap)
-            } catch (error) {
-                console.error('Error fetching attendance data:', error)
-            }
-        }
-
-        fetchAttendanceData()
-    }, [classes, currentUserRole, currentUserId])
+    const handleClassClick = (classId: string, sessionId: string) => {
+        if (!currentUserRole) return
+        router.push(`/${currentUserRole}/classes/${classId}/${sessionId}`)
+    }
 
     // Extract all sessions from classes
     const allSessions = useMemo(() => {
@@ -136,7 +112,7 @@ export function MonthlyScheduleView({
                 subject: cls.subject,
                 class_link: cls.class_link,
                 teachers: cls.teachers,
-                enrolled_students: cls.enrolled_students
+                students: cls.students
             }))
         )
     }, [classes])
@@ -167,32 +143,6 @@ export function MonthlyScheduleView({
         })
     }
 
-    // Helper to get attendance status-specific border and background colors
-    const getAttendanceStatusContainerStyles = (status: string) => {
-        switch (status) {
-            case "scheduled":
-                return "border-blue-200 bg-blue-100 dark:border-blue-800/60 dark:bg-blue-950/50"
-            case "present":
-                return "border-emerald-200 bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/50"
-            case "absent":
-                return "border-rose-200 bg-rose-100 dark:border-rose-800/60 dark:bg-rose-950/50"
-            default:
-                return "border-gray-200 bg-gray-100 dark:border-gray-800/60 dark:bg-gray-950/50"
-        }
-    }
-
-    const handleDayClick = (day: Date) => {
-        // Navigate to the weekly view for the week containing this day
-        const weekStart = startOfWeek(day, { weekStartsOn: 1 })
-        // You could implement navigation to a specific week view here
-        console.log("Navigate to week starting:", weekStart)
-    }
-
-    const handleClassClick = (classId: string, sessionId: string) => {
-        if (!currentUserRole) return
-        router.push(`/${currentUserRole}/classes/${classId}/${sessionId}`)
-    }
-
     return (
         <TooltipProvider>
             <div className="border rounded-lg overflow-hidden">
@@ -210,7 +160,7 @@ export function MonthlyScheduleView({
                     {weeks.map((week) =>
                         week.map((day) => {
                             const isCurrentMonth = day.getMonth() === monthStart.getMonth()
-                            const isTodayDate = mounted && isToday(day)
+                            const isTodayDate = isToday(day)
                             const dayClasses = getClassesForDay(day)
 
                             return (
@@ -245,16 +195,16 @@ export function MonthlyScheduleView({
                                                         <div
                                                             className={cn(
                                                                 "p-0.5 rounded text-[10px] cursor-pointer transition-all hover:shadow-sm relative",
-                                                                getAttendanceStatusContainerStyles(attendanceData[session.session_id] || "scheduled")
+                                                                getSessionStatusContainerStyles(session.status)
                                                             )}
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
                                                                 handleClassClick(session.class_id, session.session_id)
                                                             }}
                                                         >
-                                                            {/* Status icon at top right - only show attendance status */}
+                                                            {/* Status icon at top right - show session status */}
                                                             <div className="absolute top-1 right-1 p-0.5">
-                                                                {getAttendanceStatusIcon(attendanceData[session.session_id] || "scheduled")}
+                                                                {getSessionStatusIcon(session.status)}
                                                             </div>
                                                             <div className="font-medium truncate leading-tight pr-6">{session.title}</div>
                                                             <div className="text-muted-foreground truncate leading-tight">
@@ -277,15 +227,16 @@ export function MonthlyScheduleView({
                                                                     <span className="font-medium">Teachers:</span> {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
                                                                 </div>
                                                             )}
-                                                            {/* Show attendance status */}
+                                                            {/* Show session status */}
                                                             <div className="text-sm">
                                                                 <span className={cn(
-                                                                    "ml-1 px-1.5 py-0.5 rounded text-xs font-medium",
-                                                                    (attendanceData[session.session_id] || "scheduled") === "present" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                                                                    (attendanceData[session.session_id] || "scheduled") === "absent" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
-                                                                    (attendanceData[session.session_id] || "scheduled") === "scheduled" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                                                    "ml-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                                                    session.status === "complete" && "border-purple-200 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                                                    session.status === "running" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                                                    session.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                                                    session.status === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200"
                                                                 )}>
-                                                                    {attendanceData[session.session_id] || "scheduled"}
+                                                                    {session.status}
                                                                 </span>
                                                             </div>
                                                         </div>

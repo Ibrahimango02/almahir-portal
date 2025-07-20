@@ -112,7 +112,7 @@ export default function ClassesTable({
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <Users className="h-4 w-4" />
-                                            <span>{classItem.enrolled_students.length} Students</span>
+                                            <span>{classItem.students.length} Students</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <UserPen className="h-4 w-4" />

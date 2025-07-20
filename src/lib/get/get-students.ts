@@ -176,6 +176,7 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
             notes: teacher?.notes || null,
             created_at: profile.created_at,
             updated_at: profile.updated_at || null,
+            is_admin: teacher?.is_admin ?? false,
         }
     })
 

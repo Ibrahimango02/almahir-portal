@@ -68,7 +68,7 @@ interface ClassSessionDetailsProps {
       avatar_url?: string | null
       role: string
     }>
-    enrolled_students: Array<{
+    students: Array<{
       student_id: string
       first_name: string
       last_name: string
@@ -189,12 +189,12 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
   // Helper functions to get attendance status
   const getTeacherAttendanceStatus = (teacherId: string) => {
     const attendance = attendanceData.teacherAttendance.find(a => a.teacher_id === teacherId)
-    return attendance?.attendance_status || 'scheduled'
+    return attendance?.attendance_status || 'expected'
   }
 
   const getStudentAttendanceStatus = (studentId: string) => {
     const attendance = attendanceData.studentAttendance.find(a => a.student_id === studentId)
-    return attendance?.attendance_status || 'scheduled'
+    return attendance?.attendance_status || 'expected'
   }
 
   const getEntityPath = (entityType: 'teachers' | 'students', entityId: string) => {
@@ -215,18 +215,13 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
     cancellation_reason: classData.cancellation_reason || null,
     cancelled_by: classData.cancelled_by || null,
     class_link: classData.class_link,
-    teacher: {
-      teacher_id: classData.teachers?.[0]?.teacher_id || '',
-      first_name: classData.teachers?.[0]?.first_name || '',
-      last_name: classData.teachers?.[0]?.last_name || '',
-      role: classData.teachers?.[0]?.role || ''
-    },
-    enrolled_students: classData.enrolled_students || []
+    teachers: classData.teachers || [],
+    students: classData.students || []
   }
 
   // Ensure arrays are defined
   const teachers = classData.teachers || []
-  const enrolledStudents = classData.enrolled_students || []
+  const enrolledStudents = classData.students || []
 
   return (
     <>
@@ -481,7 +476,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
             <SessionRemarks
               sessionId={classData.session_id}
               sessionStatus={currentStatus}
-              students={classData.enrolled_students}
+              students={classData.students}
               userRole={userRole}
             />
           </div>

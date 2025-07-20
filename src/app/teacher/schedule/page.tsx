@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, ChevronLeft, ChevronRight, List, Search, Calendar } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
 import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
 import { ScheduleListView } from "@/components/schedule-list-view"
 import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
@@ -125,10 +125,10 @@ export default function TeacherSchedulePage() {
                         >
                             <TabsList className="bg-muted/80">
                                 <TabsTrigger value="weekly" className={!view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
-                                    <CalendarDays className="mr-2 h-4 w-4" /> Weekly
+                                    Week
                                 </TabsTrigger>
                                 <TabsTrigger value="monthly" className={view.includes("monthly") ? "bg-[#3d8f5b] text-white" : ""}>
-                                    <Calendar className="mr-2 h-4 w-4" /> Monthly
+                                    Month
                                 </TabsTrigger>
                             </TabsList>
                         </Tabs>

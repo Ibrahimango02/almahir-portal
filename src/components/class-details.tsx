@@ -63,7 +63,7 @@ type ClassDetailsProps = {
       avatar_url: string | null
       role: string
     }[]
-    enrolled_students: {
+    students: {
       student_id: string
       first_name: string
       last_name: string
@@ -189,7 +189,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
 
   // Ensure arrays are defined
   const teachers = classData.teachers || []
-  const enrolledStudents = classData.enrolled_students || []
+  const enrolledStudents = classData.students || []
   const daysRepeated = classData.days_repeated || {}
 
   return (
@@ -225,7 +225,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     <DialogTrigger asChild>
                       <Button
                         size="icon"
-                        className="h-9 w-9 bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
+                        className="h-9 w-9 bg-red-700 hover:bg-red-800 text-white border-red-700 hover:border-red-600"
                         aria-label="Delete class"
                       >
                         <Trash2 className="h-4 w-4" />

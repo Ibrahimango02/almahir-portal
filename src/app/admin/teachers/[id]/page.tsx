@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus } from "lucide-react"
+import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus, Clock, CreditCard, Receipt } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
@@ -14,6 +14,10 @@ import { getSessionCountByTeacherId, getSessionsByTeacherId, getClassesByTeacher
 import AvatarIcon from "@/components/avatar"
 import { TeacherAvailabilityDisplay } from "@/components/teacher-availability-display"
 import { TeacherStudentsSection } from "@/components/teacher-students-section"
+import { getTeacherSessionHistory } from "@/lib/get/get-session-history"
+import { getSessionRemarks } from "@/lib/get/get-session-remarks"
+import { getTeacherPaymentsByTeacherId } from "@/lib/get/get-teacher-payments"
+import { format, parseISO } from "date-fns"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,6 +39,28 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   const teacherAvailability = await getTeacherAvailability(teacher.teacher_id)
   const teacherStudents = await getTeacherStudents(teacher.teacher_id)
   const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
+
+  // Fetch session history and attendance for each session
+  const sessionsWithHistory = await getTeacherSessionHistory(teacher.teacher_id)
+
+  // Fetch all session remarks for this teacher in parallel
+  const sessionRemarksResults = await Promise.all(
+    sessionsWithHistory.map((session) =>
+      getSessionRemarks(session.session_id)
+    )
+  )
+  // Map sessionId to remarks for easy lookup
+  const sessionRemarksMap = new Map(
+    sessionsWithHistory.map((session, idx) => [session.session_id, sessionRemarksResults[idx]])
+  )
+
+  // Fetch teacher payments
+  const teacherPayments = await getTeacherPaymentsByTeacherId(teacher.teacher_id)
+
+  // Create a mapping of session IDs to class IDs from the sessions history
+  const sessionToClassMap = new Map(
+    sessionsWithHistory.map(session => [session.session_id, session.class_id])
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -206,7 +232,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
-            Classes - ({teacherClasses.length})
+            Classes <span className="text-xs bg-muted px-2 py-1 rounded-full">{teacherClasses.length}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -263,8 +289,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                               }
 
                               return (
-                                <div key={day} className="text-xs text-muted-foreground">
-                                  {dayName}: {timeSlot.start} - {timeSlot.end} {durationText}
+                                <div key={day} className="text-xs">
+                                  {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
                                 </div>
                               )
                             }
@@ -280,10 +306,6 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                         <div className="text-center">
                           <p className="text-base font-semibold text-muted-foreground">{classInfo.sessions.length}</p>
                           <p className="text-xs text-muted-foreground">sessions</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-base font-semibold text-muted-foreground">{classInfo.enrolled_students.length}</p>
-                          <p className="text-xs text-muted-foreground">students</p>
                         </div>
                       </div>
                     </div>
@@ -304,6 +326,213 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               </h3>
               <p className="text-sm text-muted-foreground">
                 {teacher.first_name} is not assigned to any classes.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sessions History Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Sessions History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sessionsWithHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Start Time</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">End Time</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Attendance</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Summary</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {sessionsWithHistory.map((session) => {
+                    const remarksObj = sessionRemarksMap.get(session.session_id)
+                    return (
+                      <tr
+                        key={session.session_id}
+                        className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
+                      >
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm font-medium text-gray-900 hover:text-primary transition-colors">
+                              {session.title}
+                            </div>
+                            <div className="text-xs text-gray-500">{session.subject}</div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.start_date), "MMMM d, yyyy")}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.start_date), "hh:mm a")}
+                              {session.actual_start_time && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  (actual: {format(parseISO(session.actual_start_time), "hh:mm a")})
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.end_date), "hh:mm a")}
+                              {session.actual_end_time && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  (actual: {format(parseISO(session.actual_end_time), "hh:mm a")})
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <Badge
+                              className={`capitalize px-2 py-0.5 text-xs ${session.attendance_status === "present"
+                                ? "bg-green-100 text-green-800"
+                                : session.attendance_status === "absent"
+                                  ? "bg-red-100 text-red-800"
+                                  : session.attendance_status === "late"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                            >
+                              {session.attendance_status}
+                            </Badge>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          {remarksObj && remarksObj.session_summary ? (
+                            <span title={remarksObj.session_summary}>
+                              {remarksObj.session_summary.length > 40
+                                ? remarksObj.session_summary.slice(0, 40) + "..."
+                                : remarksObj.session_summary}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">No summary</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-muted-foreground mb-1">
+                No Past Sessions
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                No session history available for this teacher.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Payments Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" />
+            Payments <span className="text-xs bg-muted px-2 py-1 rounded-full">{teacherPayments ? teacherPayments.length : 0}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {teacherPayments && teacherPayments.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hours</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {teacherPayments.map((payment, idx) => (
+                    <tr key={payment.payment_id || idx} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        {payment.session?.class_title || 'N/A'}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        <Link
+                          href={`/admin/classes/${sessionToClassMap.get(payment.session.session_id) || 'unknown'}/${payment.session.session_id}`}
+                          className="text-primary hover:underline"
+                        >
+                          {payment.session?.start_date ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : "N/A"}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">{payment.hours}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">{Number(payment.amount).toFixed(2)} CAD</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        {payment.paid_date ? format(parseISO(payment.paid_date), "MMM d, yyyy") : "-"}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                        <span
+                          className={
+                            `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                            (payment.status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : payment.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : payment.status === 'overdue'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800')
+                          }
+                        >
+                          {payment.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-muted-foreground mb-1">
+                No Payments
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                No payments found for this teacher.
               </p>
             </div>
           )}

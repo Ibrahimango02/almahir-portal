@@ -1,17 +1,20 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useMemo } from "react"
 import {
     format,
     parseISO,
-    isToday
+    isToday,
+    endOfMonth,
+    isWithinInterval,
+    startOfDay,
+    endOfDay
 } from "date-fns"
 import { useRouter } from "next/navigation"
-import { Calendar, CheckCircle, UserX, Clock, CalendarDays, Users } from "lucide-react"
+import { Calendar, CheckCircle, UserX, Clock, Play, CalendarDays, BookX, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ClassType } from "@/types"
-import { createClient } from "@/utils/supabase/client"
 
 // Utility function to parse class date and time
 const parseClassDateTime = (
@@ -31,13 +34,21 @@ const parseClassDateTime = (
 }
 
 // Helper to get attendance status icon for monthly list view
-const getAttendanceStatusIcon = (status: string) => {
+const getSessionStatusIcon = (status: string) => {
     switch (status) {
         case "scheduled":
             return <Calendar className="h-3 w-3" />
-        case "present":
+        case "running":
+            return <Play className="h-3 w-3" />
+        case "complete":
             return <CheckCircle className="h-3 w-3" />
-        case "absent":
+        case "pending":
+            return <Clock className="h-3 w-3" />
+        case "rescheduled":
+            return <CalendarDays className="h-3 w-3" />
+        case "cancelled":
+            return <BookX className="h-3 w-3" />
+        case "absence":
             return <UserX className="h-3 w-3" />
         default:
             return <Clock className="h-3 w-3" />
@@ -54,64 +65,6 @@ export function MonthlyListScheduleView({
     currentUserRole: string | null
 }) {
     const router = useRouter()
-    const [attendanceData, setAttendanceData] = useState<Record<string, string>>({})
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-
-    // Get current user ID
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            try {
-                const supabase = createClient()
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    setCurrentUserId(user.id)
-                }
-            } catch (error) {
-                console.error("Error getting current user:", error)
-            }
-        }
-
-        getCurrentUser()
-    }, [])
-
-    // Fetch attendance data for all sessions
-    useEffect(() => {
-        const fetchAttendanceData = async () => {
-            if (!currentUserRole || !currentUserId || classes.length === 0) return
-
-            const attendanceMap: Record<string, string> = {}
-
-            try {
-                for (const cls of classes) {
-                    for (const session of cls.sessions) {
-                        let attendanceStatus = 'scheduled' // default status
-
-                        if (currentUserRole === 'student') {
-                            const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
-                            const attendance = await getStudentAttendanceForSession(session.session_id, currentUserId)
-                            if (attendance.length > 0) {
-                                attendanceStatus = attendance[0].attendance_status
-                            }
-                        } else if (currentUserRole === 'teacher' || currentUserRole === 'admin') {
-                            const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
-                            const attendance = await getTeacherAttendanceForSession(session.session_id, currentUserId)
-                            if (attendance.length > 0) {
-                                attendanceStatus = attendance[0].attendance_status
-                            }
-                        }
-
-                        attendanceMap[session.session_id] = attendanceStatus
-                    }
-                }
-
-                setAttendanceData(attendanceMap)
-            } catch (error) {
-                console.error('Error fetching attendance data:', error)
-            }
-        }
-
-        fetchAttendanceData()
-    }, [classes, currentUserRole, currentUserId])
 
     // Extract all sessions from classes
     const allSessions = useMemo(() => {
@@ -124,7 +77,7 @@ export function MonthlyListScheduleView({
                 subject: cls.subject,
                 class_link: cls.class_link,
                 teachers: cls.teachers,
-                enrolled_students: cls.enrolled_students
+                students: cls.students
             }))
         )
     }, [classes])
@@ -147,17 +100,20 @@ export function MonthlyListScheduleView({
             }
         })
 
-        // Then filter based on the active tab
+        // Then filter by the selected month
         return sorted.filter(cls => {
             const startDateTime = parseClassDateTime(cls, "start_date")
             const endDateTime = parseClassDateTime(cls, "end_date")
             if (!startDateTime || !endDateTime) return false
 
-            // For monthly list view, we don't have an "upcoming"/"recent" filter,
-            // so we just show all classes for the month.
-            return true
+            // Filter sessions to show only those in the selected month
+            const monthEnd = endOfMonth(monthStart)
+            return isWithinInterval(startDateTime, {
+                start: startOfDay(monthStart),
+                end: endOfDay(monthEnd),
+            })
         })
-    }, [allSessions])
+    }, [allSessions, monthStart])
 
     const handleCardClick = (classId: string, sessionId: string) => {
         if (!currentUserRole) return
@@ -215,15 +171,15 @@ export function MonthlyListScheduleView({
                                             </div>
                                         </div>
                                         <div className="flex items-start gap-2 ml-3">
-                                            {/* Show attendance status */}
                                             <span className={cn(
-                                                "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium",
-                                                (attendanceData[session.session_id] || "scheduled") === "present" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                                                (attendanceData[session.session_id] || "scheduled") === "absent" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
-                                                (attendanceData[session.session_id] || "scheduled") === "scheduled" && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                                "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                                session.status === "complete" && "border-purple-200 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                                session.status === "running" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                                session.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                                session.status === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200"
                                             )}>
-                                                {getAttendanceStatusIcon(attendanceData[session.session_id] || "scheduled")}
-                                                {attendanceData[session.session_id] || "scheduled"}
+                                                {getSessionStatusIcon(session.status)}
+                                                {session.status}
                                             </span>
                                         </div>
                                     </div>

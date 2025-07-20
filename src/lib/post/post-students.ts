@@ -61,6 +61,45 @@ export async function assignStudentToClasses(data: AssignmentData) {
             }
         }
 
+        // Create student attendance records for existing class sessions
+        const studentAttendanceRecords: { session_id: string; student_id: string; attendance_status: string }[] = []
+
+        for (const class_id of data.class_ids) {
+            // Get existing sessions for this class
+            const { data: classSessions, error: sessionsError } = await supabase
+                .from('class_sessions')
+                .select('id')
+                .eq('class_id', class_id)
+
+            if (sessionsError) {
+                console.error(`Error fetching sessions for class ${class_id}:`, sessionsError)
+                continue
+            }
+
+            // Create attendance records for each session
+            if (classSessions && classSessions.length > 0) {
+                for (const session of classSessions) {
+                    studentAttendanceRecords.push({
+                        session_id: session.id,
+                        student_id: data.student_id,
+                        attendance_status: 'expected'
+                    })
+                }
+            }
+        }
+
+        // Insert student attendance records if any exist
+        if (studentAttendanceRecords.length > 0) {
+            const { error: studentAttendanceError } = await supabase
+                .from('student_attendance')
+                .insert(studentAttendanceRecords)
+
+            if (studentAttendanceError) {
+                console.error('Error creating student attendance records:', studentAttendanceError)
+                // Don't throw error here as the main operations were successful
+            }
+        }
+
         return {
             success: true,
             message: 'Student successfully assigned to classes'

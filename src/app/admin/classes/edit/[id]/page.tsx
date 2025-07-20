@@ -277,7 +277,7 @@ export default function EditClassPage() {
                         times: times,
                         classLink: classDataResult.class_link || "",
                         teacherIds: classDataResult.teachers.map(t => t.teacher_id),
-                        studentIds: classDataResult.enrolled_students.map(s => s.student_id),
+                        studentIds: classDataResult.students.map(s => s.student_id),
                     })
                 }
             } catch (error) {

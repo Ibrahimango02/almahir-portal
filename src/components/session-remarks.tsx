@@ -233,7 +233,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                     <Star
                         key={star}
                         className={`h-3.5 w-3.5 ${star <= level
-                            ? 'fill-blue-400 text-blue-400'
+                            ? 'fill-amber-400 text-amber-400'
                             : 'text-gray-200'
                             }`}
                     />
@@ -264,8 +264,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                         <BookOpen className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h3 className="text-xl font-semibold">Session Remarks & Notes</h3>
-                        <p className="text-sm text-muted-foreground">Track session progress and student performance</p>
+                        <h3 className="text-xl font-semibold">Session Remarks</h3>
                     </div>
                 </div>
                 {canEdit && (
@@ -333,7 +332,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                         placeholder="Describe what was covered in this session, key topics discussed, and any important points..."
                                         value={sessionRemarks}
                                         onChange={(e) => setSessionRemarks(e.target.value)}
-                                        className="min-h-[140px] mt-2 resize-none"
+                                        className="min-h-[140px] mt-2 resize-none break-words"
                                         required
                                     />
                                 </div>
@@ -357,9 +356,9 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                     const studentNote = studentNotes.find(note => note.student_id === student.student_id)
 
                                     return (
-                                        <div key={student.student_id} className="border border-border/50 rounded-xl p-6 space-y-6 bg-card/50">
-                                            <div className="flex items-center gap-4">
-                                                <Avatar className="h-12 w-12 ring-2 ring-border/20">
+                                        <div key={student.student_id} className="border border-border/50 rounded-xl p-3 space-y-3 bg-card/50">
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-9 w-9 ring-2 ring-border/20">
                                                     {student.avatar_url && (
                                                         <AvatarImage src={student.avatar_url} alt={student.first_name} />
                                                     )}
@@ -368,32 +367,32 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                     </AvatarFallback>
                                                 </Avatar>
                                                 <div className="flex-1">
-                                                    <h4 className="font-semibold text-base">
+                                                    <h4 className="font-semibold text-sm">
                                                         {student.first_name} {student.last_name}
                                                     </h4>
                                                 </div>
                                             </div>
 
-                                            <div className="grid gap-6 md:grid-cols-2">
-                                                <div className="space-y-3">
-                                                    <Label htmlFor={`notes-${student.student_id}`} className="text-sm font-medium">Notes</Label>
+                                            <div className="grid gap-3 md:grid-cols-2">
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`notes-${student.student_id}`} className="text-xs font-medium">Notes</Label>
                                                     <Textarea
                                                         id={`notes-${student.student_id}`}
                                                         placeholder="Add notes about this student's performance, participation, or any concerns..."
                                                         value={studentNote?.notes || ""}
                                                         onChange={(e) => updateStudentNote(student.student_id, 'notes', e.target.value)}
-                                                        className="min-h-[100px] resize-none"
+                                                        className="min-h-[70px] resize-none break-words text-xs"
                                                     />
                                                 </div>
 
-                                                <div className="space-y-6">
-                                                    <div className="space-y-3">
-                                                        <Label htmlFor={`performance-${student.student_id}`} className="text-sm font-medium">Performance Rating</Label>
+                                                <div className="space-y-3">
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`performance-${student.student_id}`} className="text-xs font-medium">Performance Rating</Label>
                                                         <Select
                                                             value={studentNote?.performance_rating?.toString() || ""}
                                                             onValueChange={(value) => updateStudentNote(student.student_id, 'performance_rating', value ? parseInt(value) : null)}
                                                         >
-                                                            <SelectTrigger className="h-10">
+                                                            <SelectTrigger className="h-8 text-xs">
                                                                 <SelectValue placeholder="Select rating" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -406,13 +405,13 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                         </Select>
                                                     </div>
 
-                                                    <div className="space-y-3">
-                                                        <Label htmlFor={`participation-${student.student_id}`} className="text-sm font-medium">Participation Level</Label>
+                                                    <div className="space-y-2">
+                                                        <Label htmlFor={`participation-${student.student_id}`} className="text-xs font-medium">Participation Level</Label>
                                                         <Select
                                                             value={studentNote?.participation_level?.toString() || ""}
                                                             onValueChange={(value) => updateStudentNote(student.student_id, 'participation_level', value ? parseInt(value) : null)}
                                                         >
-                                                            <SelectTrigger className="h-10">
+                                                            <SelectTrigger className="h-8 text-xs">
                                                                 <SelectValue placeholder="Select level" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -447,6 +446,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                             onClick={handleSave}
                             disabled={saving || !sessionRemarks.trim()}
                             className="min-w-[140px] px-6"
+                            variant="green"
                         >
                             {saving ? (
                                 <>
@@ -456,7 +456,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                             ) : (
                                 <>
                                     <Save className="h-4 w-4 mr-2" />
-                                    Save All
+                                    Save
                                 </>
                             )}
                         </Button>
@@ -466,7 +466,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                 // View Mode
                 <div className="space-y-8">
                     {/* Session Remarks */}
-                    {existingRemarks && (
+                    {existingRemarks ? (
                         <Card className="border-0 shadow-sm">
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
@@ -479,15 +479,31 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                             <CardContent>
                                 <div className="prose prose-sm max-w-none">
                                     <div className="p-4 bg-muted/30 rounded-lg border-l-4 border-primary/20">
-                                        <p className="whitespace-pre-wrap text-base leading-relaxed">{existingRemarks.session_summary}</p>
+                                        <p className="whitespace-pre-wrap text-base leading-relaxed break-words overflow-x-auto">{existingRemarks.session_summary}</p>
                                     </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-0 shadow-sm">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="flex items-center gap-3 text-lg">
+                                    Session Summary
+                                </CardTitle>
+                                <CardDescription className="text-base">
+                                    Overview of what was covered in this session
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="p-4 bg-muted/30 rounded-lg border-l-4 border-primary/20">
+                                    <p className="text-base text-muted-foreground italic">No session notes</p>
                                 </div>
                             </CardContent>
                         </Card>
                     )}
 
                     {/* Student Notes */}
-                    {existingNotes.length > 0 && (
+                    {existingNotes.length > 0 ? (
                         <Card className="border-0 shadow-sm">
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
@@ -498,15 +514,15 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-5">
+                                <div className="space-y-3">
                                     {existingNotes.map((note) => {
                                         const student = students.find(s => s.student_id === note.student_id)
                                         if (!student) return null
 
                                         return (
-                                            <div key={note.id} className="border border-border/50 rounded-xl p-6 space-y-5 bg-card/50">
-                                                <div className="flex items-start gap-4">
-                                                    <Avatar className="h-12 w-12 ring-2 ring-border/20 flex-shrink-0">
+                                            <div key={note.id} className="border border-border/50 rounded-xl p-3 space-y-3 bg-card/50">
+                                                <div className="flex items-start gap-2">
+                                                    <Avatar className="h-9 w-9 ring-2 ring-border/20 flex-shrink-0">
                                                         {student.avatar_url && (
                                                             <AvatarImage src={student.avatar_url} alt={student.first_name} />
                                                         )}
@@ -515,18 +531,18 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-semibold text-base mb-2">
+                                                        <h4 className="font-semibold text-sm mb-1">
                                                             {student.first_name} {student.last_name}
                                                         </h4>
-                                                        <div className="flex flex-wrap items-center gap-4">
+                                                        <div className="flex flex-wrap items-center gap-2">
                                                             {note.performance_rating && (
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-1">
                                                                     <span className="text-xs font-medium text-muted-foreground">Performance:</span>
                                                                     {getPerformanceRatingDisplay(note.performance_rating)}
                                                                 </div>
                                                             )}
                                                             {note.participation_level && (
-                                                                <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-1">
                                                                     <span className="text-xs font-medium text-muted-foreground">Participation:</span>
                                                                     {getParticipationBadge(note.participation_level)}
                                                                 </div>
@@ -536,9 +552,9 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                 </div>
 
                                                 {note.notes && (
-                                                    <div className="pl-16">
-                                                        <div className="p-4 bg-muted/30 rounded-lg border-l-3 border-primary/20">
-                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                                                    <div className="pl-12">
+                                                        <div className="p-2 bg-muted/30 rounded-lg border-l-3 border-primary/20">
+                                                            <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed break-words overflow-x-auto">
                                                                 {note.notes}
                                                             </p>
                                                         </div>
@@ -547,6 +563,22 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                             </div>
                                         )
                                     })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-0 shadow-sm">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="flex items-center gap-3 text-lg">
+                                    Student Notes
+                                </CardTitle>
+                                <CardDescription className="text-base">
+                                    Individual student performance and participation notes
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="p-4 bg-muted/30 rounded-lg border-l-4 border-primary/20">
+                                    <p className="text-base text-muted-foreground italic">No student notes available</p>
                                 </div>
                             </CardContent>
                         </Card>

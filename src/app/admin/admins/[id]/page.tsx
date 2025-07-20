@@ -197,12 +197,12 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                 </Card>
             </div>
 
-            {/* Classes Section */}
+            {/* Assigned Classes Section */}
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2">
                         <BookOpen className="h-5 w-5 text-primary" />
-                        Classes - ({adminClasses.length})
+                        Assigned Classes <span className="text-xs bg-muted px-2 py-1 rounded-full">{adminClasses.length}</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -259,8 +259,8 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                                                             }
 
                                                             return (
-                                                                <div key={day} className="text-xs text-muted-foreground">
-                                                                    {dayName}: {timeSlot.start} - {timeSlot.end} {durationText}
+                                                                <div key={day} className="text-xs">
+                                                                    {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
                                                                 </div>
                                                             )
                                                         }
@@ -276,10 +276,6 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                                                 <div className="text-center">
                                                     <p className="text-base font-semibold text-muted-foreground">{classInfo.sessions.length}</p>
                                                     <p className="text-xs text-muted-foreground">sessions</p>
-                                                </div>
-                                                <div className="text-center">
-                                                    <p className="text-base font-semibold text-muted-foreground">{classInfo.enrolled_students.length}</p>
-                                                    <p className="text-xs text-muted-foreground">students</p>
                                                 </div>
                                             </div>
                                         </div>

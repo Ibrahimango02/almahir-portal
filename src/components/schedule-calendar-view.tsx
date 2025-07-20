@@ -49,7 +49,7 @@ interface CalendarSessionType {
     days_repeated: DaysRepeated;
     class_link: string | null;
     teachers: { teacher_id: string; first_name: string; last_name: string; avatar_url?: string | null; role: string }[];
-    enrolled_students: { student_id: string; first_name: string; last_name: string; avatar_url?: string | null }[];
+    students: { student_id: string; first_name: string; last_name: string; avatar_url?: string | null }[];
     start_time: string;
     end_time: string;
     status: string;
@@ -161,7 +161,7 @@ export function ScheduleCalendarView({
                         days_repeated: cls.days_repeated,
                         class_link: cls.class_link,
                         teachers: cls.teachers,
-                        enrolled_students: cls.enrolled_students,
+                        students: cls.students,
                         start_time: startDateTime.toISOString(),
                         end_time: endDateTime.toISOString(),
                         status: session.status,
@@ -425,7 +425,7 @@ export function ScheduleCalendarView({
                                                     </TooltipTrigger>
                                                     <TooltipContent side="top" className="max-w-xs">
                                                         <div className="space-y-1">
-                                                            <div className="font-semibold">{extendedClass.title}</div>
+                                                            <div className="font-semibold text-sm">{extendedClass.title}</div>
                                                             <div className="text-sm">{extendedClass.subject}</div>
                                                             <div className="text-sm">
                                                                 <ClientTimeDisplay date={startTime} format="EEEE, MMMM d, yyyy" />

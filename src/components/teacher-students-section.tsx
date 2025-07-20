@@ -3,19 +3,9 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Users } from "lucide-react"
-import Link from "next/link"
+import { Mail, Phone, MapPin, Users } from "lucide-react"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
@@ -75,10 +65,6 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
         return `/admin/students/${studentId}`
     }
 
-    const getActionUrl = (action: 'assign-class' | 'edit', studentId: string) => {
-        return `/admin/students/${action}/${studentId}`
-    }
-
     if (students.length === 0) {
         return (
             <Card>
@@ -122,7 +108,6 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
-                                        <TableHead className="w-[50px] px-4"></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -226,38 +211,6 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
                                                         {format(parseISO(student.created_at), "MMM dd, yyyy")}
                                                     </p>
                                                 </div>
-                                            </TableCell>
-
-                                            {/* Actions */}
-                                            <TableCell data-no-navigation className="py-2 px-3">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                                        >
-                                                            <MoreHorizontal className="h-3.5 w-3.5" />
-                                                            <span className="sr-only">Open menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-44">
-                                                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                            <Link href={getActionUrl('assign-class', student.student_id)} className="flex items-center">
-                                                                <GraduationCap className="mr-2 h-3.5 w-3.5" />
-                                                                Assign to Class
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                            <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
-                                                                <Edit className="mr-2 h-3.5 w-3.5" />
-                                                                Edit Student
-                                                            </Link>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
                                             </TableCell>
 
                                         </TableRow>

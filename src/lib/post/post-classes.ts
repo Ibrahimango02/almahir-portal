@@ -189,7 +189,7 @@ export async function createClass(classData: ClassData) {
                             teacherAttendanceRecords.push({
                                 session_id: session.id,
                                 teacher_id: teacherId,
-                                attendance_status: 'scheduled'
+                                attendance_status: 'expected'
                             })
                         }
                     }
@@ -200,7 +200,7 @@ export async function createClass(classData: ClassData) {
                             studentAttendanceRecords.push({
                                 session_id: session.id,
                                 student_id: studentId,
-                                attendance_status: 'scheduled'
+                                attendance_status: 'expected'
                             })
                         }
                     }

@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX } from "lucide-react"
+import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
 import { updateTeacherAttendance } from "@/lib/put/put-teachers"
 import { updateStudentAttendance } from "@/lib/put/put-students"
+import { deleteSession } from "@/lib/delete/delete-classes"
 import {
   Dialog,
   DialogContent,
@@ -32,12 +33,13 @@ type ClassActionButtonsProps = {
     cancellation_reason?: string | null
     cancelled_by?: string | null
     class_link: string | null
-    teacher: {
+    teachers: {
       teacher_id: string
       first_name: string
       last_name: string
-    }
-    enrolled_students: {
+      role?: string
+    }[]
+    students: {
       student_id: string
       first_name: string
       last_name: string
@@ -55,6 +57,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [isLoading, setIsLoading] = useState(false)
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -170,15 +173,15 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     try {
       // Mark all students as absent
       const allStudentsAbsent: Record<string, boolean> = {}
-      classData.enrolled_students.forEach(student => {
+      classData.students.forEach(student => {
         allStudentsAbsent[student.student_id] = false
       })
 
       // Mark all teachers as absent
       const allTeachersAbsent: Record<string, boolean> = {}
-      if (classData.teacher && classData.teacher.teacher_id) {
-        allTeachersAbsent[classData.teacher.teacher_id] = false
-      }
+      classData.teachers.forEach(teacher => {
+        allTeachersAbsent[teacher.teacher_id] = false
+      })
 
       const attendanceResult = await updateSessionAttendance({
         sessionId: classData.session_id,
@@ -275,14 +278,21 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     setIsLoading(true)
     try {
       // First mark all students as absent
-      const allAbsent: Record<string, boolean> = {}
-      classData.enrolled_students.forEach(student => {
-        allAbsent[student.student_id] = false
+      const allStudentsAbsent: Record<string, boolean> = {}
+      classData.students.forEach(student => {
+        allStudentsAbsent[student.student_id] = false
+      })
+
+      // Mark all teachers as absent
+      const allTeachersAbsent: Record<string, boolean> = {}
+      classData.teachers.forEach(teacher => {
+        allTeachersAbsent[teacher.teacher_id] = false
       })
 
       const attendanceResult = await updateSessionAttendance({
         sessionId: classData.session_id,
-        studentAttendance: allAbsent
+        studentAttendance: allStudentsAbsent,
+        teacherAttendance: allTeachersAbsent
       })
 
       if (!attendanceResult.success) {
@@ -299,7 +309,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         onStatusChange("absence")
         toast({
           title: "Session Marked as Absence",
-          description: "The session has been marked as absence and all students have been marked as absent",
+          description: "The session has been marked as absence and all students and teachers have been marked as absent",
         })
       } else {
         throw new Error("Failed to mark absence")
@@ -309,6 +319,32 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         title: "Error",
         description: "Failed to mark absence. Please try again.",
         variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeleteSession = async () => {
+    setIsLoading(true)
+    try {
+      const result = await deleteSession(classData.session_id)
+      if (result.success) {
+        toast({
+          title: "Session Deleted",
+          description: "The session has been permanently deleted.",
+        })
+        setShowDeleteDialog(false)
+        // Optionally, you can call onStatusChange or redirect here
+        onStatusChange("deleted")
+      } else {
+        throw new Error(result.error || "Failed to delete session")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete session. Please try again.",
+        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -527,15 +563,29 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
 
             {/* Button 4 - Reschedule (only for admins) */}
             {userRole === 'admin' && (
-              <div className="relative" title={config.button4.title}>
-                <Button
-                  onClick={config.button4.onClick}
-                  className={config.button4.className}
-                  disabled={config.button4.disabled}
-                >
-                  <config.button4.icon className="h-4 w-4" />
-                </Button>
-              </div>
+              <>
+                <div className="relative" title={config.button4.title}>
+                  <Button
+                    onClick={config.button4.onClick}
+                    className={config.button4.className}
+                    disabled={config.button4.disabled}
+                  >
+                    <config.button4.icon className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Button 5 - Delete Session (only for admins) */}
+                <div className="relative" title="Delete Session">
+                  <Button
+                    size="icon"
+                    className="h-10 w-10 bg-red-700 hover:bg-red-800 text-white border-red-600 hover:border-red-600"
+                    aria-label="Delete session"
+                    onClick={() => setShowDeleteDialog(true)}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </>
             )}
           </>
         )}
@@ -579,6 +629,44 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               disabled={isLoading || !cancellationReason.trim()}
             >
               {isLoading ? "Cancelling..." : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Session Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this session? This action cannot be undone and will permanently remove the session and all associated data including attendance and remarks.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteSession}
+              disabled={isLoading}
+              className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
+            >
+              {isLoading ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Session
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

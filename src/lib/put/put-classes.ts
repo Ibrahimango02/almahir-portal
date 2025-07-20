@@ -263,7 +263,7 @@ export async function updateClass(params: {
                                     teacherAttendanceRecords.push({
                                         session_id: session.id,
                                         teacher_id: teacher.teacher_id,
-                                        attendance_status: 'scheduled'
+                                        attendance_status: 'expected'
                                     })
                                 }
                             }
@@ -274,7 +274,7 @@ export async function updateClass(params: {
                                     studentAttendanceRecords.push({
                                         session_id: session.id,
                                         student_id: student.student_id,
-                                        attendance_status: 'scheduled'
+                                        attendance_status: 'expected'
                                     })
                                 }
                             }
@@ -413,6 +413,56 @@ export async function updateSession(params: {
                     .eq('id', sessionId)
 
                 if (sessionError) throw sessionError
+
+                // --- Teacher Payments Logic ---
+                // 1. Get session info (start_date, end_date, class_id)
+                const { data: sessionData, error: sessionFetchError } = await supabase
+                    .from('class_sessions')
+                    .select('id, class_id, start_date, end_date')
+                    .eq('id', sessionId)
+                    .single()
+                if (sessionFetchError) throw sessionFetchError
+                if (!sessionData) throw new Error('Session not found')
+
+                // 2. Get teachers for the class
+                const { data: classTeachers, error: teachersError } = await supabase
+                    .from('class_teachers')
+                    .select('teacher_id')
+                    .eq('class_id', sessionData.class_id)
+                if (teachersError) throw teachersError
+                const teacherIds = classTeachers?.map(t => t.teacher_id) || []
+                if (teacherIds.length === 0) break // No teachers to pay
+
+                // 3. Get hourly_rate and is_admin for each teacher
+                const { data: teacherRates, error: ratesError } = await supabase
+                    .from('teachers')
+                    .select('profile_id, hourly_rate, is_admin')
+                    .in('profile_id', teacherIds)
+                if (ratesError) throw ratesError
+
+                // 4. Calculate intended duration in hours
+                const start = new Date(sessionData.start_date)
+                const end = new Date(sessionData.end_date)
+                const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+                // 5. Insert payment row for each teacher (only if is_admin === false)
+                const paymentRows = teacherRates
+                    .filter(tr => tr.is_admin === false)
+                    .map(tr => ({
+                        teacher_id: tr.profile_id,
+                        session_id: sessionId,
+                        hours,
+                        amount: tr.hourly_rate !== null ? Number(hours) * Number(tr.hourly_rate) : 0,
+                        status: 'pending',
+                    }))
+                if (paymentRows.length > 0) {
+                    const { error: paymentError } = await supabase
+                        .from('teacher_payments')
+                        .insert(paymentRows)
+                    if (paymentError) throw paymentError
+                }
+                // --- End Teacher Payments Logic ---
+
                 break
             }
 
@@ -503,14 +553,14 @@ export async function updateSessionAttendance(params: {
             throw new Error(`Database error: ${fetchStudentError.message}`)
         }
 
-        // Filter to only update student records with "scheduled" status
-        const scheduledStudentIds = existingStudentAttendance
-            ?.filter(record => record.attendance_status === 'scheduled')
+        // Filter to only update student records with "expected" status
+        const expectedStudentIds = existingStudentAttendance
+            ?.filter(record => record.attendance_status === 'expected')
             .map(record => record.student_id) || []
 
-        // Filter student attendance data to only include students with scheduled status
+        // Filter student attendance data to only include students with expected status
         const filteredStudentAttendance = Object.entries(studentAttendance)
-            .filter(([studentId]) => scheduledStudentIds.includes(studentId))
+            .filter(([studentId]) => expectedStudentIds.includes(studentId))
             .reduce((acc, [studentId, isPresent]) => {
                 acc[studentId] = isPresent
                 return acc
@@ -551,14 +601,14 @@ export async function updateSessionAttendance(params: {
                 throw new Error(`Database error: ${fetchTeacherError.message}`)
             }
 
-            // Filter to only update teacher records with "scheduled" status
-            const scheduledTeacherIds = existingTeacherAttendance
-                ?.filter(record => record.attendance_status === 'scheduled')
+            // Filter to only update teacher records with "expected" status
+            const expectedTeacherIds = existingTeacherAttendance
+                ?.filter(record => record.attendance_status === 'expected')
                 .map(record => record.teacher_id) || []
 
-            // Filter teacher attendance data to only include teachers with scheduled status
+            // Filter teacher attendance data to only include teachers with expected status
             const filteredTeacherAttendance = Object.entries(teacherAttendance)
-                .filter(([teacherId]) => scheduledTeacherIds.includes(teacherId))
+                .filter(([teacherId]) => expectedTeacherIds.includes(teacherId))
                 .reduce((acc, [teacherId, isPresent]) => {
                     acc[teacherId] = isPresent
                     return acc
@@ -642,7 +692,7 @@ export async function updateClassAttendance(params: {
                             teacherAttendanceRecords.push({
                                 session_id: session.id,
                                 teacher_id: teacherId,
-                                attendance_status: 'scheduled'
+                                attendance_status: 'expected'
                             })
                         }
                     }
@@ -666,7 +716,7 @@ export async function updateClassAttendance(params: {
                             studentAttendanceRecords.push({
                                 session_id: session.id,
                                 student_id: studentId,
-                                attendance_status: 'scheduled'
+                                attendance_status: 'expected'
                             })
                         }
                     }

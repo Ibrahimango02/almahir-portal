@@ -170,7 +170,8 @@ export async function getClasses(): Promise<ClassType[]> {
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Find students for this class
@@ -227,7 +228,7 @@ export async function getClasses(): Promise<ClassType[]> {
             sessions: sessions,
             class_link: classItem.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents,
+            students: enrolledStudents,
             created_at: classItem.created_at,
             updated_at: classItem.updated_at || null
         }
@@ -337,7 +338,8 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Find students for this class
@@ -398,7 +400,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
             sessions: sessions,
             class_link: classItem.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents,
+            students: enrolledStudents,
             created_at: classItem.created_at,
             updated_at: classItem.updated_at || null
         }
@@ -497,7 +499,8 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
                     hourly_rate: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.hourly_rate || null,
                     notes: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.notes || null,
                     created_at: teacherProfile?.created_at,
-                    updated_at: teacherProfile?.updated_at || null
+                    updated_at: teacherProfile?.updated_at || null,
+                    is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                 }
             }) || []).filter(Boolean);
 
@@ -539,7 +542,7 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
             cancellation_reason: session.cancellation_reason || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            students: enrolledStudents
         };
     });
 
@@ -633,7 +636,8 @@ export async function getActiveClasses(): Promise<ClassType[]> {
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Find students for this class
@@ -692,7 +696,7 @@ export async function getActiveClasses(): Promise<ClassType[]> {
             sessions: sessions,
             class_link: classItem.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents,
+            students: enrolledStudents,
             created_at: classItem.created_at,
             updated_at: classItem.updated_at || null
         }
@@ -789,7 +793,8 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Find students for this class
@@ -848,7 +853,7 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
             sessions: sessions,
             class_link: classItem.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents,
+            students: enrolledStudents,
             created_at: classItem.created_at,
             updated_at: classItem.updated_at || null
         }
@@ -905,7 +910,8 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
         notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
         created_at: teacher.created_at,
-        updated_at: teacher.updated_at || null
+        updated_at: teacher.updated_at || null,
+        is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
     })) || [];
 
     // Get students for this class
@@ -1010,7 +1016,7 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         sessions: sessions,
         class_link: classData.class_link || null,
         teachers: teachers,
-        enrolled_students: enrolledStudents,
+        students: enrolledStudents,
         times: times,
         created_at: classData.created_at,
         updated_at: classData.updated_at || null
@@ -1110,8 +1116,9 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
-            })) || [];
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
+            })) || []
 
         // Students for this class
         const classStudentIds = classStudents
@@ -1137,7 +1144,7 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
                 created_at: student.created_at,
                 updated_at: student.updated_at || null
-            })) || [];
+            })) || []
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
@@ -1169,7 +1176,7 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
             sessions: sessions,
             class_link: classData.class_link || null,
             teachers: teachers,
-            enrolled_students: students,
+            students: students,
             created_at: classData.created_at,
             updated_at: classData.updated_at || null
         };
@@ -1271,8 +1278,9 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
-            })) || [];
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
+            })) || []
 
         // Students for this class
         const classStudentIds = classStudents
@@ -1298,7 +1306,7 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
                 created_at: student.created_at,
                 updated_at: student.updated_at || null
-            })) || [];
+            })) || []
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
@@ -1330,7 +1338,7 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
             sessions: sessions,
             class_link: classData.class_link || null,
             teachers: teachers,
-            enrolled_students: students,
+            students: students,
             created_at: classData.created_at,
             updated_at: classData.updated_at || null
         };
@@ -1398,7 +1406,8 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
         notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
         created_at: teacher.created_at,
-        updated_at: teacher.updated_at || null
+        updated_at: teacher.updated_at || null,
+        is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
     })) || []
 
     // Get students for this class
@@ -1451,7 +1460,7 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         cancelled_by: sessionData.cancelled_by || null,
         class_link: classData.class_link || null,
         teachers: teachers,
-        enrolled_students: students
+        students: students
     }
 }
 
@@ -1495,7 +1504,7 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         country: teacher.country,
         language: teacher.language,
         email: teacher.email,
-        phone: teacher.phone || null,   
+        phone: teacher.phone || null,
         status: teacher.status,
         role: teacher.role,
         avatar_url: teacher.avatar_url,
@@ -1503,7 +1512,8 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
         notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
         created_at: teacher.created_at,
-        updated_at: teacher.updated_at || null
+        updated_at: teacher.updated_at || null,
+        is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
     })) || [];
 
     // Get students for this class
@@ -1567,7 +1577,7 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         cancelled_by: session.cancelled_by || null,
         class_link: classData.class_link || null,
         teachers: teachers,
-        enrolled_students: students
+        students: students
     }));
 
     return formattedSessions;
@@ -1662,7 +1672,8 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Get students for this class
@@ -1702,7 +1713,7 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
             status: sessionData.status,
             class_link: classData.class_link || null,
             teachers: teachers,
-            enrolled_students: students
+            students: students
         })
     })
 
@@ -1806,7 +1817,8 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
                     hourly_rate: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.hourly_rate || null,
                     notes: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.notes || null,
                     created_at: teacherProfile?.created_at,
-                    updated_at: teacherProfile?.updated_at || null
+                    updated_at: teacherProfile?.updated_at || null,
+                    is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                 }
             }) || []).filter(Boolean);
 
@@ -1847,7 +1859,7 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
             status: session.status,
             class_link: classData?.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            students: enrolledStudents
         };
     });
 
@@ -1951,7 +1963,8 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
                     hourly_rate: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.hourly_rate || null,
                     notes: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.notes || null,
                     created_at: teacherProfile?.created_at,
-                    updated_at: teacherProfile?.updated_at || null
+                    updated_at: teacherProfile?.updated_at || null,
+                    is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                 }
             }) || []).filter(Boolean);
 
@@ -1992,7 +2005,7 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
             status: session.status,
             class_link: classData?.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            students: enrolledStudents
         };
     });
 
@@ -2088,7 +2101,8 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Get students for this class
@@ -2106,7 +2120,7 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
                 country: student.country,
                 language: student.language,
                 email: student.email || null,
-                phone: student.phone || null,   
+                phone: student.phone || null,
                 status: student.status,
                 role: student.role,
                 avatar_url: student.avatar_url,
@@ -2128,7 +2142,7 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
             status: sessionData.status,
             class_link: classData.class_link || null,
             teachers: teachers,
-            enrolled_students: students
+            students: students
         })
     })
 
@@ -2349,7 +2363,8 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
                     hourly_rate: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.hourly_rate || null,
                     notes: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.notes || null,
                     created_at: teacherProfile?.created_at,
-                    updated_at: teacherProfile?.updated_at || null
+                    updated_at: teacherProfile?.updated_at || null,
+                    is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                 }
             }) || []).filter(Boolean)
 
@@ -2390,7 +2405,7 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
             status: session.status,
             class_link: classData?.class_link || null,
             teachers: teachers,
-            enrolled_students: enrolledStudents
+            students: enrolledStudents
         }
     })
 
@@ -2495,7 +2510,8 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
                 hourly_rate: teacherData?.find(t => t.profile_id === teacher.id)?.hourly_rate || null,
                 notes: teacherData?.find(t => t.profile_id === teacher.id)?.notes || null,
                 created_at: teacher.created_at,
-                updated_at: teacher.updated_at || null
+                updated_at: teacher.updated_at || null,
+                is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
             })) || []
 
         // Students for this class
@@ -2555,7 +2571,7 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
             created_at: classData.created_at,
             updated_at: classData.updated_at || null,
             teachers: teachers,
-            enrolled_students: students,
+            students: students,
             sessions: sessions
         }
     })
@@ -2691,4 +2707,20 @@ export async function getSessionAttendanceForAll(sessionId: string): Promise<{
     }
 }
 
+export async function getClassBySessionId(sessionId: string): Promise<string | null> {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+        .from('class_sessions')
+        .select('class_id')
+        .eq('id', sessionId)
+        .single();
+
+    if (error) {
+        console.error('Error fetching class by session id:', error);
+        return null;
+    }
+
+    return data?.class_id || null;
+}
 

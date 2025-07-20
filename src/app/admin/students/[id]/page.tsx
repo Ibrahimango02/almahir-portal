@@ -5,18 +5,44 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, Edit, BookOpen, Clock, Plus, CreditCard, Calendar, DollarSign } from "lucide-react"
+import { Mail, User, Users, Edit, BookOpen, Clock, Plus, CreditCard, Receipt, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
 import { getStudentById, getStudentParents, getStudentTeachers, getStudentTotalHours } from "@/lib/get/get-students"
+import { ParentType } from "@/types"
 import { getSessionsByStudentId, getClassesByStudentId } from "@/lib/get/get-classes"
 import { getSubscriptionInfoByStudentId } from "@/lib/get/get-subscriptions"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
 import { StudentTeachersSection } from "@/components/student-teachers-section"
+import { getStudentSessionHistory } from "@/lib/get/get-session-history"
+import { getStudentSessionNotesForStudent } from "@/lib/get/get-session-remarks"
 
+// Function to convert month numbers to month names
+const formatMonthRange = (monthRange: string): string => {
+  if (!monthRange) return '-'
 
+  const months = monthRange.split('-')
+  if (months.length !== 2) return monthRange
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ]
+
+  const startMonth = parseInt(months[0]) - 1 // Convert to 0-based index
+  const endMonth = parseInt(months[1]) - 1
+
+  if (isNaN(startMonth) || isNaN(endMonth) || startMonth < 0 || startMonth > 11 || endMonth < 0 || endMonth > 11) {
+    return monthRange // Return original if invalid
+  }
+
+  const startName = monthNames[startMonth]
+  const endName = monthNames[endMonth]
+
+  return startMonth === endMonth ? startName : `${startName} - ${endName}`
+}
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -40,45 +66,43 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const studentTotalHours = await getStudentTotalHours(student.student_id)
   const studentClasses = await getClassesByStudentId(student.student_id)
 
+  // Fetch invoices for this student
+  const { getInvoicesByStudentId } = await import("@/lib/get/get-invoices")
+  const invoices = await getInvoicesByStudentId(student.student_id)
+
   // Determine if hours used exceeds monthly hours
   const monthlyHours = studentSubscription?.subscription?.hours_per_month ?? 0
   const isOverLimit = studentTotalHours > monthlyHours
   const isUnderLimit = studentTotalHours < monthlyHours
   const isExactLimit = studentTotalHours === monthlyHours
 
-  // Determine card color classes for hours
-  let hoursCardColor = ''
+  // Determine card color classes for hours 
   let hoursTextColor = 'text-primary'
   let hoursBgColor = ''
   if (isOverLimit) {
-    hoursCardColor = 'border-red-600'
     hoursTextColor = 'text-red-600'
     hoursBgColor = 'bg-red-50'
   } else if (isUnderLimit) {
-    hoursCardColor = 'border-yellow-500'
     hoursTextColor = 'text-yellow-600'
     hoursBgColor = 'bg-yellow-50'
   } else if (isExactLimit) {
-    hoursCardColor = 'border-green-600'
     hoursTextColor = 'text-green-600'
     hoursBgColor = 'bg-green-50'
   }
 
-  // Determine if free absences are running low
-  const maxFreeAbsences = studentSubscription?.subscription?.max_free_absences ?? 0
-  const freeAbsencesRemaining = studentSubscription?.free_absences_remaining ?? maxFreeAbsences
-  const freeAbsencesUsed = maxFreeAbsences - freeAbsencesRemaining
-  const isAbsencesOverLimit = freeAbsencesUsed > maxFreeAbsences
+  // Fetch session history and attendance for each session
+  const sessionsWithHistory = await getStudentSessionHistory(student.student_id)
 
-  // Determine card color classes for absences
-  let absencesCardColor = ''
-  let absencesTextColor = 'text-primary'
-  let absencesBgColor = ''
-  if (isAbsencesOverLimit) {
-    absencesCardColor = 'border-red-600'
-    absencesTextColor = 'text-red-600'
-    absencesBgColor = 'bg-red-50'
-  }
+  // Fetch all session notes for this student in parallel
+  const sessionNotesResults = await Promise.all(
+    sessionsWithHistory.map((session) =>
+      getStudentSessionNotesForStudent(session.session_id, student.student_id)
+    )
+  )
+  // Map sessionId to notes for easy lookup
+  const sessionNotesMap = new Map(
+    sessionsWithHistory.map((session, idx) => [session.session_id, sessionNotesResults[idx]])
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,7 +194,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <div className="space-y-3 pl-6">
                   {studentParents && studentParents.length > 0 ? (
                     <div className="space-y-2">
-                      {studentParents.map((parent) => (
+                      {studentParents.map((parent: ParentType) => (
                         <Link
                           key={parent.parent_id}
                           href={`/admin/parents/${parent.parent_id}`}
@@ -260,110 +284,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         </Card>
       </div>
 
-      {/* Subscription Information Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Subscription Information
-            </CardTitle>
-          </div>
-          <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
-            <Link href={`/admin/students/${student.student_id}/subscription`}>
-              <Plus className="mr-2 h-4 w-4" />
-              {studentSubscription ? "Manage Subscription" : "Assign Subscription"}
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {studentSubscription ? (
-            <div className="space-y-6">
-              {/* Subscription Status */}
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Badge
-                    className={`capitalize px-3 py-1 ${studentSubscription.status === "active" ? "bg-green-600" :
-                      studentSubscription.status === "inactive" ? "bg-amber-500" :
-                        studentSubscription.status === "expired" ? "bg-red-600" :
-                          "bg-gray-500"
-                      }`}
-                  >
-                    {studentSubscription.status}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    Subscription Status
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{studentSubscription.subscription?.name}</p>
-                  <p className="text-xs text-muted-foreground">Current Plan</p>
-                </div>
-              </div>
-
-              {/* Subscription Period */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg">
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Start Date</h4>
-                  <p className="text-sm font-medium">
-                    {format(parseISO(studentSubscription.start_date), "MMMM d, yyyy")}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">End Date</h4>
-                  <p className="text-sm font-medium">
-                    {format(parseISO(studentSubscription.end_date), "MMMM d, yyyy")}
-                  </p>
-                </div>
-              </div>
-
-              {/* Subscription Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">Subscription Fee</span>
-                  </div>
-                  <p className="text-2xl font-bold text-primary">
-                    {studentSubscription.subscription?.total_amount} CAD
-                  </p>
-                  <p className="text-xs text-muted-foreground">every {studentSubscription.subscription?.rate} months</p>
-                </div>
-
-                <div className={`p-4 border rounded-lg ${hoursCardColor} ${hoursBgColor}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className={`h-4 w-4 ${hoursTextColor}`} />
-                    <span className={`text-sm font-medium ${hoursTextColor}`}>Monthly Hours</span>
-                  </div>
-                  <p className={`text-2xl font-bold ${hoursTextColor}`}>
-                    {studentTotalHours} / {monthlyHours}
-                  </p>
-                  <p className={`text-xs text-muted-foreground ${hoursTextColor}`}>used / available</p>
-                </div>
-
-                <div className={`p-4 border rounded-lg ${absencesCardColor} ${absencesBgColor}`}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className={`h-4 w-4 ${absencesTextColor}`} />
-                    <span className={`text-sm font-medium ${absencesTextColor}`}>Monthly Absences</span>
-                  </div>
-                  <p className={`text-2xl font-bold ${absencesTextColor}`}>
-                    {freeAbsencesUsed} / {maxFreeAbsences}
-                  </p>
-                  <p className={`text-xs text-muted-foreground ${absencesTextColor}`}>used / available</p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                No Active Subscription
-              </h3>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Enrolled Classes Section */}
       <Card>
         <CardHeader className="pb-3">
@@ -426,8 +346,8 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                               }
 
                               return (
-                                <div key={day} className="text-xs text-muted-foreground">
-                                  {dayName}: {timeSlot.start} - {timeSlot.end} {durationText}
+                                <div key={day} className="text-xs">
+                                  {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
                                 </div>
                               )
                             }
@@ -463,6 +383,298 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               </h3>
               <p className="text-sm text-muted-foreground">
                 {student.first_name} is not enrolled in any classes.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sessions History Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            Sessions History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sessionsWithHistory.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Start Time</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">End Time</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Attendance</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {sessionsWithHistory.map((session) => {
+                    const notesObj = sessionNotesMap.get(session.session_id)
+                    return (
+                      <tr
+                        key={session.session_id}
+                        className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
+                      >
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm font-medium text-gray-900 hover:text-primary transition-colors">
+                              {session.title}
+                            </div>
+                            <div className="text-xs text-gray-500">{session.subject}</div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.start_date), "MMMM d, yyyy")}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.start_date), "hh:mm a")}
+                              {session.actual_start_time && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  (actual: {format(parseISO(session.actual_start_time), "hh:mm a")})
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <div className="text-sm text-gray-900">
+                              {format(parseISO(session.end_date), "hh:mm a")}
+                              {session.actual_end_time && (
+                                <span className="text-xs text-gray-500 ml-1">
+                                  (actual: {format(parseISO(session.actual_end_time), "hh:mm a")})
+                                </span>
+                              )}
+                            </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <Link
+                            href={`/admin/classes/${session.class_id}/${session.session_id}`}
+                            className="block"
+                          >
+                            <Badge
+                              className={`capitalize px-2 py-0.5 text-xs ${session.attendance_status === "present"
+                                ? "bg-green-100 text-green-800"
+                                : session.attendance_status === "absent"
+                                  ? "bg-red-100 text-red-800"
+                                  : session.attendance_status === "late"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                            >
+                              {session.attendance_status}
+                            </Badge>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                          {notesObj && notesObj.notes ? (
+                            <span title={notesObj.notes}>
+                              {notesObj.notes.length > 40
+                                ? notesObj.notes.slice(0, 40) + "..."
+                                : notesObj.notes}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">No notes</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-muted-foreground mb-1">
+                No Past Sessions
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                No session history available for this student.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Subscription Information Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Subscription Information
+          </CardTitle>
+          <Button asChild size="sm" style={{ backgroundColor: "#3d8f5b", color: "white" }}>
+            <Link href={`/admin/students/subscription/${student.student_id}`}>
+              {studentSubscription ? <Edit className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {studentSubscription ? "Edit Subscription" : "Add Subscription"}
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {studentSubscription ? (
+            <div className="space-y-4">
+              {/* Top Row: Status and Plan */}
+              <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Status: </span>
+                  <Badge
+                    className={`capitalize px-2 py-1 text-xs ${studentSubscription.status === "active" ? "bg-green-600" :
+                      studentSubscription.status === "inactive" ? "bg-amber-500" :
+                        studentSubscription.status === "expired" ? "bg-red-600" :
+                          "bg-gray-500"
+                      }`}
+                  >
+                    {studentSubscription.status}
+                  </Badge>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{studentSubscription.subscription?.name}</p>
+                  <p className="text-xs text-muted-foreground">Current Plan</p>
+                </div>
+              </div>
+
+              {/* Middle Row: Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-muted/20 rounded-lg">
+                  <h4 className="text-xs font-medium text-muted-foreground mb-1">Start Date</h4>
+                  <p className="text-sm font-semibold">
+                    {studentSubscription.start_date ? format(parseISO(studentSubscription.start_date), "MMM d, yyyy") : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 bg-muted/20 rounded-lg">
+                  <h4 className="text-xs font-medium text-muted-foreground mb-1">Next Payment Date</h4>
+                  <p className="text-sm font-semibold">
+                    {studentSubscription.next_payment_date ? format(parseISO(studentSubscription.next_payment_date), "MMM d, yyyy") : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Row: Fee and Hours */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 border rounded-lg bg-white">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium">Subscription Fee</span>
+                  </div>
+                  <p className="text-xl font-bold text-primary">
+                    {studentSubscription.subscription?.total_amount} CAD
+                  </p>
+                  <p className="text-xs text-muted-foreground">every {studentSubscription.subscription?.rate} months</p>
+                </div>
+
+                <div className={`p-3 border rounded-lg ${hoursBgColor}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Clock className={`h-4 w-4 ${hoursTextColor}`} />
+                    <span className={`text-sm font-medium ${hoursTextColor}`}>Monthly Hours</span>
+                  </div>
+                  <p className={`text-xl font-bold ${hoursTextColor}`}>
+                    {studentTotalHours} / {monthlyHours}
+                  </p>
+                  <p className={`text-xs ${hoursTextColor}`}>used / available</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-muted-foreground mb-1">
+                No Active Subscription
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                This student doesn&apos;t have an active subscription plan.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Invoices Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-primary" />
+            Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{invoices ? invoices.length : 0}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {invoices && invoices.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {invoices.map((invoice) => (
+                    <tr key={invoice.invoice_id} className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                      <td className="px-4 py-2 text-sm">
+                        <span className="inline-block bg-muted px-2 py-0.5 rounded-full font-medium text-primary">
+                          {formatMonthRange(invoice.months)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm capitalize">
+                        <span
+                          className={
+                            `inline-block px-2 py-0.5 rounded-full text-xs font-semibold ` +
+                            (invoice.status === 'paid'
+                              ? 'bg-green-100 text-green-800'
+                              : invoice.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : invoice.status === 'overdue'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800')
+                          }
+                        >
+                          {invoice.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-muted-foreground mb-1">
+                No Invoices
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                No invoices found for this student.
               </p>
             </div>
           )}

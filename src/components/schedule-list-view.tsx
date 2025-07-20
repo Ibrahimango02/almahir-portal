@@ -4,16 +4,33 @@ import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "./table-pagination"
-import { CalendarDays, Clock, Users } from "lucide-react"
+import { CalendarDays, Clock, Users, Calendar, Play, CheckCircle, BookX, UserX } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ClassType, ClassSessionType, ScheduleListViewProps } from "@/types"
 import {
-    formatDate,
     utcToLocal,
-    isTodayInTimezone
 } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { ClientTimeDisplay } from "./client-time-display"
+import { cn } from "@/lib/utils"
+import { format, parseISO, isToday } from "date-fns"
+
+// Utility function to parse class date and time
+const parseClassDateTime = (
+    cls: { start_date?: string; end_date?: string },
+    timeField: "start_date" | "end_date"
+): Date | null => {
+    try {
+        const time = cls[timeField]
+        if (!time) return null
+
+        // Parse the ISO datetime string directly
+        return parseISO(time)
+    } catch (error) {
+        console.error(`Error parsing ${timeField} for class:`, error, cls)
+        return null
+    }
+}
 
 interface ScheduleListViewUnifiedProps extends ScheduleListViewProps {
     classData: ClassType[]
@@ -45,7 +62,7 @@ export function ScheduleListView({
                 subject: cls.subject,
                 class_link: cls.class_link,
                 teachers: cls.teachers,
-                enrolled_students: cls.enrolled_students
+                students: cls.students
             }))
         )
     }, [classData])
@@ -201,12 +218,14 @@ export function ScheduleListView({
 
             {sortedSessions.length > 0 && (
                 <>
-                    <div className="grid gap-4">
+                    <div className="grid gap-3 p-1">
                         {currentSessions.map((session) => {
                             try {
-                                const startDateTime = utcToLocal(session.start_date, timezone);
-                                const endDateTime = utcToLocal(session.end_date, timezone);
-                                const isToday = isTodayInTimezone(session.start_date, timezone);
+                                const startDateTime = parseClassDateTime(session, "start_date");
+                                const endDateTime = parseClassDateTime(session, "end_date");
+                                const isTodayClass = startDateTime && isToday(startDateTime);
+
+                                if (!startDateTime || !endDateTime) return null;
 
                                 return (
                                     <div
@@ -218,7 +237,7 @@ export function ScheduleListView({
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <h3 className="font-semibold text-base">{session.title}</h3>
-                                                    {isToday && (
+                                                    {isTodayClass && (
                                                         <Badge variant="default" className="text-xs bg-blue-500 hover:bg-blue-500 text-white font-medium px-2 py-1">
                                                             Today
                                                         </Badge>
@@ -228,7 +247,7 @@ export function ScheduleListView({
                                                 <div className="flex items-center gap-3 text-xs">
                                                     <span className="flex items-center gap-1 text-muted-foreground">
                                                         <CalendarDays className="h-3 w-3" />
-                                                        {formatDate(startDateTime, 'PPP')}
+                                                        {format(startDateTime, "PPP")}
                                                     </span>
                                                     <span className="flex items-center gap-1 text-muted-foreground">
                                                         <Clock className="h-3 w-3" />
@@ -243,15 +262,24 @@ export function ScheduleListView({
                                                 </div>
                                             </div>
                                             <div className="flex items-start gap-2 ml-3">
-                                                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${session.status === "running" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" :
-                                                    session.status === "complete" ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" :
-                                                        session.status === "pending" ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" :
-                                                            session.status === "scheduled" ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" :
-                                                                session.status === "rescheduled" ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" :
-                                                                    session.status === "cancelled" ? "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200" :
-                                                                        session.status === "absence" ? "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" :
-                                                                            "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-                                                    }`}>
+                                                <span className={cn(
+                                                    "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                                    session.status === "running" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                                    session.status === "complete" && "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                                    session.status === "pending" && "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+                                                    session.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                                    session.status === "rescheduled" && "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                                                    session.status === "cancelled" && "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                                                    session.status === "absence" && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                                                )}>
+                                                    {/* Status icons to match weekly-schedule.tsx */}
+                                                    {session.status === "scheduled" && <Calendar className="h-3 w-3" />}
+                                                    {session.status === "running" && <Play className="h-3 w-3" />}
+                                                    {session.status === "complete" && <CheckCircle className="h-3 w-3" />}
+                                                    {session.status === "pending" && <Clock className="h-3 w-3" />}
+                                                    {session.status === "rescheduled" && <CalendarDays className="h-3 w-3" />}
+                                                    {session.status === "cancelled" && <BookX className="h-3 w-3" />}
+                                                    {session.status === "absence" && <UserX className="h-3 w-3" />}
                                                     {session.status}
                                                 </span>
                                             </div>

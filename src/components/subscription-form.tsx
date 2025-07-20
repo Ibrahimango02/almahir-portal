@@ -11,6 +11,8 @@ import { toast } from '@/hooks/use-toast'
 import { SubscriptionType, StudentSubscriptionType } from '@/types'
 import { createStudentSubscription, updateStudentSubscription } from '@/lib/post/post-subscriptions'
 import { getSubscriptions } from '@/lib/get/get-subscriptions'
+import { addMonths, addDays, format as formatDate } from 'date-fns'
+import { useRouter } from 'next/navigation'
 
 interface SubscriptionFormProps {
     studentId: string
@@ -20,11 +22,13 @@ interface SubscriptionFormProps {
 
 export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: SubscriptionFormProps) {
     const [subscriptions, setSubscriptions] = useState<SubscriptionType[]>([])
-    const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>('')
-    const [startDate, setStartDate] = useState<string>('')
-    const [endDate, setEndDate] = useState<string>('')
+    const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<string>(currentSubscription?.subscription_id || '')
+    const [startDate, setStartDate] = useState<string>(currentSubscription?.start_date.split('T')[0] || '')
+    const [endDate, setEndDate] = useState<string>(currentSubscription?.next_payment_date?.split('T')[0] || '')
     const [loading, setLoading] = useState(false)
     const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionType | null>(null)
+    const [periodType, setPeriodType] = useState<'4-weeks' | 'month'>('month')
+    const router = useRouter();
 
     useEffect(() => {
         loadSubscriptions()
@@ -33,11 +37,28 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
     useEffect(() => {
         if (currentSubscription) {
             setSelectedSubscriptionId(currentSubscription.subscription_id)
-            setStartDate(currentSubscription.start_date)
-            setEndDate(currentSubscription.end_date)
+            setStartDate(currentSubscription.start_date.split('T')[0])
+            setPeriodType(currentSubscription.every_month ? 'month' : '4-weeks')
             setSelectedSubscription(currentSubscription.subscription || null)
+            // Calculate next payment date for display
+            if (currentSubscription.next_payment_date) {
+                setEndDate(currentSubscription.next_payment_date.split('T')[0])
+            }
         }
     }, [currentSubscription])
+
+    useEffect(() => {
+        // Recalculate next payment date whenever plan, periodType, or startDate changes
+        if (!selectedSubscription || !startDate) return
+        const start = new Date(startDate)
+        let nextDate: Date
+        if (periodType === '4-weeks') {
+            nextDate = addDays(start, selectedSubscription.rate * 4 * 7) // 4 weeks per rate
+        } else {
+            nextDate = addMonths(start, selectedSubscription.rate)
+        }
+        setEndDate(formatDate(nextDate, 'yyyy-MM-dd'))
+    }, [selectedSubscription, periodType, startDate])
 
     useEffect(() => {
         if (selectedSubscriptionId) {
@@ -78,21 +99,24 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                 await updateStudentSubscription(currentSubscription.id, {
                     subscription_id: selectedSubscriptionId,
                     start_date: startDate,
-                    end_date: endDate,
+                    next_payment_date: endDate,
+                    every_month: periodType === 'month',
+                    status: 'active'
                 })
                 toast({
                     title: "Success",
                     description: "Subscription updated successfully",
                 })
+                router.push(`/admin/students/${studentId}`)
             } else {
-                await createStudentSubscription(studentId, selectedSubscriptionId, startDate, endDate)
+                await createStudentSubscription(studentId, selectedSubscriptionId, startDate, endDate, periodType === 'month')
                 toast({
                     title: "Success",
                     description: "Subscription created successfully",
                 })
+                onSuccess?.()
             }
-
-            onSuccess?.()
+            // Only call onSuccess for create, since update/deactivate now redirect
         } catch {
             toast({
                 title: "Error",
@@ -126,38 +150,38 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                                 <SelectValue placeholder="Select a subscription plan" />
                             </SelectTrigger>
                             <SelectContent>
-                                {subscriptions.map((subscription) => (
-                                    <SelectItem key={subscription.id} value={subscription.id}>
-                                        {subscription.name} - ${subscription.hourly_rate}/hr
-                                    </SelectItem>
-                                ))}
+                                {[...subscriptions]
+                                    .sort((a, b) => (a.total_amount ?? 0) - (b.total_amount ?? 0))
+                                    .map((subscription) => (
+                                        <SelectItem key={subscription.id} value={subscription.id}>
+                                            {subscription.name} - ${subscription.total_amount} CAD
+                                        </SelectItem>
+                                    ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {selectedSubscription && (
-                        <div className="p-4 bg-muted rounded-lg space-y-2">
-                            <h4 className="font-medium">Plan Details</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <span className="text-muted-foreground">Hourly Rate:</span>
-                                    <span className="ml-2 font-medium">${selectedSubscription.hourly_rate}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Hours per Month:</span>
-                                    <span className="ml-2 font-medium">{selectedSubscription.hours_per_month}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Free Absences:</span>
-                                    <span className="ml-2 font-medium">{selectedSubscription.max_free_absences}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted-foreground">Monthly Rate:</span>
-                                    <span className="ml-2 font-medium">${selectedSubscription.rate}</span>
-                                </div>
-                            </div>
+                    <div className="space-y-2">
+                        <Label>Billing Period</Label>
+                        <div className="flex gap-2">
+                            <Button
+                                type="button"
+                                style={{ backgroundColor: periodType === 'month' ? '#3d8f5b' : undefined, color: periodType === 'month' ? 'white' : undefined, borderColor: '#3d8f5b' }}
+                                variant={periodType === 'month' ? 'default' : 'outline'}
+                                onClick={() => setPeriodType('month')}
+                            >
+                                Month
+                            </Button>
+                            <Button
+                                type="button"
+                                style={{ backgroundColor: periodType === '4-weeks' ? '#3d8f5b' : undefined, color: periodType === '4-weeks' ? 'white' : undefined, borderColor: '#3d8f5b' }}
+                                variant={periodType === '4-weeks' ? 'default' : 'outline'}
+                                onClick={() => setPeriodType('4-weeks')}
+                            >
+                                4 Weeks
+                            </Button>
                         </div>
-                    )}
+                    </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -171,20 +195,35 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="endDate">End Date</Label>
+                            <Label htmlFor="endDate">Next Payment Date</Label>
                             <Input
                                 id="endDate"
                                 type="date"
                                 value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                readOnly
+                                disabled
                                 required
                             />
                         </div>
                     </div>
 
-                    <Button type="submit" disabled={loading} className="w-full">
-                        {loading ? 'Saving...' : (currentSubscription ? 'Update Subscription' : 'Assign Subscription')}
-                    </Button>
+                    <div className="flex gap-4 justify-end">
+                        <Button
+                            type="submit"
+                            disabled={loading}
+                            style={{ backgroundColor: '#3d8f5b', color: 'white', minWidth: '170px', transition: 'background 0.2s, box-shadow 0.2s' }}
+                            onMouseOver={e => {
+                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#27663d';
+                                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(61,143,91,0.15)';
+                            }}
+                            onMouseOut={e => {
+                                (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#3d8f5b';
+                                (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+                            }}
+                        >
+                            {loading ? 'Saving...' : (currentSubscription ? 'Update Subscription' : 'Assign Subscription')}
+                        </Button>
+                    </div>
                 </form>
             </CardContent>
         </Card>

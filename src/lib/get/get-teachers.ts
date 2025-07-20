@@ -39,6 +39,7 @@ export async function getTeachers(): Promise<TeacherType[]> {
             specialization: teacher?.specialization || null,
             hourly_rate: teacher?.hourly_rate || null,
             notes: teacher?.notes || null,
+            is_admin: teacher?.is_admin ?? false,
             created_at: teacherProfile.created_at,
             updated_at: teacherProfile.updated_at || null,
         }
@@ -85,6 +86,7 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
         specialization: teacher?.specialization || null,
         hourly_rate: teacher?.hourly_rate || null,
         notes: teacher?.notes || null,
+        is_admin: teacher?.is_admin ?? false,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }
