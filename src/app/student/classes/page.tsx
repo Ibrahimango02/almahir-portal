@@ -1,15 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, BookOpen, Clock, Search, Archive } from "lucide-react"
+import { Search } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 import ClassesTable from "@/components/classes-table"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
 
 export default function StudentClassesPage() {
     const [classes, setClasses] = useState<ClassType[]>([])
@@ -17,7 +15,6 @@ export default function StudentClassesPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
-    const [archivedClasses, setArchivedClasses] = useState<ClassType[]>([])
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -39,7 +36,6 @@ export default function StudentClassesPage() {
                 const data = await getClassesByStudentId(currentUserId)
                 setClasses(data)
                 setFilteredClasses(data)
-                setArchivedClasses(data.filter(c => c.status === 'archived'))
             } catch (error) {
                 console.error("Error fetching classes:", error)
             } finally {
@@ -77,9 +73,6 @@ export default function StudentClassesPage() {
         })
         setFilteredClasses(filtered)
     }, [searchQuery, classes])
-
-    const totalClasses = classes.length
-    const activeClasses = classes.filter(c => c.status === 'active')
 
     return (
         <div className="flex flex-col gap-6">

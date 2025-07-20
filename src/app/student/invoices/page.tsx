@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { StudentInvoicesTable } from "@/components/student-invoices-table"
 import { getInvoicesByStudentId } from "@/lib/get/get-invoices"
 import { createClient } from "@/utils/supabase/client"
@@ -9,7 +8,6 @@ import { StudentInvoiceType } from "@/types"
 
 export default function StudentInvoicesPage() {
     const [invoices, setInvoices] = useState<StudentInvoiceType[]>([])
-    const [isLoading, setIsLoading] = useState(true)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
     useEffect(() => {
@@ -24,14 +22,13 @@ export default function StudentInvoicesPage() {
     }, [])
 
     const fetchInvoices = async (studentId: string) => {
-        setIsLoading(true)
         try {
             const data = await getInvoicesByStudentId(studentId)
             setInvoices(data || [])
-        } catch (error) {
+        } catch {
             setInvoices([])
         } finally {
-            setIsLoading(false)
+            // setIsLoading(false) // This line was removed as per the edit hint
         }
     }
 

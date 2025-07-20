@@ -4,9 +4,8 @@ import { useState, useEffect } from "react"
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, startOfMonth, addMonths, subMonths } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, List } from "lucide-react"
 import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
 import { ScheduleListView } from "@/components/schedule-list-view"
 import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
@@ -21,7 +20,6 @@ export default function ParentSchedulePage() {
     const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
     const [activeTab, setActiveTab] = useState("all")
     const [activeListTab, setActiveListTab] = useState("upcoming")
-    const [searchQuery, setSearchQuery] = useState("")
     const [classData, setClassData] = useState<ClassType[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -160,7 +158,6 @@ export default function ParentSchedulePage() {
                                     currentWeekStart={currentWeekStart}
                                     timeRangeStart={0}
                                     timeRangeEnd={24}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                             <TabsContent value="morning">
@@ -172,7 +169,6 @@ export default function ParentSchedulePage() {
                                     currentWeekStart={currentWeekStart}
                                     timeRangeStart={4}
                                     timeRangeEnd={12}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                             <TabsContent value="afternoon">
@@ -184,7 +180,6 @@ export default function ParentSchedulePage() {
                                     currentWeekStart={currentWeekStart}
                                     timeRangeStart={12}
                                     timeRangeEnd={20}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                             <TabsContent value="evening">
@@ -196,7 +191,6 @@ export default function ParentSchedulePage() {
                                     currentWeekStart={currentWeekStart}
                                     timeRangeStart={20}
                                     timeRangeEnd={28}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                         </Tabs>
@@ -213,7 +207,6 @@ export default function ParentSchedulePage() {
                                     baseRoute="/parent"
                                     filter="upcoming"
                                     currentWeekStart={currentWeekStart}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                             <TabsContent value="recent">
@@ -223,7 +216,6 @@ export default function ParentSchedulePage() {
                                     baseRoute="/parent"
                                     filter="recent"
                                     currentWeekStart={currentWeekStart}
-                                    searchQuery={searchQuery}
                                 />
                             </TabsContent>
                         </Tabs>

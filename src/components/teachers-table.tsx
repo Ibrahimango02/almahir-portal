@@ -43,7 +43,7 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
       try {
         const profile = await getProfile()
         setCurrentUserRole(profile.role)
-      } catch (error) {
+      } catch {
         if (userRole) setCurrentUserRole(userRole)
       }
     }

@@ -41,8 +41,8 @@ export async function createStudentSubscription(
 
     // Calculate month range for the invoice
     // Parse dates more reliably by splitting and using UTC to avoid timezone issues
-    const [startYear, startMonthStr, startDay] = startDate.split('-').map(Number)
-    const [endYear, endMonthStr, endDay] = endDate.split('-').map(Number)
+    const [startYear, startMonthStr] = startDate.split('-').map(Number)
+    const [endYear, endMonthStr] = endDate.split('-').map(Number)
     const startMonth = startMonthStr
     const endMonth = endMonthStr
 
@@ -130,8 +130,8 @@ export async function updateStudentSubscription(
     const startDate = updates.start_date || currentData.start_date
     const endDate = updates.next_payment_date || currentData.next_payment_date
     // Parse dates more reliably by splitting and using UTC to avoid timezone issues
-    const [startYear, startMonthStr, startDay] = startDate.split('-').map(Number)
-    const [endYear, endMonthStr, endDay] = endDate.split('-').map(Number)
+    const [startYear, startMonthStr] = startDate.split('-').map(Number)
+    const [endYear, endMonthStr] = endDate.split('-').map(Number)
     const startMonth = startMonthStr
     const endMonth = endMonthStr
 

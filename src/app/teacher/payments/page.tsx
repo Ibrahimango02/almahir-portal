@@ -8,11 +8,9 @@ import { TeacherPaymentType } from "@/types"
 
 export default function TeacherPaymentsPage() {
     const [payments, setPayments] = useState<TeacherPaymentType[]>([])
-    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         async function fetchPayments() {
-            setLoading(true)
             try {
                 const profile = await getProfile()
                 const teacherId = profile?.id
@@ -23,7 +21,7 @@ export default function TeacherPaymentsPage() {
                     }
                 }
             } finally {
-                setLoading(false)
+                // setLoading(false) // This line was removed as per the edit hint.
             }
         }
         fetchPayments()

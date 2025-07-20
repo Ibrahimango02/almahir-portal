@@ -87,7 +87,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const userId = user?.id;
   // Check if admin
   const isAdmin = userId ? await checkIfAdmin(userId) : false;
-  const isModerator = userId && !isAdmin ? true : false;
 
   const { id } = await params
 

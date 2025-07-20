@@ -9,8 +9,27 @@ import { format, parseISO } from "date-fns"
 import { X, BookOpen, Search } from "lucide-react"
 import Link from "next/link"
 
+type SessionReportType = {
+    session_id: string;
+    class_id: string;
+    title: string;
+    subject: string;
+    start_date: string;
+    end_date: string;
+    actual_start_time: string | null;
+    actual_end_time: string | null;
+    status: string;
+    cancellation_reason: string | null;
+    cancelled_by: string | null;
+    teacher_name: string;
+    student_names: string[];
+    attendance_status: string;
+    notes: string | null;
+    session_summary: string | null;
+};
+
 export default function AdminReportsPage() {
-    const [sessions, setSessions] = useState<any[]>([])
+    const [sessions, setSessions] = useState<SessionReportType[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [search, setSearch] = useState("")

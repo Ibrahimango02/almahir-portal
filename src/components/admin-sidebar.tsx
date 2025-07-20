@@ -24,7 +24,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useState, useEffect } from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { logout } from "@/lib/auth/auth-actions"
 import { getProfile } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"

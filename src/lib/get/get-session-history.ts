@@ -361,11 +361,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             .select('*')
             .in('session_id', sessionIds)
 
-        // Get student attendance for all sessions
-        const { data: studentAttendance } = await supabase
-            .from('student_attendance')
-            .select('*')
-            .in('session_id', sessionIds)
+
 
         // Create mappings for efficient lookup
         const sessionHistoryMap = new Map(
@@ -378,10 +374,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
 
         const teacherAttendanceMap = new Map(
             teacherAttendance?.map(a => [a.session_id, a.attendance_status]) || []
-        )
-
-        const studentAttendanceMap = new Map(
-            studentAttendance?.map(a => [a.session_id, a.attendance_status]) || []
         )
 
         // Create class to teacher mapping
@@ -408,7 +400,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             const history = sessionHistoryMap.get(session.id)
             const remarks = sessionRemarksMap.get(session.id)
             const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
-            const studentAttendanceStatus = studentAttendanceMap.get(session.id) || 'N/A'
 
             // Get teacher names for this class
             const classTeacherIds = classTeacherMap.get(session.class_id) || []

@@ -8,7 +8,6 @@ import { StudentInvoiceType } from "@/types"
 
 export default function ParentInvoicesPage() {
     const [invoices, setInvoices] = useState<StudentInvoiceType[]>([])
-    const [isLoading, setIsLoading] = useState(true)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
     useEffect(() => {
@@ -23,14 +22,11 @@ export default function ParentInvoicesPage() {
     }, [])
 
     const fetchInvoices = async (parentId: string) => {
-        setIsLoading(true)
         try {
             const data = await getInvoicesByParentId(parentId)
             setInvoices(data || [])
-        } catch (error) {
+        } catch {
             setInvoices([])
-        } finally {
-            setIsLoading(false)
         }
     }
 

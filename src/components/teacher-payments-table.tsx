@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, CheckCircle, XCircle, ArrowUpDown, UserPen } from "lucide-react"
+import { Edit, MoreHorizontal, CheckCircle, XCircle, ArrowUpDown } from "lucide-react"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { format, parseISO } from "date-fns"

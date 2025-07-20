@@ -3,14 +3,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useToast } from "@/components/ui/use-toast"
 import Link from "next/link"
-import { CalendarDays, Users, UserPen, Clock, Trash2, Edit } from "lucide-react"
+import { CalendarDays, Users, UserPen, Clock, Edit } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
-import { deleteClass } from "@/lib/delete/delete-classes"
-import { updateClassAssignments } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
@@ -77,9 +73,6 @@ type ClassDetailsProps = {
 export function ClassDetails({ classData, userRole, userParentStudents = [] }: ClassDetailsProps) {
   const [sessions, setSessions] = useState<ClassSessionType[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const { toast } = useToast()
   const router = useRouter()
   const { timezone } = useTimezone()
 
@@ -145,48 +138,6 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
     return enableLinks && (userRole === 'admin')
   }
 
-  const handleDeleteClass = async () => {
-    setIsDeleting(true)
-    try {
-      // First, clean up teacher-student relationships by removing all assignments
-      // This ensures the teacher_students table is properly cleaned up
-      const cleanupResult = await updateClassAssignments({
-        classId: classData.class_id,
-        teacher_ids: [], // Remove all teachers
-        student_ids: []  // Remove all students
-      })
-
-      if (!cleanupResult.success) {
-        console.warn('Warning: Failed to clean up teacher-student relationships:', cleanupResult.error?.message)
-        // Continue with deletion anyway
-      }
-
-      // Then delete the class
-      const result = await deleteClass(classData.class_id)
-
-      if (result.success) {
-        toast({
-          title: "Class Deleted",
-          description: `"${classData.title}" has been successfully deleted.`,
-        })
-        // Redirect to classes list based on user role
-        router.push(getRedirectPath('list'))
-      } else {
-        throw new Error(result.error || "Failed to delete class")
-      }
-    } catch (error) {
-      console.error("Error deleting class:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete class. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDeleting(false)
-      setShowDeleteDialog(false)
-    }
-  }
-
   // Ensure arrays are defined
   const teachers = classData.teachers || []
   const enrolledStudents = classData.students || []
@@ -221,53 +172,6 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  {/*
-                  <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-                    <DialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        className="h-9 w-9 bg-red-700 hover:bg-red-800 text-white border-red-700 hover:border-red-600"
-                        aria-label="Delete class"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Delete Class</DialogTitle>
-                        <DialogDescription>
-                          Are you sure you want to delete &quot;{classData.title}&quot;? This action cannot be undone and will permanently remove the class and all associated data including sessions, teacher assignments, and student enrollments.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowDeleteDialog(false)}
-                          disabled={isDeleting}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={handleDeleteClass}
-                          disabled={isDeleting}
-                          className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
-                        >
-                          {isDeleting ? (
-                            <>
-                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                              Deleting...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Class
-                            </>
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                  */}
                 </div>
               )}
             </div>

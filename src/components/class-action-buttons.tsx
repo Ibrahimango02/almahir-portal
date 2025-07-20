@@ -1,14 +1,13 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX, Trash2 } from "lucide-react"
+import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
 import { updateTeacherAttendance } from "@/lib/put/put-teachers"
 import { updateStudentAttendance } from "@/lib/put/put-students"
-import { deleteSession } from "@/lib/delete/delete-classes"
 import {
   Dialog,
   DialogContent,
@@ -57,7 +56,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [isLoading, setIsLoading] = useState(false)
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -325,32 +323,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
-  const handleDeleteSession = async () => {
-    setIsLoading(true)
-    try {
-      const result = await deleteSession(classData.session_id)
-      if (result.success) {
-        toast({
-          title: "Session Deleted",
-          description: "The session has been permanently deleted.",
-        })
-        setShowDeleteDialog(false)
-        // Optionally, you can call onStatusChange or redirect here
-        onStatusChange("deleted")
-      } else {
-        throw new Error(result.error || "Failed to delete session")
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete session. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleRescheduleSession = () => {
     router.push(`/admin/classes/reschedule/${classData.class_id}/${classData.session_id}`)
   }
@@ -573,18 +545,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                     <config.button4.icon className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* Button 5 - Delete Session (only for admins) */}
-                {/* <div className="relative" title="Delete Session">
-                  <Button
-                    size="icon"
-                    className="h-10 w-10 bg-red-700 hover:bg-red-800 text-white border-red-600 hover:border-red-600"
-                    aria-label="Delete session"
-                    onClick={() => setShowDeleteDialog(true)}
-                    disabled={isLoading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div> */}
               </>
             )}
           </>
@@ -634,44 +594,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Delete Session Confirmation Dialog */}
-      {/* <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Session</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this session? This action cannot be undone and will permanently remove the session and all associated data including attendance and remarks.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteSession}
-              disabled={isLoading}
-              className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600"
-            >
-              {isLoading ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Session
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
     </div>
   )
 }
