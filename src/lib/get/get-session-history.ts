@@ -272,4 +272,195 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
         console.error('Error fetching teacher session history:', error)
         return []
     }
+}
+
+export async function getAllSessionHistoryForReports(): Promise<Array<{
+    session_id: string
+    class_id: string
+    title: string
+    subject: string
+    start_date: string
+    end_date: string
+    actual_start_time: string | null
+    actual_end_time: string | null
+    status: string
+    cancellation_reason: string | null
+    cancelled_by: string | null
+    teacher_name: string
+    student_names: string[]
+    attendance_status: string
+    notes: string | null
+    session_summary: string | null
+}>> {
+    const supabase = createClient()
+
+    try {
+        // Get all sessions with their class details
+        const { data: sessions, error: sessionsError } = await supabase
+            .from('class_sessions')
+            .select(`
+                id,
+                class_id,
+                start_date,
+                end_date,
+                status,
+                cancellation_reason,
+                cancelled_by,
+                classes (
+                    title,
+                    subject
+                )
+            `)
+            .order('start_date', { ascending: false })
+
+        if (sessionsError) throw sessionsError
+        if (!sessions || sessions.length === 0) return []
+
+        const sessionIds = sessions.map(s => s.id)
+        const classIds = [...new Set(sessions.map(s => s.class_id))]
+
+        // Get session history for all sessions
+        const { data: sessionHistory } = await supabase
+            .from('session_history')
+            .select('*')
+            .in('session_id', sessionIds)
+
+        // Get session remarks for all sessions
+        const { data: sessionRemarks } = await supabase
+            .from('session_remarks')
+            .select('*')
+            .in('session_id', sessionIds)
+
+        // Get all teachers for these classes
+        const { data: classTeachers } = await supabase
+            .from('class_teachers')
+            .select('class_id, teacher_id')
+            .in('class_id', classIds)
+
+        const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+        const { data: teacherProfiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', teacherIds)
+
+        // Get all students for these classes
+        const { data: classStudents } = await supabase
+            .from('class_students')
+            .select('class_id, student_id')
+            .in('class_id', classIds)
+
+        const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+        const { data: studentProfiles } = await supabase
+            .from('profiles')
+            .select('*')
+            .in('id', studentIds)
+
+        // Get teacher attendance for all sessions
+        const { data: teacherAttendance } = await supabase
+            .from('teacher_attendance')
+            .select('*')
+            .in('session_id', sessionIds)
+
+        // Get student attendance for all sessions
+        const { data: studentAttendance } = await supabase
+            .from('student_attendance')
+            .select('*')
+            .in('session_id', sessionIds)
+
+        // Create mappings for efficient lookup
+        const sessionHistoryMap = new Map(
+            sessionHistory?.map(h => [h.session_id, h]) || []
+        )
+
+        const sessionRemarksMap = new Map(
+            sessionRemarks?.map(r => [r.session_id, r]) || []
+        )
+
+        const teacherAttendanceMap = new Map(
+            teacherAttendance?.map(a => [a.session_id, a.attendance_status]) || []
+        )
+
+        const studentAttendanceMap = new Map(
+            studentAttendance?.map(a => [a.session_id, a.attendance_status]) || []
+        )
+
+        // Create class to teacher mapping
+        const classTeacherMap = new Map()
+        classTeachers?.forEach(ct => {
+            if (!classTeacherMap.has(ct.class_id)) {
+                classTeacherMap.set(ct.class_id, [])
+            }
+            classTeacherMap.get(ct.class_id).push(ct.teacher_id)
+        })
+
+        // Create class to students mapping
+        const classStudentMap = new Map()
+        classStudents?.forEach(cs => {
+            if (!classStudentMap.has(cs.class_id)) {
+                classStudentMap.set(cs.class_id, [])
+            }
+            classStudentMap.get(cs.class_id).push(cs.student_id)
+        })
+
+        // Combine the data
+        const result = sessions.map(session => {
+            const classData = Array.isArray(session.classes) ? session.classes[0] : session.classes
+            const history = sessionHistoryMap.get(session.id)
+            const remarks = sessionRemarksMap.get(session.id)
+            const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
+            const studentAttendanceStatus = studentAttendanceMap.get(session.id) || 'N/A'
+
+            // Get teacher names for this class
+            const classTeacherIds = classTeacherMap.get(session.class_id) || []
+            const teacherNames = classTeacherIds
+                .map((teacherId: string) => {
+                    const teacher = teacherProfiles?.find(t => t.id === teacherId)
+                    return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
+                })
+                .join(', ')
+
+            // Get student names for this class
+            const classStudentIds = classStudentMap.get(session.class_id) || []
+            const studentNames = classStudentIds
+                .map((studentId: string) => {
+                    const student = studentProfiles?.find(s => s.id === studentId)
+                    return student ? `${student.first_name} ${student.last_name}` : 'Unknown Student'
+                })
+
+            return {
+                session_id: session.id,
+                class_id: session.class_id,
+                title: classData?.title || 'Unknown Class',
+                subject: classData?.subject || 'Unknown Subject',
+                start_date: session.start_date,
+                end_date: session.end_date,
+                actual_start_time: history?.actual_start_time || null,
+                actual_end_time: history?.actual_end_time || null,
+                status: session.status,
+                cancellation_reason: session.cancellation_reason,
+                cancelled_by: session.cancelled_by,
+                teacher_name: teacherNames,
+                student_names: studentNames,
+                attendance_status: teacherAttendanceStatus,
+                notes: history?.notes || null,
+                session_summary: remarks?.session_summary || null
+            }
+        })
+
+        // Filter to only past sessions or those with specific statuses, then sort by date (newest first)
+        const now = new Date()
+        return result
+            .filter(session => {
+                const sessionDate = new Date(session.end_date)
+                return sessionDate < now ||
+                    session.status === 'complete' ||
+                    session.status === 'cancelled' ||
+                    session.status === 'absence'
+            })
+            .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
+
+    } catch (error) {
+        console.error('Error fetching all session history for reports:', error)
+        return []
+    }
 } 

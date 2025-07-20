@@ -35,6 +35,8 @@ export async function login(formData: FormData) {
     switch (role) {
         case 'admin':
             redirect('/admin/dashboard')
+        case 'moderator':
+            redirect('/admin/dashboard')
         case 'teacher':
             redirect('/teacher/dashboard')
         case 'parent':

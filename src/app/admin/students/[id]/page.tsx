@@ -18,30 +18,64 @@ import AvatarIcon from "@/components/avatar"
 import { StudentTeachersSection } from "@/components/student-teachers-section"
 import { getStudentSessionHistory } from "@/lib/get/get-session-history"
 import { getStudentSessionNotesForStudent } from "@/lib/get/get-session-remarks"
+import { getInvoicesByStudentId } from "@/lib/get/get-invoices"
 
 // Function to convert month numbers to month names
 const formatMonthRange = (monthRange: string): string => {
   if (!monthRange) return '-'
-
-  const months = monthRange.split('-')
-  if (months.length !== 2) return monthRange
 
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ]
 
-  const startMonth = parseInt(months[0]) - 1 // Convert to 0-based index
-  const endMonth = parseInt(months[1]) - 1
+  const months = monthRange.split('-')
 
-  if (isNaN(startMonth) || isNaN(endMonth) || startMonth < 0 || startMonth > 11 || endMonth < 0 || endMonth > 11) {
-    return monthRange // Return original if invalid
+  if (months.length === 1) {
+    // Single month case (e.g., "8")
+    const month = parseInt(months[0]) - 1 // Convert to 0-based index
+    if (isNaN(month) || month < 0 || month > 11) {
+      return monthRange // Return original if invalid
+    }
+    return monthNames[month]
+  } else if (months.length === 2) {
+    // Check if this is a cross-year range (e.g., "8/2025-8/2026")
+    const startPart = months[0]
+    const endPart = months[1]
+
+    if (startPart.includes('/') && endPart.includes('/')) {
+      // Cross-year format: "8/2025-8/2026"
+      const [startMonth, startYear] = startPart.split('/').map(Number)
+      const [endMonth, endYear] = endPart.split('/').map(Number)
+
+      const startMonthIndex = startMonth - 1
+      const endMonthIndex = endMonth - 1
+
+      if (isNaN(startMonthIndex) || isNaN(endMonthIndex) || startMonthIndex < 0 || startMonthIndex > 11 || endMonthIndex < 0 || endMonthIndex > 11) {
+        return monthRange // Return original if invalid
+      }
+
+      const startName = monthNames[startMonthIndex]
+      const endName = monthNames[endMonthIndex]
+
+      return `${startName} ${startYear} - ${endName} ${endYear}`
+    } else {
+      // Same year range case (e.g., "7-8")
+      const startMonth = parseInt(months[0]) - 1 // Convert to 0-based index
+      const endMonth = parseInt(months[1]) - 1
+
+      if (isNaN(startMonth) || isNaN(endMonth) || startMonth < 0 || startMonth > 11 || endMonth < 0 || endMonth > 11) {
+        return monthRange // Return original if invalid
+      }
+
+      const startName = monthNames[startMonth]
+      const endName = monthNames[endMonth]
+
+      return startMonth === endMonth ? startName : `${startName} - ${endName}`
+    }
   }
 
-  const startName = monthNames[startMonth]
-  const endName = monthNames[endMonth]
-
-  return startMonth === endMonth ? startName : `${startName} - ${endName}`
+  return monthRange // Return original for any other format
 }
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,9 +99,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
   const studentSessions = await getSessionsByStudentId(student.student_id)
   const studentTotalHours = await getStudentTotalHours(student.student_id)
   const studentClasses = await getClassesByStudentId(student.student_id)
-
-  // Fetch invoices for this student
-  const { getInvoicesByStudentId } = await import("@/lib/get/get-invoices")
   const invoices = await getInvoicesByStudentId(student.student_id)
 
   // Determine if hours used exceeds monthly hours
@@ -408,7 +439,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Start Time</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">End Time</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Attendance</th>
-                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Session Notes</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student Notes</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
@@ -627,6 +658,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Months</th>
+                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Parents</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Due Date</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Paid Date</th>
@@ -640,6 +672,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                         <span className="inline-block bg-muted px-2 py-0.5 rounded-full font-medium text-primary">
                           {formatMonthRange(invoice.months)}
                         </span>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm">
                         {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD

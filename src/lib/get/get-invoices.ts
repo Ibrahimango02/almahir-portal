@@ -175,13 +175,14 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
             updated_at: invoice.updated_at,
             student: undefined,
             subscription: undefined,
+            parent: undefined,
         };
     }
 
     const studentSubscription = studentSubscriptions[0];
 
-    // Get student and subscription data
-    const [studentsData, subscriptionsData] = await Promise.all([
+    // Get student, subscription, and parent data
+    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
         supabase
             .from('profiles')
             .select('id, first_name, last_name')
@@ -189,11 +190,34 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .eq('id', studentSubscription.subscription_id)
+            .eq('id', studentSubscription.subscription_id),
+        supabase
+            .from('parent_students')
+            .select('student_id, parent_id')
+            .eq('student_id', studentSubscription.student_id)
     ]);
 
     const student = studentsData.data?.[0];
     const subscription = subscriptionsData.data?.[0];
+    const parentStudents = parentStudentsData.data || [];
+
+    // Find parent for this student
+    let parent = undefined;
+    const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
+    if (parentStudent) {
+        const { data: parentProfiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .eq('id', parentStudent.parent_id);
+        const parentProfile = parentProfiles?.[0];
+        if (parentProfile) {
+            parent = {
+                parent_id: parentProfile.id,
+                first_name: parentProfile.first_name,
+                last_name: parentProfile.last_name,
+            };
+        }
+    }
 
     return {
         invoice_id: invoice.id,
@@ -215,6 +239,7 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
             name: subscription.name,
             total_amount: subscription.total_amount,
         } : undefined,
+        parent,
     };
 }
 
@@ -296,6 +321,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
             updated_at: invoice.updated_at,
             student: undefined,
             subscription: undefined,
+            parent: undefined,
         }));
     }
 
@@ -303,8 +329,8 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
     const studentIds = studentSubscriptionsWithData.map((ss: { student_id: string }) => ss.student_id);
     const subscriptionIds = studentSubscriptionsWithData.map((ss: { subscription_id: string }) => ss.subscription_id);
 
-    // Get students and subscriptions data
-    const [studentsData, subscriptionsData] = await Promise.all([
+    // Get students, subscriptions, and parent data
+    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
         supabase
             .from('profiles')
             .select('id, first_name, last_name')
@@ -312,11 +338,27 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .in('id', subscriptionIds)
+            .in('id', subscriptionIds),
+        supabase
+            .from('parent_students')
+            .select('student_id, parent_id')
+            .in('student_id', studentIds)
     ]);
 
     const students = studentsData.data || [];
     const subscriptions = subscriptionsData.data || [];
+    const parentStudents = parentStudentsData.data || [];
+
+    // Get unique parent IDs
+    const parentIds = [...new Set(parentStudents.map((ps: { parent_id: string }) => ps.parent_id))];
+    let parents: { id: string; first_name: string; last_name: string }[] = [];
+    if (parentIds.length > 0) {
+        const { data: parentProfiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', parentIds);
+        parents = parentProfiles || [];
+    }
 
     // Map invoices to StudentInvoiceType[]
     return invoices.map((invoice: {
@@ -333,6 +375,20 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
         const studentSubscription = studentSubscriptionsWithData.find((ss: { id: string }) => ss.id === invoice.student_subscription);
         const student = studentSubscription ? students.find((s: { id: string }) => s.id === studentSubscription.student_id) : null;
         const subscription = studentSubscription ? subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id) : null;
+
+        // Find parent for this student
+        let parent = undefined;
+        const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
+        if (parentStudent) {
+            const parentProfile = parents.find((p: { id: string }) => p.id === parentStudent.parent_id);
+            if (parentProfile) {
+                parent = {
+                    parent_id: parentProfile.id,
+                    first_name: parentProfile.first_name,
+                    last_name: parentProfile.last_name,
+                };
+            }
+        }
 
         return {
             invoice_id: invoice.id,
@@ -354,6 +410,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
                 name: subscription.name,
                 total_amount: subscription.total_amount,
             } : undefined,
+            parent,
         };
     });
 }
@@ -362,14 +419,14 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
     const supabase = createClient();
 
     // 1. Get all students of this parent
-    const { data: parentStudents } = await supabase
+    const { data: parentStudentRelations } = await supabase
         .from('parent_students')
         .select('student_id')
         .eq('parent_id', parentId);
 
-    if (!parentStudents || parentStudents.length === 0) return [];
+    if (!parentStudentRelations || parentStudentRelations.length === 0) return [];
 
-    const parentStudentIds = parentStudents.map(ps => ps.student_id);
+    const parentStudentIds = parentStudentRelations.map(ps => ps.student_id);
 
     // 2. Get all student subscriptions for these students
     const { data: studentSubscriptions, error: subscriptionError } = await supabase
@@ -401,11 +458,11 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
         return [];
     }
 
-    // 4. Get student and subscription info
+    // 4. Get student, subscription, and parent info
     const studentIds = studentSubscriptions.map((ss: { student_id: string }) => ss.student_id);
     const subscriptionIds = studentSubscriptions.map((ss: { subscription_id: string }) => ss.subscription_id);
 
-    const [studentsData, subscriptionsData] = await Promise.all([
+    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
         supabase
             .from('profiles')
             .select('id, first_name, last_name')
@@ -413,11 +470,27 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .in('id', subscriptionIds)
+            .in('id', subscriptionIds),
+        supabase
+            .from('parent_students')
+            .select('student_id, parent_id')
+            .in('student_id', studentIds)
     ]);
 
     const students = studentsData.data || [];
     const subscriptions = subscriptionsData.data || [];
+    const parentStudents = parentStudentsData.data || [];
+
+    // Get unique parent IDs
+    const parentIds = [...new Set(parentStudents.map((ps: { parent_id: string }) => ps.parent_id))];
+    let parents: { id: string; first_name: string; last_name: string }[] = [];
+    if (parentIds.length > 0) {
+        const { data: parentProfiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .in('id', parentIds);
+        parents = parentProfiles || [];
+    }
 
     // 5. Map invoices to StudentInvoiceType[]
     return invoices.map((invoice: {
@@ -434,6 +507,20 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
         const studentSubscription = studentSubscriptions.find((ss: { id: string }) => ss.id === invoice.student_subscription);
         const student = studentSubscription ? students.find((s: { id: string }) => s.id === studentSubscription.student_id) : null;
         const subscription = studentSubscription ? subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id) : null;
+
+        // Find parent for this student
+        let parent = undefined;
+        const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
+        if (parentStudent) {
+            const parentProfile = parents.find((p: { id: string }) => p.id === parentStudent.parent_id);
+            if (parentProfile) {
+                parent = {
+                    parent_id: parentProfile.id,
+                    first_name: parentProfile.first_name,
+                    last_name: parentProfile.last_name,
+                };
+            }
+        }
 
         return {
             invoice_id: invoice.id,
@@ -455,6 +542,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
                 name: subscription.name,
                 total_amount: subscription.total_amount,
             } : undefined,
+            parent,
         };
     });
 }

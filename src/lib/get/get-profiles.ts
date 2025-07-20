@@ -73,6 +73,35 @@ export async function getAdmins(): Promise<AdminType[]> {
     }))
 }
 
+export async function getAdminsAndModerators(): Promise<AdminType[]> {
+    const supabase = createClient()
+
+    const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('role', ['admin', 'moderator'])
+
+    if (error) {
+        throw error
+    }
+
+    return profiles.map(profile => ({
+        admin_id: profile.id,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        gender: profile.gender,
+        country: profile.country,
+        language: profile.language,
+        email: profile.email,
+        phone: profile.phone,
+        status: profile.status,
+        role: profile.role,
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at
+    }))
+}
+
 export async function getAdminById(id: string): Promise<AdminType> {
     const supabase = createClient()
 
@@ -103,4 +132,20 @@ export async function checkIfAdmin(id: string): Promise<boolean> {
     }
 
     return profile.role === 'admin';
+}
+
+export async function checkIfAdminOrModerator(id: string): Promise<boolean> {
+    const supabase = createClient();
+
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', id)
+        .single();
+
+    if (error || !profile) {
+        return false;
+    }
+
+    return profile.role === 'admin' || profile.role === 'moderator';
 }

@@ -63,9 +63,9 @@ export default function InviteUserPage() {
             // Reset form
             setFormData({ fullName: "", email: "", role: "" })
 
-            // Redirect back to admins list after a short delay
+            // Redirect back to dashboard after a short delay
             setTimeout(() => {
-                router.push("/admin/admins")
+                router.push("/admin/dashboard")
             }, 2000)
         } catch (error) {
             console.error('Error sending invitation:', error)
@@ -141,6 +141,7 @@ export default function InviteUserPage() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="moderator">Moderator</SelectItem>
                                     <SelectItem value="teacher">Teacher</SelectItem>
                                     <SelectItem value="student">Student</SelectItem>
                                     <SelectItem value="parent">Parent</SelectItem>

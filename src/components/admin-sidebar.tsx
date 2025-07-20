@@ -19,6 +19,7 @@ import {
   BookOpen,
   FolderOpen,
   Plus,
+  ScrollText
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -81,6 +82,12 @@ const routes = [
     label: "Accounting",
     icon: Receipt,
     href: "/admin/accounting",
+    color: "text-green-600",
+  },
+  {
+    label: "Reports",
+    icon: ScrollText,
+    href: "/admin/reports",
     color: "text-green-600",
   },
   {
@@ -181,7 +188,7 @@ export function AdminSidebar() {
           >
             <Link href="/admin/invite" className="flex items-center justify-center w-full">
               <Plus className="mr-2 h-4 w-4" />
-              Add User
+              Invite User
             </Link>
           </Button>
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">

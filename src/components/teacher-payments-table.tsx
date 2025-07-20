@@ -138,6 +138,9 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
 
     const getActionUrl = (action: 'edit', paymentId: string) => {
         if (!currentUserRole) return '/'
+        if (currentUserRole === 'admin') {
+            return `/admin/accounting/edit-payment/${paymentId}`
+        }
         return `/${currentUserRole}/payments/${action}/${paymentId}`
     }
 

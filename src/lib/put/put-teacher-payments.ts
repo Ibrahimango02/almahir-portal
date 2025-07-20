@@ -4,6 +4,7 @@ export type UpdateTeacherPaymentData = {
     id: string
     status: string
     paid_date?: string
+    amount?: number
 }
 
 export async function updateTeacherPayment(paymentData: UpdateTeacherPaymentData) {
@@ -17,6 +18,11 @@ export async function updateTeacherPayment(paymentData: UpdateTeacherPaymentData
     // Set paid_date when status is changed to 'paid'
     if (paymentData.status === 'paid' && paymentData.paid_date) {
         paymentToUpdate.paid_date = paymentData.paid_date
+    }
+
+    // Set amount if provided
+    if (paymentData.amount !== undefined) {
+        paymentToUpdate.amount = paymentData.amount
     }
 
     const { data, error } = await supabase

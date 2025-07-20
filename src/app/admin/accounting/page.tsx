@@ -9,7 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { getInvoices } from "@/lib/get/get-invoices"
 import { getTeacherPayments } from "@/lib/get/get-teacher-payments"
 import { StudentInvoiceType, TeacherPaymentType } from "@/types"
-import { DollarSign, Users, HandCoins, Calendar, X } from "lucide-react"
+import { DollarSign, HandCoins, Calendar, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
@@ -342,7 +342,7 @@ export default function AdminAccountingPage() {
             <CardContent>
               {filteredTeacherPayments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No teacher payments found</p>
                   <p className="text-sm">
                     {search || startDate || endDate

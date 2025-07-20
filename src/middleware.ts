@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
     // Define route permissions with role-based access control
     const roleBasedRoutes: Record<string, string[]> = {
         'admin': ['/admin'],
+        'moderator': ['/admin'],
         'teacher': ['/teacher'],
         'student': ['/student'],
         'parent': ['/parent']
@@ -51,6 +52,14 @@ export async function middleware(request: NextRequest) {
 
     if (pathStartsWithAnyRolePrefix && !pathStartsWithAllowedPrefix) {
         return NextResponse.redirect(new URL('/error', request.url));
+    }
+
+    // Additional restrictions for moderator role
+    if (role === 'moderator') {
+        // Moderators cannot access admins and accounting pages
+        if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting')) {
+            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        }
     }
 
     return supabaseResponse;

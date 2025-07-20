@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role
-    const validRoles = ['admin', 'teacher', 'parent', 'student']
+    const validRoles = ['admin', 'moderator', 'teacher', 'parent', 'student']
     if (!validRoles.includes(role)) {
         return NextResponse.json({ error: 'Invalid role specified' }, { status: 400 })
     }

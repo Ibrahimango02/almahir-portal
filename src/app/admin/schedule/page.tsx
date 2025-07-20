@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CalendarDays, ChevronLeft, ChevronRight, List, Search } from "lucide-react"
+import { CalendarDays, ChevronLeft, ChevronRight, List } from "lucide-react"
 import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
 import { ScheduleListView } from "@/components/schedule-list-view"
 import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
@@ -20,7 +20,6 @@ export default function SchedulePage() {
   const [currentMonth, setCurrentMonth] = useState(() => startOfMonth(new Date()))
   const [activeTab, setActiveTab] = useState("all")
   const [activeListTab, setActiveListTab] = useState("upcoming")
-  const [searchQuery, setSearchQuery] = useState("")
   const [classData, setClassData] = useState<ClassType[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -49,18 +48,6 @@ export default function SchedulePage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Class Schedule</h1>
-        <div className="flex items-center gap-2">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search classes..."
-              className="w-full pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
       </div>
 
       <Card>
@@ -167,7 +154,6 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={0}
                   timeRangeEnd={24}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="morning">
@@ -179,7 +165,6 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={4}
                   timeRangeEnd={12}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="afternoon">
@@ -191,7 +176,6 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={12}
                   timeRangeEnd={20}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="evening">
@@ -203,7 +187,6 @@ export default function SchedulePage() {
                   currentWeekStart={currentWeekStart}
                   timeRangeStart={20}
                   timeRangeEnd={28}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
             </Tabs>
@@ -220,7 +203,6 @@ export default function SchedulePage() {
                   baseRoute="/admin"
                   filter="upcoming"
                   currentWeekStart={currentWeekStart}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
               <TabsContent value="recent">
@@ -230,7 +212,6 @@ export default function SchedulePage() {
                   baseRoute="/admin"
                   filter="recent"
                   currentWeekStart={currentWeekStart}
-                  searchQuery={searchQuery}
                 />
               </TabsContent>
             </Tabs>
