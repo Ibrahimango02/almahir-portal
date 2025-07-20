@@ -25,18 +25,18 @@ export default function TeachersPage() {
   useEffect(() => {
     const filtered = teachers.filter(teacher => {
       const searchLower = searchQuery.toLowerCase()
-      const fullName = `${teacher.first_name} ${teacher.last_name}`.toLowerCase()
+      const fullName = `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.toLowerCase()
       return (
         fullName.includes(searchLower) ||
-        teacher.first_name.toLowerCase().includes(searchLower) ||
-        teacher.last_name.toLowerCase().includes(searchLower) ||
-        teacher.email.toLowerCase().includes(searchLower) ||
-        (teacher.phone?.toLowerCase().includes(searchLower) ?? false) ||
-        teacher.gender.toLowerCase().includes(searchLower) ||
-        teacher.country.toLowerCase().includes(searchLower) ||
-        teacher.language.toLowerCase().includes(searchLower) ||
-        teacher.status.toLowerCase().includes(searchLower) ||
-        (teacher.specialization?.toLowerCase().includes(searchLower) ?? false)
+        (teacher.first_name?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.last_name?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.email?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.phone?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.gender?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.country?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.language?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.status?.toLowerCase() ?? '').includes(searchLower) ||
+        (teacher.specialization?.toLowerCase() ?? '').includes(searchLower)
       )
     })
     setFilteredTeachers(filtered)
@@ -60,15 +60,9 @@ export default function TeachersPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Teachers</CardTitle>
-          <CardDescription>Manage your teaching staff and their information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TeachersTable teachers={filteredTeachers} />
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <TeachersTable teachers={filteredTeachers} />
+      </div>
     </div>
   )
 }

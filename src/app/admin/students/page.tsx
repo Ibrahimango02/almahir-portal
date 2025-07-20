@@ -60,15 +60,9 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Students</CardTitle>
-          <CardDescription>Manage student information and class enrollments</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StudentsTable students={filteredStudents} />
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <StudentsTable students={filteredStudents} />
+      </div>
     </div>
   )
 }

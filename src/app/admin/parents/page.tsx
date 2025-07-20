@@ -59,15 +59,9 @@ export default function ParentsPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle>All Parents</CardTitle>
-          <CardDescription>Manage parent information and student relationships</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ParentsTable parents={filteredParents} />
-        </CardContent>
-      </Card>
+      <div className="p-6">
+        <ParentsTable parents={filteredParents} />
+      </div>
     </div>
   )
 }

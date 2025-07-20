@@ -49,9 +49,36 @@ const routes = [
     color: "text-green-600",
   },
   {
+    label: "Resources",
+    icon: FolderOpen,
+    href: "/admin/resources",
+    color: "text-green-600",
+  },
+  {
+    label: "Accounting",
+    icon: Receipt,
+    href: "/admin/accounting",
+    color: "text-green-600",
+  },
+  {
+    label: "Reports",
+    icon: ScrollText,
+    href: "/admin/reports",
+    color: "text-green-600",
+  },
+]
+
+const userRoutes = [
+  {
     label: "Admins",
     icon: User,
     href: "/admin/admins",
+    color: "text-green-600",
+  },
+  {
+    label: "Moderators",
+    icon: User,
+    href: "/admin/moderators",
     color: "text-green-600",
   },
   {
@@ -72,31 +99,12 @@ const routes = [
     href: "/admin/parents",
     color: "text-green-600",
   },
-  {
-    label: "Resources",
-    icon: FolderOpen,
-    href: "/admin/resources",
-    color: "text-green-600",
-  },
-  {
-    label: "Accounting",
-    icon: Receipt,
-    href: "/admin/accounting",
-    color: "text-green-600",
-  },
-  {
-    label: "Reports",
-    icon: ScrollText,
-    href: "/admin/reports",
-    color: "text-green-600",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    href: "/admin/settings",
-    color: "text-green-600",
-  },
 ]
+
+const otherRoutes = routes.filter(
+  (route) =>
+    !["/admin/admins", "/admin/teachers", "/admin/students", "/admin/parents"].includes(route.href)
+)
 
 export function AdminSidebar() {
   const pathname = usePathname()
@@ -163,7 +171,39 @@ export function AdminSidebar() {
           </Button>
         </div>
         <div className="flex flex-col gap-1 p-4">
-          {routes.map((route) => (
+          {otherRoutes.map((route) => (
+            <Link
+              key={route.href}
+              href={route.href}
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
+                pathname === route.href
+                  ? "bg-gray-100 text-gray-900 font-medium dark:bg-gray-800 dark:text-gray-50"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800/70 dark:hover:text-gray-200",
+              )}
+            >
+              <route.icon className={cn("h-5 w-5", route.color)} />
+              {route.label}
+            </Link>
+          ))}
+          {/* Users subheading with Invite User button */}
+          <div className="mt-4 mb-1 px-3 flex items-center justify-between">
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</span>
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="ml-2 h-6 w-6 p-0"
+              style={{ lineHeight: 0 }}
+              title="Invite User"
+            >
+              <Link href="/admin/invite">
+                <Plus className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          {userRoutes.map((route) => (
             <Link
               key={route.href}
               href={route.href}
@@ -181,21 +221,7 @@ export function AdminSidebar() {
           ))}
         </div>
         <div className="mt-auto">
-          <Button
-            asChild
-            style={{ backgroundColor: "#3d8f5b", color: "white", marginBottom: 16, width: '50%', marginLeft: '25%' }}
-            className="w-full"
-          >
-            <Link href="/admin/invite" className="flex items-center justify-center w-full">
-              <Plus className="mr-2 h-4 w-4" />
-              Invite User
-            </Link>
-          </Button>
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Theme</span>
-              <ThemeToggle />
-            </div>
             <div className="relative">
               <div className="flex items-center justify-between rounded-lg px-3 py-2 dark:bg-gray-800/50">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -242,8 +268,16 @@ export function AdminSidebar() {
                 </Button>
               </div>
               {showLogout && (
-                <div className="absolute right-0 bottom-full mb-2 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
+                <div className="absolute right-0 top-full mt-2 w-34 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
                   <div className="py-1">
+                    <Link
+                      href="/admin/settings"
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      onClick={() => setShowLogout(false)}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Link>
                     <button
                       onClick={logout}
                       className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"

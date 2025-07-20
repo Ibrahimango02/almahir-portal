@@ -55,15 +55,9 @@ export default function AdminsPage() {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>All Administrators</CardTitle>
-                    <CardDescription>Manage your administrative staff and their information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AdminsTable admins={filteredAdmins} />
-                </CardContent>
-            </Card>
+            <div className="p-6">
+                <AdminsTable admins={filteredAdmins} />
+            </div>
         </div>
     )
 }
