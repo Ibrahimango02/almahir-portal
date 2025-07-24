@@ -286,7 +286,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
     status: string
     cancellation_reason: string | null
     cancelled_by: string | null
-    teacher_name: string
+    teacher_names: string[]
     student_names: string[]
     attendance_status: string
     notes: string | null
@@ -317,7 +317,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
         if (!sessions || sessions.length === 0) return []
 
         const sessionIds = sessions.map(s => s.id)
-        const classIds = [...new Set(sessions.map(s => s.class_id))]
 
         // Get session history for all sessions
         const { data: sessionHistory } = await supabase
@@ -325,17 +324,23 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             .select('*')
             .in('session_id', sessionIds)
 
-        // Get session remarks for all sessions
+        // Only keep sessions that exist in session_history
+        const sessionHistoryIds = new Set((sessionHistory || []).map(h => h.session_id))
+        const filteredSessions = sessions.filter(s => sessionHistoryIds.has(s.id))
+        const filteredSessionIds = filteredSessions.map(s => s.id)
+        const filteredClassIds = [...new Set(filteredSessions.map(s => s.class_id))]
+
+        // Get session remarks for filtered sessions
         const { data: sessionRemarks } = await supabase
             .from('session_remarks')
             .select('*')
-            .in('session_id', sessionIds)
+            .in('session_id', filteredSessionIds)
 
         // Get all teachers for these classes
         const { data: classTeachers } = await supabase
             .from('class_teachers')
             .select('class_id, teacher_id')
-            .in('class_id', classIds)
+            .in('class_id', filteredClassIds)
 
         const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
         const { data: teacherProfiles } = await supabase
@@ -347,7 +352,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
         const { data: classStudents } = await supabase
             .from('class_students')
             .select('class_id, student_id')
-            .in('class_id', classIds)
+            .in('class_id', filteredClassIds)
 
         const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
         const { data: studentProfiles } = await supabase
@@ -355,13 +360,11 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             .select('*')
             .in('id', studentIds)
 
-        // Get teacher attendance for all sessions
+        // Get teacher attendance for filtered sessions
         const { data: teacherAttendance } = await supabase
             .from('teacher_attendance')
             .select('*')
-            .in('session_id', sessionIds)
-
-
+            .in('session_id', filteredSessionIds)
 
         // Create mappings for efficient lookup
         const sessionHistoryMap = new Map(
@@ -395,22 +398,21 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
         })
 
         // Combine the data
-        const result = sessions.map(session => {
+        const result = filteredSessions.map(session => {
             const classData = Array.isArray(session.classes) ? session.classes[0] : session.classes
             const history = sessionHistoryMap.get(session.id)
             const remarks = sessionRemarksMap.get(session.id)
             const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
 
-            // Get teacher names for this class
+            // Get teacher names for this class (as array)
             const classTeacherIds = classTeacherMap.get(session.class_id) || []
             const teacherNames = classTeacherIds
                 .map((teacherId: string) => {
                     const teacher = teacherProfiles?.find(t => t.id === teacherId)
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
                 })
-                .join(', ')
 
-            // Get student names for this class
+            // Get student names for this class (as array)
             const classStudentIds = classStudentMap.get(session.class_id) || []
             const studentNames = classStudentIds
                 .map((studentId: string) => {
@@ -430,7 +432,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
                 status: session.status,
                 cancellation_reason: session.cancellation_reason,
                 cancelled_by: session.cancelled_by,
-                teacher_name: teacherNames,
+                teacher_names: teacherNames,
                 student_names: studentNames,
                 attendance_status: teacherAttendanceStatus,
                 notes: history?.notes || null,

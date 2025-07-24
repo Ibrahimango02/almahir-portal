@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation"
 import {
   CalendarDays,
   Receipt,
-  GraduationCapIcon as Graduation,
   Home,
   LogOut,
   Menu,
@@ -14,12 +13,14 @@ import {
   Settings,
   Users,
   User,
+  UserCog,
   UserPen,
   X,
-  BookOpen,
+  LibraryBig,
   FolderOpen,
   Plus,
   ScrollText,
+  Bookmark,
   UserSearch
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -44,7 +45,7 @@ const routes = [
   },
   {
     label: "Classes",
-    icon: BookOpen,
+    icon: LibraryBig,
     href: "/admin/classes",
     color: "text-green-600",
   },
@@ -66,12 +67,18 @@ const routes = [
     href: "/admin/reports",
     color: "text-green-600",
   },
+  {
+    label: "Rules",
+    icon: Bookmark,
+    href: "/admin/rules",
+    color: "text-green-600",
+  },
 ]
 
 const userRoutes = [
   {
     label: "Admins",
-    icon: User,
+    icon: UserCog,
     href: "/admin/admins",
     color: "text-green-600",
   },
@@ -83,13 +90,13 @@ const userRoutes = [
   },
   {
     label: "Teachers",
-    icon: UserPen,
+    icon: User,
     href: "/admin/teachers",
     color: "text-green-600",
   },
   {
     label: "Students",
-    icon: Graduation,
+    icon: UserPen,
     href: "/admin/students",
     color: "text-green-600",
   },

@@ -5,18 +5,19 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
     CalendarDays,
-    GraduationCapIcon as Graduation,
+    UserPen,
     Home,
     LogOut,
     Menu,
     MoreVertical,
     Settings,
     Users,
-    UserPen,
     X,
-    BookOpen,
+    LibraryBig,
     FolderOpen,
-    ScrollText
+    ScrollText,
+    Bookmark,
+    User
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -40,7 +41,7 @@ const mainRoutes = [
     },
     {
         label: "Classes",
-        icon: BookOpen,
+        icon: LibraryBig,
         href: "/admin/classes",
         color: "text-green-600",
     },
@@ -56,18 +57,24 @@ const mainRoutes = [
         href: "/admin/reports",
         color: "text-green-600",
     },
+    {
+        label: "Rules",
+        icon: Bookmark,
+        href: "/admin/rules",
+        color: "text-green-600",
+    },
 ]
 
 const userRoutes = [
     {
         label: "Teachers",
-        icon: UserPen,
+        icon: User,
         href: "/admin/teachers",
         color: "text-green-600",
     },
     {
         label: "Students",
-        icon: Graduation,
+        icon: UserPen,
         href: "/admin/students",
         color: "text-green-600",
     },

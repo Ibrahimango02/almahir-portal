@@ -4,7 +4,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
-  BookOpen,
+  LibraryBig,
   CalendarDays,
   Receipt,
   FolderOpen,
@@ -15,6 +15,7 @@ import {
   Settings,
   User,
   X,
+  Bookmark,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -38,7 +39,7 @@ const routes = [
   },
   {
     label: "Classes",
-    icon: BookOpen,
+    icon: LibraryBig,
     href: "/student/classes",
     color: "text-green-600",
   },
@@ -52,6 +53,12 @@ const routes = [
     label: "Invoices",
     icon: Receipt,
     href: "/student/invoices",
+    color: "text-green-600",
+  },
+  {
+    label: "Rules",
+    icon: Bookmark,
+    href: "/student/rules",
     color: "text-green-600",
   },
   // Removed Settings from sidebar

@@ -57,8 +57,8 @@ export async function middleware(request: NextRequest) {
     // Additional restrictions for moderator role
     if (role === 'moderator') {
         // Moderators cannot access admins and accounting pages
-        if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting')) {
-            return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+        if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting') || path.startsWith('/admin/invite')) {
+            return NextResponse.redirect(new URL('/error', request.url));
         }
     }
 
@@ -75,6 +75,6 @@ export const config = {
          * - favicon.ico (favicon file)
          * Feel free to modify this pattern to include more paths.
          */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|md)$).*)',
     ],
 }

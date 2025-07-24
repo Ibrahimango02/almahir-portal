@@ -21,7 +21,7 @@ type SessionReportType = {
     status: string;
     cancellation_reason: string | null;
     cancelled_by: string | null;
-    teacher_name: string;
+    teacher_names: string[];
     student_names: string[];
     attendance_status: string;
     notes: string | null;
@@ -65,7 +65,7 @@ export default function AdminReportsPage() {
 
     // Filtered data based on search and date range
     const filteredSessions = sessions.filter(session => {
-        const teacherName = session.teacher_name.toLowerCase()
+        const teacherNames = session.teacher_names.join(', ').toLowerCase()
         const studentNames = session.student_names.join(', ').toLowerCase()
         const className = session.title.toLowerCase()
         const subject = session.subject.toLowerCase()
@@ -73,7 +73,7 @@ export default function AdminReportsPage() {
 
         // Text search filter
         const matchesSearch = search === "" || (
-            teacherName.includes(search.toLowerCase()) ||
+            teacherNames.includes(search.toLowerCase()) ||
             studentNames.includes(search.toLowerCase()) ||
             className.includes(search.toLowerCase()) ||
             subject.includes(search.toLowerCase()) ||
@@ -82,7 +82,7 @@ export default function AdminReportsPage() {
 
         // Teacher filter
         const matchesTeacher = teacherFilter === "" ||
-            teacherName.includes(teacherFilter.toLowerCase())
+            teacherNames.includes(teacherFilter.toLowerCase())
 
         // Student filter
         const matchesStudent = studentFilter === "" ||
@@ -294,7 +294,7 @@ export default function AdminReportsPage() {
                                                 </Link>
                                             </td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                {session.teacher_name}
+                                                {session.teacher_names.join(', ')}
                                             </td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                 <div className="max-w-xs">

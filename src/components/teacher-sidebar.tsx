@@ -5,7 +5,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   CalendarDays,
-  GraduationCapIcon as Graduation,
+  UserPen,
   Home,
   LogOut,
   Menu,
@@ -13,7 +13,8 @@ import {
   Settings,
   User,
   X,
-  BookOpen,
+  Bookmark,
+  LibraryBig,
   FolderOpen,
   Receipt
 } from "lucide-react"
@@ -39,13 +40,13 @@ const routes = [
   },
   {
     label: "Classes",
-    icon: BookOpen,
+    icon: LibraryBig,
     href: "/teacher/classes",
     color: "text-green-600",
   },
   {
     label: "Students",
-    icon: Graduation,
+    icon: UserPen,
     href: "/teacher/students",
     color: "text-green-600",
   },
@@ -59,6 +60,12 @@ const routes = [
     label: "Payments",
     icon: Receipt,
     href: "/teacher/payments",
+    color: "text-green-600",
+  },
+  {
+    label: "Rules",
+    icon: Bookmark,
+    href: "/teacher/rules",
     color: "text-green-600",
   },
 ]

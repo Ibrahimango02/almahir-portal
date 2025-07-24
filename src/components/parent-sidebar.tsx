@@ -5,10 +5,10 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   CalendarDays,
-  BookOpen,
+  Bookmark,
   FolderOpen,
   Receipt,
-  GraduationCapIcon as Graduation,
+  UserPen,
   Home,
   LogOut,
   Menu,
@@ -16,6 +16,7 @@ import {
   Settings,
   User,
   X,
+  LibraryBig,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -39,13 +40,13 @@ const routes = [
   },
   {
     label: "Classes",
-    icon: BookOpen,
+    icon: LibraryBig,
     href: "/parent/classes",
     color: "text-green-600",
   },
   {
     label: "Students",
-    icon: Graduation,
+    icon: UserPen,
     href: "/parent/students",
     color: "text-green-600",
   },
@@ -59,6 +60,12 @@ const routes = [
     label: "Invoices",
     icon: Receipt,
     href: "/parent/invoices",
+    color: "text-green-600",
+  },
+  {
+    label: "Rules",
+    icon: Bookmark,
+    href: "/parent/rules",
     color: "text-green-600",
   },
   // Removed Settings from sidebar
