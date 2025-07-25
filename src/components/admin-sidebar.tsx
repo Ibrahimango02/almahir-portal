@@ -75,6 +75,8 @@ const routes = [
   },
 ]
 
+// Users routes
+
 const userRoutes = [
   {
     label: "Admins",
