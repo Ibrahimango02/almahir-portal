@@ -47,7 +47,7 @@ const formSchema = z.object({
         start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
         end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
     })),
-    classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
+    classLink: z.string().url({ message: "Please enter a valid URL" }),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
 }).refine(
@@ -868,7 +868,7 @@ export default function CreateClassPage() {
                                         name="classLink"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-sm font-medium text-gray-700">Class Link (Optional)</FormLabel>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Class Link</FormLabel>
                                                 <FormControl>
                                                     <Input
                                                         placeholder="https://meet.google.com/..."

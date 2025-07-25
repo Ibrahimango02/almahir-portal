@@ -335,6 +335,7 @@ export async function updateSession(params: {
                     const { error: updateError } = await supabase
                         .from('class_sessions')
                         .update({
+                            status: 'scheduled',
                             start_date: newStartDate,
                             end_date: newEndDate,
                             rescheduled_by: rescheduledBy || null,

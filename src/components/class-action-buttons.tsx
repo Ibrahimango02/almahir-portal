@@ -1,13 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX } from "lucide-react"
+import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
 import { updateTeacherAttendance } from "@/lib/put/put-teachers"
 import { updateStudentAttendance } from "@/lib/put/put-students"
+import { deleteSession } from "@/lib/delete/delete-classes"
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,8 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [isLoading, setIsLoading] = useState(false)
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -323,12 +326,45 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
+  const handleDeleteSession = async () => {
+    setIsDeleting(true)
+    try {
+      const result = await deleteSession(classData.session_id)
+      if (result.success) {
+        toast({
+          title: "Session Deleted",
+          description: "The session has been deleted successfully.",
+        })
+        setShowDeleteDialog(false)
+        // Redirect to class page
+        router.push(`/admin/classes/${classData.class_id}`)
+      } else {
+        throw new Error(result.error || "Failed to delete session")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete session",
+        variant: "destructive"
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const handleRescheduleSession = () => {
     router.push(`/admin/classes/reschedule/${classData.class_id}/${classData.session_id}`)
   }
 
   // Button configurations for different states
   const getButtonConfig = () => {
+    const deleteButton = {
+      icon: Trash2,
+      onClick: () => setShowDeleteDialog(true),
+      className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-500 bg-white text-red-600 hover:bg-red-100 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
+      title: currentStatus === 'scheduled' ? "Delete Session" : "Delete Session (Disabled)",
+      disabled: isLoading || currentStatus !== 'scheduled',
+    }
     switch (currentStatus) {
       case "scheduled":
         return {
@@ -359,7 +395,8 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0",
             title: "Reschedule Session",
             disabled: isLoading
-          }
+          },
+          button5: deleteButton
         }
 
       case "pending":
@@ -391,6 +428,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Class (Disabled)",
             disabled: true
+          },
+          button5: {
+            ...deleteButton,
+            disabled: true,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
           }
         }
 
@@ -423,6 +465,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Session (Disabled)",
             disabled: true
+          },
+          button5: {
+            ...deleteButton,
+            disabled: true,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
           }
         }
 
@@ -455,6 +502,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0",
             title: "Reschedule Session",
             disabled: isLoading
+          },
+          button5: {
+            ...deleteButton,
+            disabled: true,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
           }
         }
 
@@ -487,6 +539,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Session (Disabled)",
             disabled: true
+          },
+          button5: {
+            ...deleteButton,
+            disabled: true,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
           }
         }
     }
@@ -545,6 +602,16 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                     <config.button4.icon className="h-4 w-4" />
                   </Button>
                 </div>
+                {/* Button 5 - Delete Session (only for admins) */}
+                <div className="relative" title={config.button5.title}>
+                  <Button
+                    onClick={config.button5.onClick}
+                    className={config.button5.className}
+                    disabled={config.button5.disabled}
+                  >
+                    <config.button5.icon className="h-4 w-4" />
+                  </Button>
+                </div>
               </>
             )}
           </>
@@ -590,6 +657,44 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
             >
               {isLoading ? "Cancelling..." : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this session? This action cannot be undone and will permanently remove the session and its records from the database.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteSession}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Session
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
