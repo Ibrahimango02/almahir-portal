@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { TimePicker } from "@/components/ui/time-picker"
 import { format, parse, isAfter, startOfDay } from "date-fns"
-import { CalendarIcon, Clock } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { notFound } from "next/navigation"
@@ -23,7 +23,6 @@ import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
-import { createClient } from "@/utils/supabase/client"
 
 // Create a schema for form validation
 const formSchema = z
@@ -58,12 +57,24 @@ const formSchema = z
   })
   .refine(
     (data) => {
-      const startTime = parse(data.start_time, "HH:mm", new Date())
-      const endTime = parse(data.end_time, "HH:mm", new Date())
-      return isAfter(endTime, startTime)
+      // Convert times to minutes for comparison
+      const [startHour, startMinute] = data.start_time.split(':').map(Number)
+      const [endHour, endMinute] = data.end_time.split(':').map(Number)
+
+      const startMinutes = startHour * 60 + startMinute
+      const endMinutes = endHour * 60 + endMinute
+
+      // If end time is earlier in the day than start time, it means the class runs past midnight
+      // This is valid (e.g., 11:00 PM to 12:00 AM)
+      if (endMinutes <= startMinutes) {
+        // Only allow this if the end time is 12:00 AM (00:00)
+        return endMinutes === 0
+      }
+
+      return true
     },
     {
-      message: "End time must be after start time",
+      message: "End time must be after start time, unless the class runs past midnight (ending at 12:00 AM)",
       path: ["end_time"],
     },
   )
@@ -102,7 +113,6 @@ export default function ReschedulePage() {
   const { timezone } = useTimezone()
   const [classData, setClassData] = useState<ClassSessionType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [adminId, setAdminId] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchClassData() {
@@ -123,22 +133,7 @@ export default function ReschedulePage() {
     fetchClassData()
   }, [sessionId])
 
-  // Get current admin ID
-  useEffect(() => {
-    async function getCurrentAdmin() {
-      try {
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          setAdminId(user.id)
-        }
-      } catch (error) {
-        console.error("Error getting current admin:", error)
-      }
-    }
 
-    getCurrentAdmin()
-  }, [])
 
   // Initialize form with default values
   const form = useForm<FormValues>({
@@ -184,7 +179,6 @@ export default function ReschedulePage() {
         action: 'reschedule',
         newStartDate: startUtc.toISOString(),
         newEndDate: endUtc.toISOString(),
-        rescheduledBy: adminId || undefined,
       })
 
       if (!result.success) {
@@ -232,7 +226,7 @@ export default function ReschedulePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Reschedule Class</CardTitle>
+          <CardTitle>Reschedule Session</CardTitle>
           <CardDescription>Update the schedule for {classData.title}</CardDescription>
         </CardHeader>
         <CardContent>
@@ -297,12 +291,12 @@ export default function ReschedulePage() {
                       <FormLabel>
                         Start Time <span className="text-destructive">*</span>
                       </FormLabel>
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <FormControl>
-                          <Input placeholder="HH:MM" {...field} type="time" />
-                        </FormControl>
-                      </div>
+                      <TimePicker
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select start time"
+                        className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                      />
                       <FormMessage />
                     </FormItem>
                   )}
@@ -316,12 +310,12 @@ export default function ReschedulePage() {
                       <FormLabel>
                         End Time <span className="text-destructive">*</span>
                       </FormLabel>
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <FormControl>
-                          <Input placeholder="HH:MM" {...field} type="time" />
-                        </FormControl>
-                      </div>
+                      <TimePicker
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select end time"
+                        className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

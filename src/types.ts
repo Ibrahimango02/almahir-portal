@@ -99,6 +99,43 @@ export type TeacherType = {
     updated_at: string | null
 }
 
+export type RescheduleRequestType = {
+    id: string
+    session_id: string
+    requested_by: string
+    requested_date: string
+    reason: string
+    status: 'pending' | 'approved' | 'rejected'
+    admin_notes?: string
+    processed_by?: string
+    processed_at?: string
+    created_at: string
+    updated_at: string
+}
+
+export type RescheduleRequestWithDetailsType = RescheduleRequestType & {
+    session: {
+        id: string
+        class_id: string
+        start_date: string
+        end_date: string
+        status: string
+        class: {
+            title: string
+            subject?: string
+        }
+    }
+    requester: {
+        first_name: string
+        last_name: string
+        role: string
+    }
+    processor?: {
+        first_name: string
+        last_name: string
+    }
+}
+
 // all sessions for a class
 export type ClassType = {
     class_id: string

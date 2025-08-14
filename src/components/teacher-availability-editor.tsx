@@ -206,7 +206,14 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
         const startMinutes = parseInt(start.split(':')[0]) * 60 + parseInt(start.split(':')[1])
         const endMinutes = parseInt(end.split(':')[0]) * 60 + parseInt(end.split(':')[1])
 
-        return endMinutes > startMinutes
+        // If end time is earlier in the day than start time, it means the slot runs past midnight
+        // This is valid (e.g., 11:00 PM to 12:00 AM)
+        if (endMinutes <= startMinutes) {
+            // Only allow this if the end time is 12:00 AM (00:00)
+            return endMinutes === 0
+        }
+
+        return true
     }
 
     // Helper function to convert time string to minutes for comparison
@@ -287,7 +294,7 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
 
             let errorMessage = "Please fix the following issues:"
             if (hasInvalidSlots) {
-                errorMessage += " Invalid time slots (end time must be after start time)"
+                errorMessage += " Invalid time slots (end time must be after start time, unless the slot runs past midnight ending at 12:00 AM)"
             }
             if (hasOverlaps) {
                 errorMessage += hasInvalidSlots ? ", overlapping time slots" : " Overlapping time slots"
@@ -485,7 +492,7 @@ export function TeacherAvailabilityEditor({ teacherId }: TeacherAvailabilityEdit
                                                 {!validateTimeSlot(slot) && (
                                                     <div className="mt-2 text-xs text-red-600 flex items-center gap-1">
                                                         <AlertCircle className="h-3 w-3" />
-                                                        Invalid time range - end time must be after start time
+                                                        Invalid time range - end time must be after start time, unless the slot runs past midnight ending at 12:00 AM
                                                     </div>
                                                 )}
                                                 {validateTimeSlot(slot) && !validateTimeSlotAgainstOthers(day, index) && (

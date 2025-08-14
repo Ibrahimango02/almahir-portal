@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
+import { TimePicker } from "@/components/ui/time-picker"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/use-toast"
 import Link from "next/link"
@@ -70,10 +71,12 @@ const formSchema = z.object({
             const startMinutes = parseInt(timeData.start.split(':')[0]) * 60 + parseInt(timeData.start.split(':')[1])
             const endMinutes = parseInt(timeData.end.split(':')[0]) * 60 + parseInt(timeData.end.split(':')[1])
 
-            if (startMinutes >= endMinutes) {
+            // If end time is earlier in the day than start time, it means the class runs past midnight
+            // This is valid (e.g., 11:00 PM to 12:00 AM)
+            if (startMinutes >= endMinutes && endMinutes !== 0) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: "End time must be after start time",
+                    message: "End time must be after start time, unless the class runs past midnight (ending at 12:00 AM)",
                     path: ["times", day, "end"]
                 })
             }
@@ -587,19 +590,17 @@ export default function CreateClassPage() {
                                                                     <FormItem>
                                                                         <FormLabel className="text-xs font-medium text-gray-600">Start Time</FormLabel>
                                                                         <FormControl>
-                                                                            <Input
-                                                                                placeholder="14:30"
-                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                                                                                {...field}
+                                                                            <TimePicker
                                                                                 value={String(field.value || "")}
-                                                                                onChange={(e) => {
-                                                                                    field.onChange(e.target.value)
+                                                                                onValueChange={(value) => {
+                                                                                    field.onChange(value)
                                                                                     // Trigger conflict check after a short delay
                                                                                     setTimeout(checkConflicts, 300)
                                                                                 }}
+                                                                                placeholder="Select start time"
+                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
                                                                             />
                                                                         </FormControl>
-                                                                        <FormDescription className="text-xs">24h format</FormDescription>
                                                                         <FormMessage />
                                                                     </FormItem>
                                                                 )}
@@ -611,19 +612,17 @@ export default function CreateClassPage() {
                                                                     <FormItem>
                                                                         <FormLabel className="text-xs font-medium text-gray-600">End Time</FormLabel>
                                                                         <FormControl>
-                                                                            <Input
-                                                                                placeholder="16:00"
-                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                                                                                {...field}
+                                                                            <TimePicker
                                                                                 value={String(field.value || "")}
-                                                                                onChange={(e) => {
-                                                                                    field.onChange(e.target.value)
+                                                                                onValueChange={(value) => {
+                                                                                    field.onChange(value)
                                                                                     // Trigger conflict check after a short delay
                                                                                     setTimeout(checkConflicts, 300)
                                                                                 }}
+                                                                                placeholder="Select end time"
+                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
                                                                             />
                                                                         </FormControl>
-                                                                        <FormDescription className="text-xs">24h format</FormDescription>
                                                                         <FormMessage />
                                                                     </FormItem>
                                                                 )}

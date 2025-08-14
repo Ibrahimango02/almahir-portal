@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { Users, UserPen, Calendar, BookOpen } from "lucide-react"
+import { Users, UserPen, Calendar, BookOpen, AlertTriangle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -14,16 +14,30 @@ interface ClassesTableProps {
     isLoading: boolean
     userType?: 'admin' | 'teacher' | 'student' | 'parent'
     emptyStateMessage?: string
+    showExpirationWarning?: boolean
 }
 
 export default function ClassesTable({
     classes,
     isLoading,
     userType = 'admin',
-    emptyStateMessage = "No classes found"
+    emptyStateMessage = "No classes found",
+    showExpirationWarning = false
 }: ClassesTableProps) {
     const router = useRouter()
     const { timezone } = useTimezone()
+
+    // Function to check if a class is expiring within a week
+    const isClassExpiringSoon = (classItem: ClassType): boolean => {
+        if (classItem.status.toLowerCase() !== 'active') return false
+
+        const endDate = new Date(classItem.end_date)
+        const currentDate = new Date()
+        const oneWeekFromNow = new Date()
+        oneWeekFromNow.setDate(currentDate.getDate() + 7)
+
+        return endDate <= oneWeekFromNow && endDate > currentDate
+    }
 
     const getNavigationPath = (classId: string) => {
         switch (userType) {
@@ -92,9 +106,20 @@ export default function ClassesTable({
                                                 <h3 className="font-semibold text-lg">
                                                     {classItem.title}
                                                 </h3>
-                                                <Badge className={getStatusColor(classItem.status)}>
-                                                    {classItem.status}
-                                                </Badge>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge className={getStatusColor(classItem.status)}>
+                                                        {classItem.status}
+                                                    </Badge>
+                                                    {showExpirationWarning && isClassExpiringSoon(classItem) && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className="text-xs bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800"
+                                                        >
+                                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                                            Expires Soon
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </div>
                                             <p className="text-muted-foreground font-medium">
                                                 {classItem.subject}

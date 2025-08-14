@@ -2724,3 +2724,25 @@ export async function getClassBySessionId(sessionId: string): Promise<string | n
     return data?.class_id || null;
 }
 
+export async function getPendingRescheduleRequestsCount(): Promise<number> {
+    const supabase = createClient()
+
+    try {
+        const { count, error } = await supabase
+            .from('class_sessions')
+            .select('*', { count: 'exact', head: true })
+            .eq('reschedule_status', 'pending')
+            .eq('status', 'cancelled')
+
+        if (error) {
+            console.error('Error fetching pending reschedule requests count:', error)
+            return 0
+        }
+
+        return count || 0
+    } catch (error) {
+        console.error('Error in getPendingRescheduleRequestsCount:', error)
+        return 0
+    }
+}
+

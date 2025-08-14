@@ -757,7 +757,13 @@ function CalendarScheduleView({
                         }
 
                         // Calculate duration in minutes and convert to pixels (50px per hour)
-                        const durationMinutes = differenceInMinutes(endTime, startTime)
+                        let durationMinutes = differenceInMinutes(endTime, startTime)
+                        
+                        // Handle sessions that cross midnight
+                        if (durationMinutes < 0) {
+                            durationMinutes += 24 * 60; // Add 24 hours in minutes
+                        }
+                        
                         const heightPx = Math.max(50, Math.round((durationMinutes * 50) / 60))
 
                         // Calculate width based on group size

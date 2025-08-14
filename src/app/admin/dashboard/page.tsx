@@ -12,10 +12,13 @@ import {
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
+import { RescheduleRequestsTable } from "@/components/reschedule-requests-table"
 import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus, getActiveClassesCount } from "@/lib/get/get-classes"
+import { getPendingRescheduleRequestsCount } from "@/lib/get/get-reschedule-requests"
 import { getActiveStudentsCount } from "@/lib/get/get-students"
 import { getActiveTeachersCount } from "@/lib/get/get-teachers"
 import { createClient } from "@/utils/supabase/server"
@@ -46,6 +49,7 @@ export default async function AdminDashboard() {
   const teachersCount = await getActiveTeachersCount()
   const weeklySessionsCount = await getWeeklySessionsCount()
   const activeClassesCount = await getActiveClassesCount()
+  const pendingRescheduleCount = await getPendingRescheduleRequestsCount()
 
   // Fetch sessions data for today using getSessionsToday()
   const sessionsData = await getSessionsToday()
@@ -214,9 +218,32 @@ export default async function AdminDashboard() {
                 </div>
                 <div className="ml-auto">{activeClassesCount}</div>
               </div>
+
+              <div className="flex items-center gap-4 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
+                  <Calendar className="h-5 w-5 text-orange-700 dark:text-orange-300" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">Pending Reschedules</p>
+                </div>
+                <div className="ml-auto">{pendingRescheduleCount}</div>
+              </div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Reschedule Requests */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold tracking-tight">Reschedule Requests</h2>
+          {pendingRescheduleCount > 0 && (
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+              {pendingRescheduleCount} pending
+            </Badge>
+          )}
+        </div>
+        <RescheduleRequestsTable />
       </div>
     </div>
   )

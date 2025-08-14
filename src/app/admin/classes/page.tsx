@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Plus, BookOpen, Clock, Search, Archive } from "lucide-react"
+import { useEffect, useState, useCallback } from "react"
+import { Plus, BookOpen, Clock, Search, Archive, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,41 +16,64 @@ export default function ClassesPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
     const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
+    const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived" | "expires-soon">("all")
 
-    useEffect(() => {
-        const fetchClasses = async () => {
-            try {
-                const [activeData, archivedData] = await Promise.all([
-                    getActiveClasses(),
-                    getArchivedClasses()
-                ])
-                setActiveClasses(activeData)
-                setArchivedClasses(archivedData)
-                setFilteredClasses([...activeData, ...archivedData])
-            } catch (error) {
-                console.error("Error fetching classes:", error)
-            } finally {
-                setIsLoading(false)
-            }
+    // Function to check if a class is expiring within a week
+    const isClassExpiringSoon = (classItem: ClassType): boolean => {
+        if (classItem.status.toLowerCase() !== 'active') return false
+
+        const endDate = new Date(classItem.end_date)
+        const currentDate = new Date()
+        const oneWeekFromNow = new Date()
+        oneWeekFromNow.setDate(currentDate.getDate() + 7)
+
+        return endDate <= oneWeekFromNow && endDate > currentDate
+    }
+
+    // Get count of expiring classes
+    const getExpiringClassesCount = (): number => {
+        return activeClasses.filter(isClassExpiringSoon).length
+    }
+
+    // Get filtered classes based on status filter
+    const getFilteredClasses = useCallback((): ClassType[] => {
+        let filtered = [...activeClasses, ...archivedClasses]
+
+        // Apply status filter
+        switch (statusFilter) {
+            case "active":
+                filtered = activeClasses
+                break
+            case "archived":
+                filtered = archivedClasses
+                break
+            case "expires-soon":
+                filtered = activeClasses.filter(isClassExpiringSoon)
+                break
+            case "all":
+            default:
+                filtered = [...activeClasses, ...archivedClasses]
+                break
         }
 
-        fetchClasses()
-    }, [])
-
-    useEffect(() => {
-        const allClasses = [...activeClasses, ...archivedClasses]
-        const filtered = allClasses.filter((classItem) => {
-            const searchLower = searchQuery.toLowerCase()
-            return (
-                classItem.title.toLowerCase().includes(searchLower) ||
-                classItem.subject.toLowerCase().includes(searchLower) ||
-                classItem.teachers.some(
-                    (teacher) =>
-                        teacher.first_name.toLowerCase().includes(searchLower) ||
-                        teacher.last_name.toLowerCase().includes(searchLower)
+        // Apply search filter
+        if (searchQuery.trim()) {
+            filtered = filtered.filter((classItem) => {
+                const searchLower = searchQuery.toLowerCase()
+                return (
+                    classItem.title.toLowerCase().includes(searchLower) ||
+                    classItem.subject.toLowerCase().includes(searchLower) ||
+                    classItem.teachers.some(
+                        (teacher) =>
+                            teacher.first_name.toLowerCase().includes(searchLower) ||
+                            teacher.last_name.toLowerCase().includes(searchLower)
+                    )
                 )
-            )
-        }).sort((a, b) => {
+            })
+        }
+
+        // Sort filtered results
+        return filtered.sort((a, b) => {
             // First sort by status: active classes first, then archived
             const statusOrder = { active: 0, archived: 1 }
             const statusA = statusOrder[a.status.toLowerCase() as keyof typeof statusOrder] ?? 4
@@ -63,10 +86,33 @@ export default function ClassesPage() {
             // Then sort alphabetically by title within each status group
             return a.title.localeCompare(b.title)
         })
-        setFilteredClasses(filtered)
-    }, [searchQuery, activeClasses, archivedClasses])
+    }, [activeClasses, archivedClasses, statusFilter, searchQuery])
+
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const [activeData, archivedData] = await Promise.all([
+                    getActiveClasses(),
+                    getArchivedClasses()
+                ])
+                setActiveClasses(activeData)
+                setArchivedClasses(archivedData)
+            } catch (error) {
+                console.error("Error fetching classes:", error)
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        fetchClasses()
+    }, [])
+
+    useEffect(() => {
+        setFilteredClasses(getFilteredClasses())
+    }, [searchQuery, statusFilter, activeClasses, archivedClasses, getFilteredClasses])
 
     const totalClasses = activeClasses.length + archivedClasses.length
+    const expiringClassesCount = getExpiringClassesCount()
 
     return (
         <div className="flex flex-col gap-6">
@@ -96,7 +142,7 @@ export default function ClassesPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                 <Card>
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
@@ -138,6 +184,20 @@ export default function ClassesPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                <Card>
+                    <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Expiring Soon</p>
+                                <p className="text-3xl font-bold">{expiringClassesCount}</p>
+                            </div>
+                            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-full">
+                                <AlertTriangle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Main Content Card */}
@@ -147,11 +207,53 @@ export default function ClassesPage() {
                     <CardDescription>View and manage all classes in the system</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {/* Filter Options */}
+                    <div className="flex flex-wrap items-center gap-2 mb-6">
+                        <span className="text-sm font-medium text-muted-foreground">Filter by:</span>
+                        <Button
+                            variant={statusFilter === "all" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setStatusFilter("all")}
+                            className="h-8"
+                            style={statusFilter === "all" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                        >
+                            All
+                        </Button>
+                        <Button
+                            variant={statusFilter === "active" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setStatusFilter("active")}
+                            className="h-8"
+                            style={statusFilter === "active" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                        >
+                            Active
+                        </Button>
+                        <Button
+                            variant={statusFilter === "archived" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setStatusFilter("archived")}
+                            className="h-8"
+                            style={statusFilter === "archived" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                        >
+                            Archived
+                        </Button>
+                        <Button
+                            variant={statusFilter === "expires-soon" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setStatusFilter("expires-soon")}
+                            className="h-8"
+                            style={statusFilter === "expires-soon" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                        >
+                            Expires Soon
+                        </Button>
+                    </div>
+
                     <ClassesTable
                         classes={filteredClasses}
                         isLoading={isLoading}
                         userType="admin"
                         emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "Get started by creating your first class"}
+                        showExpirationWarning={true}
                     />
                 </CardContent>
             </Card>

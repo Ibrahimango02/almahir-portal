@@ -57,12 +57,24 @@ const formSchema = z
     })
     .refine(
         (data) => {
-            const startTime = parse(data.start_time, "HH:mm", new Date())
-            const endTime = parse(data.end_time, "HH:mm", new Date())
-            return isAfter(endTime, startTime)
+            // Convert times to minutes for comparison
+            const [startHour, startMinute] = data.start_time.split(':').map(Number)
+            const [endHour, endMinute] = data.end_time.split(':').map(Number)
+
+            const startMinutes = startHour * 60 + startMinute
+            const endMinutes = endHour * 60 + endMinute
+
+            // If end time is earlier in the day than start time, it means the class runs past midnight
+            // This is valid (e.g., 11:00 PM to 12:00 AM)
+            if (endMinutes <= startMinutes) {
+                // Only allow this if the end time is 12:00 AM (00:00)
+                return endMinutes === 0
+            }
+
+            return true
         },
         {
-            message: "End time must be after start time",
+            message: "End time must be after start time, unless the class runs past midnight (ending at 12:00 AM)",
             path: ["end_time"],
         },
     )

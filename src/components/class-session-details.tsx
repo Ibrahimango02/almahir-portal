@@ -151,7 +151,16 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
   // Calculate duration
   let durationMinutes = 60 // default to 1 hour
   if (isValid(startDateTime) && isValid(endDateTime)) {
-    durationMinutes = Math.max(differenceInMinutes(endDateTime, startDateTime), 0)
+    // Handle sessions that cross midnight
+    let calculatedDuration = differenceInMinutes(endDateTime, startDateTime)
+
+    // If the duration is negative, it means the session crosses midnight
+    // In this case, we need to add 24 hours (1440 minutes) to get the correct duration
+    if (calculatedDuration < 0) {
+      calculatedDuration += 24 * 60 // Add 24 hours in minutes
+    }
+
+    durationMinutes = Math.max(calculatedDuration, 0)
   }
 
   const scheduledDuration = formatDuration(durationMinutes)

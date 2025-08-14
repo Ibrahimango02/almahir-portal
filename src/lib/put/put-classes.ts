@@ -320,12 +320,9 @@ export async function updateSession(params: {
     action: string;
     newStartDate?: string;
     newEndDate?: string;
-    cancellationReason?: string;
-    cancelledBy?: string;
-    rescheduledBy?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, newStartDate, newEndDate, cancellationReason, cancelledBy, rescheduledBy } = params
+    const { sessionId, action, newStartDate, newEndDate } = params
 
     try {
         switch (action.toLowerCase()) {
@@ -338,7 +335,6 @@ export async function updateSession(params: {
                             status: 'scheduled',
                             start_date: newStartDate,
                             end_date: newEndDate,
-                            rescheduled_by: rescheduledBy || null,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', sessionId)
@@ -482,9 +478,7 @@ export async function updateSession(params: {
                 const { error: sessionError } = await supabase
                     .from('class_sessions')
                     .update({
-                        status: 'cancelled',
-                        cancellation_reason: cancellationReason || null,
-                        cancelled_by: cancelledBy || null
+                        status: 'cancelled'
                     })
                     .eq('id', sessionId)
 
