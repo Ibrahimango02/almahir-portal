@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Phone, MapPin, Users } from "lucide-react"
+import { Mail, Phone, MapPin, UserPen } from "lucide-react"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
@@ -70,13 +70,13 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
+                        <UserPen className="h-5 w-5" />
                         {teacherName}&apos;s Students
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-center py-8">
-                        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <UserPen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <p className="text-muted-foreground">No students are currently enrolled in {teacherName}&apos;s classes.</p>
                     </div>
                 </CardContent>
@@ -89,7 +89,7 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
             <CardHeader>
                 <div>
                     <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5" />
+                        <UserPen className="h-5 w-5" />
                         Students <span className="text-xs bg-muted px-2 py-1 rounded-full">{students.length}</span>
                     </CardTitle>
                 </div>

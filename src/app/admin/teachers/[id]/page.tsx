@@ -539,7 +539,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               </div>
             ) : (
               <div className="text-center py-6">
-                <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <Receipt className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                 <h3 className="text-base font-medium text-muted-foreground mb-1">
                   No Payments
                 </h3>
