@@ -63,6 +63,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [rescheduleDate, setRescheduleDate] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showRemarksReminderDialog, setShowRemarksReminderDialog] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -254,6 +255,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           title: "Session Ended",
           description: "The session has been ended",
         })
+        setShowRemarksReminderDialog(true)
       } else {
         throw new Error("Failed to end session")
       }
@@ -830,6 +832,26 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                   Delete Session
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session Remarks Reminder Dialog */}
+      <Dialog open={showRemarksReminderDialog} onOpenChange={setShowRemarksReminderDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Session Remarks Reminder</DialogTitle>
+            <DialogDescription>
+              The session has been ended. Please remember to add remarks for this session.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => setShowRemarksReminderDialog(false)}
+              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
+            >
+              OK
             </Button>
           </DialogFooter>
         </DialogContent>

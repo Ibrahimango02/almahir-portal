@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, User, FileText, Check, X } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { updateSession } from "@/lib/put/put-classes"
@@ -183,10 +183,7 @@ export function RescheduleRequestsTable() {
 
     if (loading) {
         return (
-            <Card className="border-0 shadow-sm">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Reschedule Requests</CardTitle>
-                </CardHeader>
+            <Card className="border-0 shadow-none">
                 <CardContent className="pt-0">
                     <div className="flex items-center justify-center py-4">
                         <div className="flex items-center gap-2 text-muted-foreground">
@@ -201,10 +198,7 @@ export function RescheduleRequestsTable() {
 
     if (requests.length === 0) {
         return (
-            <Card className="border-0 shadow-sm">
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Reschedule Requests</CardTitle>
-                </CardHeader>
+            <Card className="border-0 shadow-none">
                 <CardContent className="pt-0">
                     <div className="text-center text-muted-foreground py-4">
                         <Calendar className="h-6 w-6 mx-auto mb-1 opacity-50" />

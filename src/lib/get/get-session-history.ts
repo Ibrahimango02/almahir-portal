@@ -284,8 +284,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
     actual_start_time: string | null
     actual_end_time: string | null
     status: string
-    cancellation_reason: string | null
-    cancelled_by: string | null
     teacher_names: string[]
     student_names: string[]
     attendance_status: string
@@ -304,8 +302,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
                 start_date,
                 end_date,
                 status,
-                cancellation_reason,
-                cancelled_by,
                 classes (
                     title,
                     subject
@@ -430,8 +426,6 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
                 actual_start_time: history?.actual_start_time || null,
                 actual_end_time: history?.actual_end_time || null,
                 status: session.status,
-                cancellation_reason: session.cancellation_reason,
-                cancelled_by: session.cancelled_by,
                 teacher_names: teacherNames,
                 student_names: studentNames,
                 attendance_status: teacherAttendanceStatus,

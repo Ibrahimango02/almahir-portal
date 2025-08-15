@@ -118,16 +118,6 @@ export default async function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-400/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-            <BookX className="h-4 w-4 text-rose-500/80" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{todaysClasses.cancelled}</div>
-          </CardContent>
-        </Card>
-
         <Card className="border-l-4 border-l-orange-400/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Absence</CardTitle>
@@ -135,6 +125,16 @@ export default async function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todaysClasses.absence}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-rose-400/70">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+            <BookX className="h-4 w-4 text-rose-500/80" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todaysClasses.cancelled}</div>
           </CardContent>
         </Card>
       </div>

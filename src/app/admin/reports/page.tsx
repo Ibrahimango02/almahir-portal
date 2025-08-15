@@ -19,8 +19,6 @@ type SessionReportType = {
     actual_start_time: string | null;
     actual_end_time: string | null;
     status: string;
-    cancellation_reason: string | null;
-    cancelled_by: string | null;
     teacher_names: string[];
     student_names: string[];
     attendance_status: string;

@@ -47,8 +47,8 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
     const [existingRemarks, setExistingRemarks] = useState<SessionRemarksType | null>(null)
     const [existingNotes, setExistingNotes] = useState<StudentSessionNotesType[]>([])
 
-    // Check if user can edit (only teachers and admins when session is running)
-    const canEdit = (userRole === 'teacher' || userRole === 'admin') && sessionStatus === 'running'
+    // Check if user can edit (teachers and admins can edit when session is running, complete, or absence)
+    const canEdit = (userRole === 'teacher' || userRole === 'admin') && (sessionStatus === 'running' || sessionStatus === 'complete' || sessionStatus === 'absence')
 
     // Initialize student notes and load existing data
     useEffect(() => {
@@ -289,6 +289,15 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                 )}
             </div>
 
+            {/* Info note for ended sessions */}
+            {canEdit && (sessionStatus === 'complete' || sessionStatus === 'absence') && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                        <strong>Note:</strong> This session has ended, but you can still edit the session remarks and student notes.
+                    </p>
+                </div>
+            )}
+
             {!hasData && !isEditing ? (
                 <Card className="border-2 border-dashed border-muted-foreground/20 bg-muted/30">
                     <CardContent className="flex items-center justify-center p-12 text-center">
@@ -320,7 +329,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                 </div>
                             </CardTitle>
                             <CardDescription className="text-base">
-                                Provide a comprehensive summary of what was covered in this session. This is required.
+                                Provide a comprehensive summary of what was covered in this session. This is required and can be edited even after the session ends.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -347,7 +356,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                 Individual Student Notes
                             </CardTitle>
                             <CardDescription className="text-base">
-                                Add detailed notes for each student about their performance and participation in this session.
+                                Add detailed notes for each student about their performance and participation in this session. These can be edited even after the session ends.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
