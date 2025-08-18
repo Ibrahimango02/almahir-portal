@@ -80,7 +80,6 @@ function parseDaysRepeated(daysRepeated: unknown): {
 }
 
 // Helper function to map student data to StudentType
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapStudentToStudentType(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     student: any,

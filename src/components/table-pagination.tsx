@@ -19,18 +19,11 @@ export function TablePagination({
     onPageChange,
     pageSize,
     onPageSizeChange,
-    totalItems,
 }: TablePaginationProps) {
-    const startItem = (currentPage - 1) * pageSize + 1
-    const endItem = Math.min(currentPage * pageSize, totalItems)
-
     const pageSizeOptions = [5, 10, 20, 50, 100]
 
     return (
-        <div className="flex items-center justify-between px-2">
-            <div className="flex-1 text-sm text-muted-foreground">
-                Showing {startItem} to {endItem} of {totalItems} results
-            </div>
+        <div className="flex items-center justify-end px-2">
             <div className="flex items-center space-x-6 lg:space-x-8">
                 <div className="flex items-center space-x-2">
                     <p className="text-sm font-medium">Rows per page</p>
