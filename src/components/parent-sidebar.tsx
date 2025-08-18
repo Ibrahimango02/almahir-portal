@@ -24,6 +24,8 @@ import { useState, useEffect } from "react"
 import { logout } from "@/lib/auth/auth-actions"
 import { getProfile } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"
+import { StudentSwitcher } from "@/components/student-switcher"
+import { useStudentSwitcher } from "@/contexts/StudentSwitcherContext"
 
 const routes = [
   {
@@ -77,6 +79,7 @@ export function ParentSidebar() {
   const [showLogout, setShowLogout] = useState(false)
   const [profile, setProfile] = useState<ProfileType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { } = useStudentSwitcher()
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -136,6 +139,11 @@ export function ParentSidebar() {
           </Button>
         </div>
         <div className="flex flex-col gap-1 p-4">
+          {/* Student Switcher */}
+          <div className="mb-4">
+            <StudentSwitcher />
+          </div>
+
           {routes.map((route) => (
             <Link
               key={route.href}

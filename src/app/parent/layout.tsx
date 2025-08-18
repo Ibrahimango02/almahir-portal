@@ -1,5 +1,6 @@
 import type React from "react"
 import { ParentSidebar } from "@/components/parent-sidebar"
+import { StudentSwitcherProvider } from "@/contexts/StudentSwitcherContext"
 
 export default function ParentLayout({
     children,
@@ -7,11 +8,13 @@ export default function ParentLayout({
     children: React.ReactNode
 }) {
     return (
-        <div className="min-h-screen bg-background">
-            <ParentSidebar />
-            <div className="md:pl-60">
-                <main className="p-4 md:p-6">{children}</main>
+        <StudentSwitcherProvider>
+            <div className="min-h-screen bg-background">
+                <ParentSidebar />
+                <div className="md:pl-60">
+                    <main className="p-4 md:p-6">{children}</main>
+                </div>
             </div>
-        </div>
+        </StudentSwitcherProvider>
     )
 }

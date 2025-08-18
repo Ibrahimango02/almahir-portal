@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin } from "lucide-react"
-import { format, parseISO } from "date-fns"
+
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
@@ -95,7 +95,6 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[100px]">Classes</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
                 <TableHead className="w-[50px] px-4"></TableHead>
               </TableRow>
             </TableHeader>
@@ -187,15 +186,6 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                   <TableCell className="py-2 px-3 text-center">
                     <div className="max-w-[100px] mx-auto">
                       <StatusBadge status={convertStatusToPrefixedFormat(teacher.status, 'user')} />
-                    </div>
-                  </TableCell>
-
-                  {/* Join Date */}
-                  <TableCell className="py-2 px-3">
-                    <div className="text-xs">
-                      <p className="font-medium">
-                        {format(parseISO(teacher.created_at), "MMM dd, yyyy")}
-                      </p>
                     </div>
                   </TableCell>
 

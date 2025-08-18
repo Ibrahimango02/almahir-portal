@@ -27,10 +27,12 @@ export default function AdminAccountingPage() {
     const fetchData = async () => {
       try {
         setLoading(true)
+
         const [invoicesData, paymentsData] = await Promise.all([
           getInvoices(),
           getTeacherPayments()
         ])
+
         setInvoices(invoicesData)
         setTeacherPayments(paymentsData)
       } catch (err) {
@@ -134,9 +136,6 @@ export default function AdminAccountingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
-            <p className="text-muted-foreground">
-              Manage student invoices and teacher payments
-            </p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -163,9 +162,6 @@ export default function AdminAccountingPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
-            <p className="text-muted-foreground">
-              Manage student invoices and teacher payments
-            </p>
           </div>
         </div>
         <Card className="mt-6">
@@ -191,9 +187,6 @@ export default function AdminAccountingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
-          <p className="text-muted-foreground">
-            Manage student invoices and teacher payments
-          </p>
         </div>
       </div>
 
@@ -237,7 +230,7 @@ export default function AdminAccountingPage() {
       </div>
 
       {/* Filters Section */}
-      <Card>
+      <Card className="border-0 shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
@@ -295,7 +288,7 @@ export default function AdminAccountingPage() {
       </Card>
 
       {/* Tabs for Invoices and Payments */}
-      <Tabs defaultValue="invoices" className="space-y-4">
+      <Tabs defaultValue="invoices" className="space-y-10">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="invoices" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
@@ -308,10 +301,7 @@ export default function AdminAccountingPage() {
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Invoices</CardTitle>
-            </CardHeader>
+          <Card className="border-0 shadow-none">
             <CardContent>
               {filteredInvoices.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -335,10 +325,7 @@ export default function AdminAccountingPage() {
         </TabsContent>
 
         <TabsContent value="payments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Teacher Payments</CardTitle>
-            </CardHeader>
+          <Card className="border-0 shadow-none">
             <CardContent>
               {filteredTeacherPayments.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">

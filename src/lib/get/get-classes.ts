@@ -79,6 +79,72 @@ function parseDaysRepeated(daysRepeated: unknown): {
     return {}
 }
 
+// Helper function to map student data to StudentType
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapStudentToStudentType(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    student: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    profiles: any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    childProfiles: any[]
+): StudentType | null {
+    if (student.student_type === 'independent' && student.profile_id) {
+        // Independent student - get profile from profiles table
+        const profile = profiles?.find(p => p.id === student.profile_id)
+        if (!profile) return null
+
+        return {
+            student_id: student.id,
+            student_type: student.student_type,
+            profile_id: student.profile_id,
+            birth_date: student.birth_date,
+            grade_level: student.grade_level,
+            notes: student.notes,
+            created_at: student.created_at,
+            updated_at: student.updated_at,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email,
+            phone: profile.phone,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            age: calculateAge(student.birth_date)
+        }
+    } else if (student.student_type === 'dependent') {
+        // Dependent student - get profile from child_profiles table
+        const childProfile = childProfiles?.find(cp => cp.student_id === student.id)
+        if (!childProfile) return null
+
+        return {
+            student_id: student.id,
+            student_type: student.student_type,
+            profile_id: null,
+            birth_date: student.birth_date,
+            grade_level: student.grade_level,
+            notes: student.notes,
+            created_at: student.created_at,
+            updated_at: student.updated_at,
+            first_name: childProfile.first_name,
+            last_name: childProfile.last_name,
+            gender: childProfile.gender,
+            country: childProfile.country,
+            language: childProfile.language,
+            email: null,
+            phone: null,
+            status: childProfile.status,
+            role: 'student',
+            avatar_url: childProfile.avatar_url,
+            age: calculateAge(student.birth_date)
+        }
+    }
+    return null
+}
+
 export async function getClasses(): Promise<ClassType[]> {
     const supabase = createClient()
 
@@ -134,16 +200,24 @@ export async function getClasses(): Promise<ClassType[]> {
         .select('*')
         .in('profile_id', teacherIds)
 
-    // Get student profile information
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Format the data as required
     const formattedClasses = classes?.map(classItem => {
@@ -179,26 +253,13 @@ export async function getClasses(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
@@ -302,16 +363,24 @@ export async function getClassesToday(): Promise<ClassType[]> {
         .select('*')
         .in('profile_id', teacherIds)
 
-    // Get student profile information
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Format the data to match ClassType
     const formattedClasses = classes?.map(classItem => {
@@ -347,26 +416,13 @@ export async function getClassesToday(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Get today's sessions for this class
         const sessions: SessionType[] = classSessions
@@ -462,17 +518,25 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student profiles
+    // 6. Get student data
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
 
     // 7. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
@@ -509,26 +573,13 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
             ?.filter(cs => cs.class_id === session.class_id)
             .map(cs => cs.student_id) || [];
 
-        const enrolledStudents = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date || ''),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || [];
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[];
 
         return {
             class_id: session.class_id,
@@ -600,16 +651,24 @@ export async function getActiveClasses(): Promise<ClassType[]> {
         .select('*')
         .in('profile_id', teacherIds)
 
-    // Get student profiles and data
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Format the classes with all related data
     const formattedClasses: ClassType[] = classes?.map(classItem => {
@@ -645,26 +704,13 @@ export async function getActiveClasses(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
@@ -757,16 +803,24 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
         .select('*')
         .in('profile_id', teacherIds)
 
-    // Get student profiles and data
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Format the classes with all related data
     const formattedClasses: ClassType[] = classes?.map(classItem => {
@@ -802,26 +856,13 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
             ?.filter(cs => cs.class_id === classItem.id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
@@ -922,34 +963,32 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
 
     const studentIds = classStudents?.map(cs => cs.student_id) || [];
 
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
 
-    const enrolledStudents: StudentType[] = studentProfiles?.map(student => ({
-        student_id: student.id,
-        first_name: student.first_name,
-        last_name: student.last_name,
-        gender: student.gender,
-        country: student.country,
-        language: student.language,
-        email: student.email || null,
-        phone: student.phone || null,
-        status: student.status,
-        role: student.role,
-        avatar_url: student.avatar_url,
-        age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-        grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-        notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-        created_at: student.created_at,
-        updated_at: student.updated_at || null
-    })) || [];
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
+
+    const enrolledStudents: StudentType[] = studentIds
+        .map(studentId => {
+            const student = studentData?.find(s => s.id === studentId)
+            if (!student) return null
+            return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+        })
+        .filter(Boolean) as StudentType[];
 
     // Get sessions for this class
     const { data: classSessions } = await supabase
@@ -1070,16 +1109,24 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
 
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
 
-    // Get student profiles
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
 
     // Get session data for all classes (now includes start_date and end_date)
     const { data: classSessions, error: sessionError } = await supabase
@@ -1125,26 +1172,13 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
             ?.filter(cs => cs.class_id === classData.id)
             .map(cs => cs.student_id) || [];
 
-        const students: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const students: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
@@ -1158,11 +1192,8 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 updated_at: session.updated_at || null
             })) || [];
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classData.days_repeated;
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim());
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(classData.days_repeated)
 
         return {
             class_id: classData.id,
@@ -1232,16 +1263,24 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
 
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
 
-    // Get student profiles
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
 
     // Get sessions for these classes (include all fields)
     const { data: classSessions, error: sessionError } = await supabase
@@ -1287,26 +1326,13 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
             ?.filter(cs => cs.class_id === classData.id)
             .map(cs => cs.student_id) || [];
 
-        const students: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const students: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
@@ -1320,11 +1346,8 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 updated_at: session.updated_at || null
             })) || [];
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classData.days_repeated;
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim());
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(classData.days_repeated)
 
         return {
             class_id: classData.id,
@@ -1418,34 +1441,32 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
 
     const studentIds = classStudents?.map(cs => cs.student_id) || []
 
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
 
-    const students: StudentType[] = studentProfiles?.map(student => ({
-        student_id: student.id,
-        first_name: student.first_name,
-        last_name: student.last_name,
-        gender: student.gender,
-        country: student.country,
-        language: student.language,
-        email: student.email || null,
-        phone: student.phone || null,
-        status: student.status,
-        role: student.role,
-        avatar_url: student.avatar_url,
-        age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-        grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-        notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-        created_at: student.created_at,
-        updated_at: student.updated_at || null
-    })) || []
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
+
+    const students: StudentType[] = studentIds
+        .map(studentId => {
+            const student = studentData?.find(s => s.id === studentId)
+            if (!student) return null
+            return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+        })
+        .filter(Boolean) as StudentType[]
 
     return {
         class_id: classData.id,
@@ -1524,34 +1545,32 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
 
     const studentIds = classStudents?.map(cs => cs.student_id) || [];
 
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
 
-    const students: StudentType[] = studentProfiles?.map(student => ({
-        student_id: student.id,
-        first_name: student.first_name,
-        last_name: student.last_name,
-        gender: student.gender,
-        country: student.country,
-        language: student.language,
-        email: student.email || null,
-        phone: student.phone || null,
-        status: student.status,
-        role: student.role,
-        avatar_url: student.avatar_url,
-        age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-        grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-        notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-        created_at: student.created_at,
-        updated_at: student.updated_at || null
-    })) || [];
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
+
+    const students: StudentType[] = studentIds
+        .map(studentId => {
+            const student = studentData?.find(s => s.id === studentId)
+            if (!student) return null
+            return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+        })
+        .filter(Boolean) as StudentType[];
 
     // Get sessions for this class
     const { data: classSessions } = await supabase
@@ -1630,17 +1649,25 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
         .select('class_id, student_id')
         .in('class_id', classIds)
 
-    // Get student profiles
+    // Get student data from students table
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Combine class and session data to match ClassSessionType
     const classSessionsData: ClassSessionType[] = []
@@ -1681,26 +1708,13 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
             ?.filter(cs => cs.class_id === classData.id)
             .map(cs => cs.student_id) || []
 
-        const students: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const students: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         classSessionsData.push({
             class_id: classData.id,
@@ -1780,17 +1794,25 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student profiles
+    // 6. Get student data from students table
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
 
     // 7. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
@@ -1827,26 +1849,13 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
             ?.filter(cs => cs.class_id === session.class_id)
             .map(cs => cs.student_id) || [];
 
-        const enrolledStudents = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date || ''),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || [];
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[];
 
         return {
             class_id: session.class_id,
@@ -1926,17 +1935,25 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student profiles
+    // 6. Get student data from students table
     const studentIds = [...new Set(classStudentsAll?.map(cs => cs.student_id) || [])];
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds);
-
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds);
+        .in('id', studentIds);
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds);
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds);
 
     // 7. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
@@ -1973,26 +1990,13 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
             ?.filter(cs => cs.class_id === session.class_id)
             .map(cs => cs.student_id) || [];
 
-        const enrolledStudents = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date || ''),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || [];
+        const enrolledStudents: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[];
 
         return {
             class_id: session.class_id,
@@ -2059,17 +2063,25 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
         .select('class_id, student_id')
         .in('class_id', classIds)
 
-    // Get student profiles
+    // Get student data from students table
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // Combine class and session data to match ClassSessionType
     const classSessionsData: ClassSessionType[] = []
@@ -2110,26 +2122,13 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
             ?.filter(cs => cs.class_id === classData.id)
             .map(cs => cs.student_id) || []
 
-        const students: StudentType[] = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const students: StudentType[] = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         classSessionsData.push({
             class_id: classData.id,
@@ -2257,15 +2256,15 @@ export async function getClassStudentCount(classId: string) {
 export async function getParentStudentsSessionsToday(parentId: string): Promise<ClassSessionType[]> {
     const supabase = createClient()
 
-    // 1. Get all students of this parent
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
+    // 1. Get all students of this parent through child_profiles
+    const { data: parentChildProfiles } = await supabase
+        .from('child_profiles')
         .select('student_id')
-        .eq('parent_id', parentId)
+        .eq('parent_profile_id', parentId)
 
-    if (!parentStudents || parentStudents.length === 0) return []
+    if (!parentChildProfiles || parentChildProfiles.length === 0) return []
 
-    const parentStudentIds = parentStudents.map(ps => ps.student_id)
+    const parentStudentIds = parentChildProfiles.map(cp => cp.student_id)
 
     // 2. Get all classes that these students are enrolled in
     const { data: classStudents } = await supabase
@@ -2328,15 +2327,24 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
 
     const studentIds = [...new Set(classStudentsAll?.map(cs => cs.student_id) || [])]
 
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // 7. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
@@ -2373,26 +2381,13 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
             ?.filter(cs => cs.class_id === session.class_id)
             .map(cs => cs.student_id) || []
 
-        const enrolledStudents = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date || ''),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const enrolledStudents = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], childProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         return {
             class_id: session.class_id,
@@ -2415,15 +2410,15 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
 export async function getClassesByParentId(parentId: string): Promise<ClassType[]> {
     const supabase = createClient()
 
-    // 1. Get all students of this parent
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
+    // 1. Get all students of this parent through child_profiles
+    const { data: parentChildProfiles } = await supabase
+        .from('child_profiles')
         .select('student_id')
-        .eq('parent_id', parentId)
+        .eq('parent_profile_id', parentId)
 
-    if (!parentStudents || parentStudents.length === 0) return []
+    if (!parentChildProfiles || parentChildProfiles.length === 0) return []
 
-    const parentStudentIds = parentStudents.map(ps => ps.student_id)
+    const parentStudentIds = parentChildProfiles.map(cp => cp.student_id)
 
     // 2. Get all classes that these students are enrolled in
     const { data: classStudents } = await supabase
@@ -2469,15 +2464,24 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
 
     const studentIds = [...new Set(classStudentsAll?.map(cs => cs.student_id) || [])]
 
-    const { data: studentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
+    // Get student data from students table
     const { data: studentData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    // Get profiles for independent students
+    const independentStudentIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+    const { data: studentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', independentStudentIds)
+
+    // Get child profiles for dependent students
+    const { data: classChildProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .in('student_id', studentIds)
 
     // 6. Get sessions for these classes
     const { data: classSessions } = await supabase
@@ -2519,26 +2523,13 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
             ?.filter(cs => cs.class_id === classData.id)
             .map(cs => cs.student_id) || []
 
-        const students = studentProfiles
-            ?.filter(sp => classStudentIds.includes(sp.id))
-            .map(student => ({
-                student_id: student.id,
-                first_name: student.first_name,
-                last_name: student.last_name,
-                gender: student.gender,
-                country: student.country,
-                language: student.language,
-                email: student.email || null,
-                phone: student.phone || null,
-                status: student.status,
-                role: student.role,
-                avatar_url: student.avatar_url,
-                age: calculateAge(studentData?.find(s => s.profile_id === student.id)?.birth_date),
-                grade_level: studentData?.find(s => s.profile_id === student.id)?.grade_level || null,
-                notes: studentData?.find(s => s.profile_id === student.id)?.notes || null,
-                created_at: student.created_at,
-                updated_at: student.updated_at || null
-            })) || []
+        const students = classStudentIds
+            .map(studentId => {
+                const student = studentData?.find(s => s.id === studentId)
+                if (!student) return null
+                return mapStudentToStudentType(student, studentProfiles || [], classChildProfiles || [])
+            })
+            .filter(Boolean) as StudentType[]
 
         // Sessions for this class
         const sessions = classSessions

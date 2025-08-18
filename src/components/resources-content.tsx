@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Download, Calendar, HardDrive, User, BookOpen } from "lucide-react"
-import { getResourcesByStudentTeachersWithClassInfo } from "@/lib/get/get-resources"
+import { getResourcesByParentStudentsTeachersWithClassInfo, getResourcesByStudentId } from "@/lib/get/get-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
 import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { createClient } from "@/utils/supabase/client"
+import { useStudentSwitcher } from "@/contexts/StudentSwitcherContext"
 
 type ResourceWithUploader = ResourceType & {
     uploader?: {
@@ -21,17 +21,30 @@ type ResourceWithUploader = ResourceType & {
     }
 }
 
-export default function StudentResourcesPage() {
+interface ResourcesContentProps {
+    currentUserId: string
+}
+
+export function ResourcesContent({ currentUserId }: ResourcesContentProps) {
+    const { selectedStudent, isParentView } = useStudentSwitcher()
     const [resources, setResources] = useState<ResourceWithUploader[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const { toast } = useToast()
 
     const fetchResources = useCallback(async () => {
-        if (!currentUserId) return
-
         try {
-            const data = await getResourcesByStudentTeachersWithClassInfo(currentUserId)
+            setIsLoading(true)
+            let data: (ResourceType & { class?: { title: string; subject?: string } })[]
+
+            if (isParentView) {
+                // Parent view: get resources for all children
+                data = await getResourcesByParentStudentsTeachersWithClassInfo(currentUserId)
+            } else if (selectedStudent) {
+                // Student view: get resources for specific student
+                data = await getResourcesByStudentId(selectedStudent.student_id)
+            } else {
+                data = []
+            }
 
             // Fetch uploader information for each resource
             const resourcesWithUploaders = await Promise.all(
@@ -65,25 +78,11 @@ export default function StudentResourcesPage() {
         } finally {
             setIsLoading(false)
         }
-    }, [currentUserId, toast])
+    }, [currentUserId, selectedStudent, isParentView, toast])
 
     useEffect(() => {
-        const getCurrentUser = async () => {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setCurrentUserId(user.id)
-            }
-        }
-
-        getCurrentUser()
-    }, [])
-
-    useEffect(() => {
-        if (currentUserId) {
-            fetchResources()
-        }
-    }, [currentUserId, fetchResources])
+        fetchResources()
+    }, [fetchResources])
 
     const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 Bytes'
@@ -110,12 +109,20 @@ export default function StudentResourcesPage() {
         </Card>
     )
 
+    // Determine the title and description based on the current view
+    const currentTitle = isParentView
+        ? "Resources"
+        : `${selectedStudent?.first_name}'s Resources`
+    const currentDescription = isParentView
+        ? "Educational materials shared by your children's teachers"
+        : `Educational materials shared by ${selectedStudent?.first_name}'s teachers`
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Resources</h1>
-                    <p className="text-muted-foreground">Educational materials shared by your teachers</p>
+                    <h1 className="text-3xl font-bold tracking-tight">{currentTitle}</h1>
+                    <p className="text-muted-foreground">{currentDescription}</p>
                 </div>
             </div>
 
@@ -130,7 +137,12 @@ export default function StudentResourcesPage() {
                     <CardContent className="p-12 text-center">
                         <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium mb-2">No resources available</h3>
-                        <p className="text-muted-foreground mb-6">Your teachers haven&apos;t shared any resources yet</p>
+                        <p className="text-muted-foreground mb-6">
+                            {isParentView
+                                ? "Your children's teachers haven't shared any resources yet"
+                                : `${selectedStudent?.first_name}'s teachers haven't shared any resources yet`
+                            }
+                        </p>
                     </CardContent>
                 </Card>
             ) : (
@@ -191,4 +203,4 @@ export default function StudentResourcesPage() {
             )}
         </div>
     )
-}
+} 

@@ -49,7 +49,7 @@ export default function SchedulePage() {
         <h1 className="text-3xl font-bold tracking-tight">Class Schedule</h1>
       </div>
 
-      <Card>
+      <Card className="border-0 shadow-none">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle>

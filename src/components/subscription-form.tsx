@@ -151,7 +151,7 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                             </SelectTrigger>
                             <SelectContent>
                                 {[...subscriptions]
-                                    .sort((a, b) => (a.total_amount ?? 0) - (b.total_amount ?? 0))
+                                    .sort((a, b) => a.name.localeCompare(b.name))
                                     .map((subscription) => (
                                         <SelectItem key={subscription.id} value={subscription.id}>
                                             {subscription.name} - ${subscription.total_amount} CAD

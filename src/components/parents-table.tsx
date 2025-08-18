@@ -22,7 +22,7 @@ import { StatusBadge } from "./status-badge"
 import { getParentStudents } from "@/lib/get/get-parents"
 import { ParentType, StudentType } from "@/types"
 import AvatarIcon from "./avatar"
-import { format, parseISO } from "date-fns"
+
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
 
@@ -106,7 +106,6 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[300px]">Students</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
                 {isAdmin && <TableHead className="w-[50px] px-4"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -194,15 +193,6 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                   <TableCell className="py-2 px-3 text-center">
                     <div className="max-w-[100px] mx-auto">
                       <StatusBadge status={convertStatusToPrefixedFormat(parent.status, 'user')} />
-                    </div>
-                  </TableCell>
-
-                  {/* Join Date */}
-                  <TableCell className="py-2 px-3">
-                    <div className="text-xs">
-                      <p className="font-medium">
-                        {format(parseISO(parent.created_at), "MMM dd, yyyy")}
-                      </p>
                     </div>
                   </TableCell>
 

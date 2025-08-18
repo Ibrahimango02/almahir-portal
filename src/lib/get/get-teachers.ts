@@ -106,42 +106,83 @@ export async function getTeacherStudents(id: string): Promise<StudentType[]> {
     // Get unique student IDs (a student might appear multiple times if they're in multiple classes with the same teacher)
     const studentIds = [...new Set(teacherStudents.map(ts => ts.student_id))]
 
-    const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', studentIds)
-
-    if (!profiles) return []
-
+    // Get all students from students table
     const { data: studentsData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
 
-    // Combine the data into a single array of StudentType
-    const students: StudentType[] = profiles.map(profile => {
-        const student = studentsData?.find(s => s.profile_id === profile.id)
-        return {
-            student_id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            gender: profile.gender,
-            country: profile.country,
-            language: profile.language,
-            email: profile.email ?? "",
-            phone: profile.phone || null,
-            status: profile.status,
-            role: profile.role,
-            avatar_url: profile.avatar_url,
-            age: calculateAge(student?.birth_date),
-            grade_level: student?.grade_level || null,
-            notes: student?.notes || null,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at || null
+    if (!studentsData) return []
+
+    const result: StudentType[] = []
+
+    for (const student of studentsData) {
+        if (student.student_type === 'independent' && student.profile_id) {
+            // Independent student - get profile from profiles table
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', student.profile_id)
+                .single()
+
+            if (profile) {
+                result.push({
+                    student_id: student.id,
+                    student_type: student.student_type,
+                    profile_id: student.profile_id,
+                    birth_date: student.birth_date,
+                    grade_level: student.grade_level,
+                    notes: student.notes,
+                    created_at: student.created_at,
+                    updated_at: student.updated_at,
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    gender: profile.gender,
+                    country: profile.country,
+                    language: profile.language,
+                    email: profile.email,
+                    phone: profile.phone,
+                    status: profile.status,
+                    role: profile.role,
+                    avatar_url: profile.avatar_url,
+                    age: calculateAge(student.birth_date)
+                })
+            }
+        } else if (student.student_type === 'dependent') {
+            // Dependent student - get profile from child_profiles table
+            const { data: childProfile } = await supabase
+                .from('child_profiles')
+                .select('*')
+                .eq('student_id', student.id)
+                .single()
+
+            if (childProfile) {
+                result.push({
+                    student_id: student.id,
+                    student_type: student.student_type,
+                    profile_id: null,
+                    birth_date: student.birth_date,
+                    grade_level: student.grade_level,
+                    notes: student.notes,
+                    created_at: student.created_at,
+                    updated_at: student.updated_at,
+                    first_name: childProfile.first_name,
+                    last_name: childProfile.last_name,
+                    gender: childProfile.gender,
+                    country: childProfile.country,
+                    language: childProfile.language,
+                    email: null,
+                    phone: null,
+                    status: childProfile.status,
+                    role: 'student',
+                    avatar_url: childProfile.avatar_url,
+                    age: calculateAge(student.birth_date)
+                })
+            }
         }
-    })
+    }
 
-    return students
+    return result
 }
 
 export async function getTeacherAvailability(id: string): Promise<TeacherAvailabilityType | null> {

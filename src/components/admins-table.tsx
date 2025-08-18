@@ -24,7 +24,7 @@ import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { AdminType } from "@/types"
 import Link from "next/link"
-import { format, parseISO } from "date-fns"
+
 import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
@@ -82,7 +82,6 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[100px]">Classes</TableHead>
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[100px]">Joined</TableHead>
                                 <TableHead className="w-[50px] px-4"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -165,15 +164,6 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     <TableCell className="py-2 px-3 text-center">
                                         <div className="max-w-[100px] mx-auto">
                                             <StatusBadge status={convertStatusToPrefixedFormat(admin.status, 'user')} />
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Join Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="text-xs">
-                                            <p className="font-medium">
-                                                {format(parseISO(admin.created_at), "MMM dd, yyyy")}
-                                            </p>
                                         </div>
                                     </TableCell>
 

@@ -69,52 +69,52 @@ export async function getParentById(id: string): Promise<ParentType | null> {
 export async function getParentStudents(id: string): Promise<StudentType[]> {
     const supabase = createClient()
 
-    // Get all student IDs for this parent
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
-        .select('student_id')
-        .eq('parent_id', id)
-
-    if (!parentStudents) return []
-
-    const studentIds = parentStudents.map(student => student.student_id)
-
-    // Get student profiles
-    const { data: profiles } = await supabase
-        .from('profiles')
+    // Get all dependent students for this parent through child_profiles
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
         .select('*')
-        .in('id', studentIds)
+        .eq('parent_profile_id', id)
 
-    if (!profiles) return []
+    if (!childProfiles || childProfiles.length === 0) return []
+
+    const studentIds = childProfiles.map(child => child.student_id)
 
     // Get student data from students table
     const { data: studentsData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
+        .in('id', studentIds)
+
+    if (!studentsData) return []
 
     // Combine the data into a single array of StudentType objects
-    const combinedStudents = profiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
-        const student = studentsData?.find((s: { profile_id: string; birth_date: string; grade_level: string | null; notes: string | null }) => s.profile_id === profile.id)
+    const combinedStudents = childProfiles.map((childProfile) => {
+        const student = studentsData.find(s => s.id === childProfile.student_id)
+
+        if (!student) return null
+
         return {
-            student_id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            gender: profile.gender,
-            country: profile.country,
-            language: profile.language,
-            email: profile.email,
-            phone: profile.phone || null,
-            status: profile.status,
-            role: profile.role,
-            avatar_url: profile.avatar_url,
-            age: calculateAge(student?.birth_date),
-            grade_level: student?.grade_level || null,
-            notes: student?.notes || null,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at || null
+            student_id: student.id,
+            student_type: student.student_type,
+            profile_id: student.profile_id,
+            birth_date: student.birth_date,
+            grade_level: student.grade_level,
+            notes: student.notes,
+            created_at: student.created_at,
+            updated_at: student.updated_at,
+            first_name: childProfile.first_name,
+            last_name: childProfile.last_name,
+            gender: childProfile.gender,
+            country: childProfile.country,
+            language: childProfile.language,
+            email: null, // Dependent students don't have email
+            phone: null, // Dependent students don't have phone
+            status: childProfile.status,
+            role: 'student',
+            avatar_url: childProfile.avatar_url,
+            age: calculateAge(student.birth_date)
         }
-    })
+    }).filter(Boolean) as StudentType[]
 
     return combinedStudents
 }
@@ -143,16 +143,16 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
     // Get unique student IDs (a student might be in multiple classes with the same teacher)
     const studentIds = [...new Set(classStudents.map(cs => cs.student_id))]
 
-    // Get all parents of these students
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
-        .select('parent_id')
+    // Get all parents of these students through child_profiles
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('parent_profile_id')
         .in('student_id', studentIds)
 
-    if (!parentStudents || parentStudents.length === 0) return []
+    if (!childProfiles || childProfiles.length === 0) return []
 
     // Get unique parent IDs (a parent might have multiple students with the same teacher)
-    const parentIds = [...new Set(parentStudents.map(ps => ps.parent_id))]
+    const parentIds = [...new Set(childProfiles.map(cp => cp.parent_profile_id))]
 
     // Get parent profiles
     const { data: parentProfiles } = await supabase
@@ -185,15 +185,15 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
 export async function getParentStudentsForTeacher(parentId: string, teacherId: string): Promise<StudentType[]> {
     const supabase = createClient()
 
-    // First, get all students of this parent
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
-        .select('student_id')
-        .eq('parent_id', parentId)
+    // First, get all dependent students of this parent through child_profiles
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('*')
+        .eq('parent_profile_id', parentId)
 
-    if (!parentStudents || parentStudents.length === 0) return []
+    if (!childProfiles || childProfiles.length === 0) return []
 
-    const parentStudentIds = parentStudents.map(student => student.student_id)
+    const parentStudentIds = childProfiles.map(child => child.student_id)
 
     // Get all classes that this teacher teaches
     const { data: teacherClasses } = await supabase
@@ -220,42 +220,44 @@ export async function getParentStudentsForTeacher(parentId: string, teacherId: s
 
     if (commonStudentIds.length === 0) return []
 
-    // Get the student profiles
-    const { data: profiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', commonStudentIds)
-
-    if (!profiles) return []
-
     // Get student data from students table
     const { data: studentsData } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', commonStudentIds)
+        .in('id', commonStudentIds)
+
+    if (!studentsData) return []
 
     // Combine the data into a single array of StudentType objects
-    const combinedStudents = profiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
-        const student = studentsData?.find((s: { profile_id: string; birth_date: string; grade_level: string | null; notes: string | null }) => s.profile_id === profile.id)
-        return {
-            student_id: profile.id,
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            gender: profile.gender,
-            country: profile.country,
-            language: profile.language,
-            email: profile.email,
-            phone: profile.phone || null,
-            status: profile.status,
-            role: profile.role,
-            avatar_url: profile.avatar_url,
-            age: calculateAge(student?.birth_date),
-            grade_level: student?.grade_level || null,
-            notes: student?.notes || null,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at || null
-        }
-    })
+    const combinedStudents = childProfiles
+        .filter(child => commonStudentIds.includes(child.student_id))
+        .map((childProfile) => {
+            const student = studentsData.find(s => s.id === childProfile.student_id)
+
+            if (!student) return null
+
+            return {
+                student_id: student.id,
+                student_type: student.student_type,
+                profile_id: student.profile_id,
+                birth_date: student.birth_date,
+                grade_level: student.grade_level,
+                notes: student.notes,
+                created_at: student.created_at,
+                updated_at: student.updated_at,
+                first_name: childProfile.first_name,
+                last_name: childProfile.last_name,
+                gender: childProfile.gender,
+                country: childProfile.country,
+                language: childProfile.language,
+                email: null, // Dependent students don't have email
+                phone: null, // Dependent students don't have phone
+                status: childProfile.status,
+                role: 'student',
+                avatar_url: childProfile.avatar_url,
+                age: calculateAge(student.birth_date)
+            }
+        }).filter(Boolean) as StudentType[]
 
     return combinedStudents
 }

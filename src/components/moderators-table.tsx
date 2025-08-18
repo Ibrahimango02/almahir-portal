@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 import { ProfileType } from "@/types"
-import { format, parseISO } from "date-fns"
+
 import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TablePagination } from "./table-pagination"
@@ -40,7 +40,6 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[100px]">Joined</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -97,14 +96,6 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                     <TableCell className="py-2 px-3 text-center">
                                         <div className="max-w-[100px] mx-auto">
                                             <StatusBadge status={convertStatusToPrefixedFormat(moderator.status, 'user')} />
-                                        </div>
-                                    </TableCell>
-                                    {/* Join Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="text-xs">
-                                            <p className="font-medium">
-                                                {moderator.created_at ? format(parseISO(moderator.created_at), "MMM dd, yyyy") : ''}
-                                            </p>
                                         </div>
                                     </TableCell>
                                 </TableRow>

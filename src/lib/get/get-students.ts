@@ -5,127 +5,218 @@ import { calculateAge } from '@/lib/utils'
 export async function getStudents(): Promise<StudentType[]> {
     const supabase = createClient()
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'student')
-
-    if (!profile) return []
-
-    const studentIds = profile.map(student => student.id)
-
-    const { data: students } = await supabase
+    // Get all students from the students table
+    const { data: students, error: studentsError } = await supabase
         .from('students')
         .select('*')
-        .in('profile_id', studentIds)
 
-    // Combine the data into a single array of objects
-    const combinedStudents = profile?.map(studentProfile => {
-        // Find student data
-        const student = students?.find(s => s.profile_id === studentProfile.id)
+    if (studentsError || !students) return []
 
-        return {
-            student_id: studentProfile.id,
-            first_name: studentProfile.first_name,
-            last_name: studentProfile.last_name,
-            gender: studentProfile.gender,
-            country: studentProfile.country,
-            language: studentProfile.language,
-            email: studentProfile.email ?? "",
-            phone: studentProfile.phone || null,
-            status: studentProfile.status,
-            role: studentProfile.role,
-            avatar_url: studentProfile.avatar_url,
-            age: calculateAge(student?.birth_date),
-            grade_level: student?.grade_level || null,
-            notes: student?.notes || null,
-            created_at: studentProfile.created_at,
-            updated_at: studentProfile.updated_at || null
+    const result: StudentType[] = []
+
+    for (const student of students) {
+        if (student.student_type === 'independent' && student.profile_id) {
+            // Independent student - get profile from profiles table
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', student.profile_id)
+                .single()
+
+            if (profile) {
+                result.push({
+                    student_id: student.id,
+                    student_type: student.student_type,
+                    profile_id: student.profile_id,
+                    birth_date: student.birth_date,
+                    grade_level: student.grade_level,
+                    notes: student.notes,
+                    created_at: student.created_at,
+                    updated_at: student.updated_at,
+                    first_name: profile.first_name,
+                    last_name: profile.last_name,
+                    gender: profile.gender,
+                    country: profile.country,
+                    language: profile.language,
+                    email: profile.email,
+                    phone: profile.phone,
+                    status: profile.status,
+                    role: profile.role,
+                    avatar_url: profile.avatar_url,
+                    age: calculateAge(student.birth_date)
+                })
+            }
+        } else if (student.student_type === 'dependent') {
+            // Dependent student - get profile from child_profiles table
+            const { data: childProfile } = await supabase
+                .from('child_profiles')
+                .select('*')
+                .eq('student_id', student.id)
+                .single()
+
+            if (childProfile) {
+                result.push({
+                    student_id: student.id,
+                    student_type: student.student_type,
+                    profile_id: null, // Dependent students don't have a profile_id
+                    birth_date: student.birth_date,
+                    grade_level: student.grade_level,
+                    notes: student.notes,
+                    created_at: student.created_at,
+                    updated_at: student.updated_at,
+                    first_name: childProfile.first_name,
+                    last_name: childProfile.last_name,
+                    gender: childProfile.gender,
+                    country: childProfile.country,
+                    language: childProfile.language,
+                    email: null, // Dependent students don't have email
+                    phone: null, // Dependent students don't have phone
+                    status: childProfile.status,
+                    role: 'student',
+                    avatar_url: childProfile.avatar_url,
+                    age: calculateAge(student.birth_date)
+                })
+            }
         }
-    }) || []
+    }
 
-    return combinedStudents
+    return result
 }
 
 export async function getStudentById(id: string): Promise<StudentType | null> {
     const supabase = createClient()
 
-    const { data: profile } = await supabase
-        .from('profiles')
+    // Get student from students table
+    const { data: student, error: studentError } = await supabase
+        .from('students')
         .select('*')
         .eq('id', id)
-        .eq('role', 'student')
         .single()
 
-    if (!profile) {
+    if (studentError || !student) {
         return null
     }
 
-    const { data: student } = await supabase
-        .from('students')
-        .select('*')
-        .eq('profile_id', id)
-        .single()
+    if (student.student_type === 'independent' && student.profile_id) {
+        // Independent student - get profile from profiles table
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', student.profile_id)
+            .single()
 
-    // Return the parent with their students
-    return {
-        student_id: profile.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        gender: profile.gender,
-        country: profile.country,
-        language: profile.language,
-        email: profile.email ?? "",
-        phone: profile.phone || null,
-        status: profile.status,
-        role: profile.role,
-        avatar_url: profile.avatar_url,
-        age: calculateAge(student?.birth_date),
-        grade_level: student?.grade_level || null,
-        notes: student?.notes || null,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at || null
+        if (profile) {
+            return {
+                student_id: student.id,
+                student_type: student.student_type,
+                profile_id: student.profile_id,
+                birth_date: student.birth_date,
+                grade_level: student.grade_level,
+                notes: student.notes,
+                created_at: student.created_at,
+                updated_at: student.updated_at,
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                gender: profile.gender,
+                country: profile.country,
+                language: profile.language,
+                email: profile.email,
+                phone: profile.phone,
+                status: profile.status,
+                role: profile.role,
+                avatar_url: profile.avatar_url,
+                age: calculateAge(student.birth_date)
+            }
+        }
+    } else if (student.student_type === 'dependent') {
+        // Dependent student - get profile from child_profiles table
+        const { data: childProfile } = await supabase
+            .from('child_profiles')
+            .select('*')
+            .eq('student_id', student.id)
+            .single()
+
+        if (childProfile) {
+            return {
+                student_id: student.id,
+                student_type: student.student_type,
+                profile_id: null, // Dependent students don't have a profile_id
+                birth_date: student.birth_date,
+                grade_level: student.grade_level,
+                notes: student.notes,
+                created_at: student.created_at,
+                updated_at: student.updated_at,
+                first_name: childProfile.first_name,
+                last_name: childProfile.last_name,
+                gender: childProfile.gender,
+                country: childProfile.country,
+                language: childProfile.language,
+                email: null, // Dependent students don't have email
+                phone: null, // Dependent students don't have phone
+                status: childProfile.status,
+                role: 'student',
+                avatar_url: childProfile.avatar_url,
+                age: calculateAge(student.birth_date)
+            }
+        }
     }
+
+    return null
 }
 
 export async function getStudentParents(id: string): Promise<ParentType[]> {
     const supabase = createClient()
 
-    const { data: parentStudents } = await supabase
-        .from('parent_students')
-        .select('parent_id')
-        .eq('student_id', id)
+    // First, get the student to determine their type
+    const { data: student } = await supabase
+        .from('students')
+        .select('student_type')
+        .eq('id', id)
+        .single()
 
-    if (!parentStudents) return []
+    if (!student) return []
 
-    const parentIds = parentStudents.map(parent => parent.parent_id)
+    if (student.student_type === 'dependent') {
+        // For dependent students, get parent from child_profiles.parent_profile_id
+        const { data: childProfile } = await supabase
+            .from('child_profiles')
+            .select('parent_profile_id')
+            .eq('student_id', id)
+            .single()
 
-    const { data: parentProfiles } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', parentIds)
+        if (!childProfile || !childProfile.parent_profile_id) return []
 
-    // If no parent profiles found, return empty array
-    if (!parentProfiles) return []
+        // Get parent profile
+        const { data: parentProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', childProfile.parent_profile_id)
+            .single()
 
-    // Map the profiles to ParentType
-    const parents: ParentType[] = parentProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => ({
-        parent_id: profile.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        gender: profile.gender,
-        country: profile.country,
-        language: profile.language,
-        email: profile.email ?? "",
-        phone: profile.phone || null,
-        status: profile.status,
-        role: profile.role,
-        avatar_url: profile.avatar_url,
-        created_at: profile.created_at,
-        updated_at: profile.updated_at || null
-    }))
+        if (!parentProfile) return []
 
-    return parents
+        // Return single parent
+        return [{
+            parent_id: parentProfile.id,
+            first_name: parentProfile.first_name,
+            last_name: parentProfile.last_name,
+            gender: parentProfile.gender,
+            country: parentProfile.country,
+            language: parentProfile.language,
+            email: parentProfile.email ?? "",
+            phone: parentProfile.phone || null,
+            status: parentProfile.status,
+            role: parentProfile.role,
+            avatar_url: parentProfile.avatar_url,
+            created_at: parentProfile.created_at,
+            updated_at: parentProfile.updated_at || null
+        }]
+    } else {
+        // For independent students, there's no direct parent relationship
+        // This might need to be handled differently based on your business logic
+        // For now, return empty array
+        return []
+    }
 }
 
 export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
@@ -187,9 +278,8 @@ export async function getStudentsCount() {
     const supabase = createClient()
 
     const { count, error } = await supabase
-        .from('profiles')
+        .from('students')
         .select('*', { count: 'exact', head: true })
-        .eq('role', 'student')
 
     if (error) {
         console.error('Error fetching students count:', error)
@@ -202,18 +292,35 @@ export async function getStudentsCount() {
 export async function getActiveStudentsCount() {
     const supabase = createClient()
 
-    const { count, error } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'student')
-        .eq('status', 'active')
+    // For active students count, we need to check both independent and dependent students
+    // Independent students: check profiles.status
+    // Dependent students: check child_profiles.status
 
-    if (error) {
-        console.error('Error fetching active students count:', error)
+    // Get independent students count
+    const { count: independentCount, error: independentError } = await supabase
+        .from('students')
+        .select('profiles!inner(status)', { count: 'exact', head: true })
+        .eq('student_type', 'independent')
+        .eq('profiles.status', 'active')
+
+    if (independentError) {
+        console.error('Error fetching independent active students count:', independentError)
         return 0
     }
 
-    return count
+    // Get dependent students count - check child_profiles.status
+    const { count: dependentCount, error: dependentError } = await supabase
+        .from('students')
+        .select('child_profiles!inner(status)', { count: 'exact', head: true })
+        .eq('student_type', 'dependent')
+        .eq('child_profiles.status', 'active')
+
+    if (dependentError) {
+        console.error('Error fetching dependent active students count:', dependentError)
+        return 0
+    }
+
+    return (independentCount || 0) + (dependentCount || 0)
 }
 
 export async function getStudentTotalHours(studentId: string): Promise<number> {

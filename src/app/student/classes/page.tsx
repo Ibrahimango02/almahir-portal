@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
@@ -79,7 +79,6 @@ export default function StudentClassesPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
-                    <p className="text-muted-foreground">Manage and view all classes</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -98,7 +97,6 @@ export default function StudentClassesPage() {
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle>All Classes</CardTitle>
-                    <CardDescription>View and manage all classes in the system</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ClassesTable

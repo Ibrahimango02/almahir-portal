@@ -5,6 +5,71 @@ type AssignmentData = {
     class_ids: string[]
 }
 
+type CreateDependentStudentData = {
+    first_name: string
+    last_name: string
+    gender: string
+    country: string
+    language: string
+    birth_date: string
+    grade_level: string
+    parent_profile_id: string
+}
+
+export async function createDependentStudent(data: CreateDependentStudentData) {
+    const supabase = createClient()
+
+    try {
+        // First, create the student record
+        const { data: student, error: studentError } = await supabase
+            .from('students')
+            .insert({
+                student_type: 'dependent',
+                birth_date: data.birth_date,
+                grade_level: data.grade_level,
+                notes: `This is ${data.first_name} ${data.last_name}`
+            })
+            .select()
+            .single()
+
+        if (studentError || !student) {
+            throw new Error(`Failed to create student: ${studentError?.message}`)
+        }
+
+        // Then, create the child profile
+        const { error: childProfileError } = await supabase
+            .from('child_profiles')
+            .insert({
+                student_id: student.id,
+                first_name: data.first_name,
+                last_name: data.last_name,
+                gender: data.gender,
+                country: data.country,
+                language: data.language,
+                parent_profile_id: data.parent_profile_id,
+                status: 'active'
+            })
+
+        if (childProfileError) {
+            // If child profile creation fails, delete the student record
+            await supabase
+                .from('students')
+                .delete()
+                .eq('id', student.id)
+            throw new Error(`Failed to create child profile: ${childProfileError.message}`)
+        }
+
+        return {
+            success: true,
+            student_id: student.id,
+            message: 'Dependent student created successfully'
+        }
+    } catch (error) {
+        console.error('Error in createDependentStudent:', error)
+        throw error
+    }
+}
+
 export async function assignStudentToClasses(data: AssignmentData) {
     const supabase = createClient()
 

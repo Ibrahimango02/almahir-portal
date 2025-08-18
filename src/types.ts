@@ -62,21 +62,40 @@ export type ParentType = {
 
 export type StudentType = {
     student_id: string
-    first_name: string
-    last_name: string
-    gender: string
-    country: string
-    language: string
-    email: string | null
-    phone: string | null
-    status: string
-    role: string
-    avatar_url: string | null
-    age: number
+    student_type: 'independent' | 'dependent'
+    profile_id: string | null
+    birth_date: string | null
     grade_level: string | null
     notes: string | null
     created_at: string
     updated_at: string | null
+    // Profile data (either from profiles or child_profiles)
+    first_name: string
+    last_name: string
+    gender: string | null
+    country: string | null
+    language: string | null
+    email: string | null
+    phone: string | null
+    status: string
+    role: string | null
+    avatar_url: string | null
+    age: number | null
+}
+
+export type ChildProfileType = {
+    id: string
+    student_id: string
+    first_name: string
+    last_name: string
+    gender: string | null
+    country: string | null
+    language: string | null
+    avatar_url: string | null
+    status: string
+    created_at: string
+    updated_at: string | null
+    parent_profile_id: string
 }
 
 export type TeacherType = {
@@ -187,7 +206,7 @@ export type ClassSessionType = {
 export type InvoiceType = {
     invoice_id: string
     student: {
-        student_id: string
+        id: string
         first_name: string
         last_name: string
     }
@@ -250,6 +269,7 @@ export type ResourceType = {
     file_type: string
     uploaded_by: string | null
     is_public: boolean
+    class_id: string | null
     created_at: string
     updated_at: string | null
 }
@@ -355,7 +375,7 @@ export type StudentInvoiceType = {
     updated_at: string;
     // Joined data
     student?: {
-        student_id: string;
+        id: string;
         first_name: string;
         last_name: string;
     };

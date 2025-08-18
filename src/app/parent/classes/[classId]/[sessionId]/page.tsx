@@ -2,6 +2,7 @@ import { ClassSessionDetails } from "@/components/class-session-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
+import { getParentStudents } from "@/lib/get/get-parents"
 import { createClient } from "@/utils/supabase/server"
 
 export default async function ClassSessionPage({ params }: { params: Promise<{ classId: string, sessionId: string }> }) {
@@ -19,12 +20,9 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
     const { data: { user } } = await supabase.auth.getUser()
     let userParentStudents: string[] = []
     if (user) {
-        const { data: parentStudents } = await supabase
-            .from('parent_students')
-            .select('student_id')
-            .eq('parent_id', user.id)
+        const parentStudents = await getParentStudents(user.id)
         if (parentStudents) {
-            userParentStudents = parentStudents.map(ps => ps.student_id)
+            userParentStudents = parentStudents.map(student => student.student_id)
         }
     }
 

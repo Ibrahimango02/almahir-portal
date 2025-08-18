@@ -63,11 +63,11 @@ export default function StudentsPage() {
                 student.last_name.toLowerCase().includes(searchLower) ||
                 (student.email?.toLowerCase().includes(searchLower) ?? false) ||
                 (student.phone?.toLowerCase().includes(searchLower) ?? false) ||
-                student.country.toLowerCase().includes(searchLower) ||
-                student.language.toLowerCase().includes(searchLower) ||
+                (student.country?.toLowerCase().includes(searchLower) ?? false) ||
+                (student.language?.toLowerCase().includes(searchLower) ?? false) ||
                 student.status.toLowerCase().includes(searchLower) ||
                 student.age === parseInt(searchLower) ||
-                student.gender.toLowerCase().includes(searchLower)
+                (student.gender?.toLowerCase().includes(searchLower) ?? false)
             )
         })
         setFilteredStudents(filtered)

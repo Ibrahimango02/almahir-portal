@@ -8,24 +8,31 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User } from "lucide-react"
-import { getResources } from "@/lib/get/get-resources"
+import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User, BookOpen } from "lucide-react"
+import { getResourcesWithClassInfo } from "@/lib/get/get-resources"
 import { createResource } from "@/lib/post/post-resources"
 import { deleteResource } from "@/lib/delete/delete-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
+import { getClassesForResourceUpload } from "@/lib/get/get-resources"
 import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type ResourceWithUploader = ResourceType & {
     uploader?: {
         first_name: string
         last_name: string
     }
+    class?: {
+        title: string
+        subject?: string
+    }
 }
 
 export default function ResourcesPage() {
     const [resources, setResources] = useState<ResourceWithUploader[]>([])
+    const [classes, setClasses] = useState<{ id: string; title: string; subject?: string }[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [isUploading, setIsUploading] = useState(false)
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -36,7 +43,7 @@ export default function ResourcesPage() {
 
     const fetchResources = useCallback(async () => {
         try {
-            const data = await getResources()
+            const data = await getResourcesWithClassInfo()
 
             // Fetch uploader information for each resource
             const resourcesWithUploaders = await Promise.all(
@@ -75,6 +82,18 @@ export default function ResourcesPage() {
     useEffect(() => {
         fetchResources()
     }, [fetchResources])
+
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const data = await getClassesForResourceUpload()
+                setClasses(data)
+            } catch (error) {
+                console.error("Error fetching classes:", error)
+            }
+        }
+        fetchClasses()
+    }, [])
 
     const handleUpload = async (formData: FormData) => {
         setIsUploading(true)
@@ -192,6 +211,21 @@ export default function ResourcesPage() {
                                     placeholder="Brief description of the resource"
                                     rows={3}
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="classId">Class (Required)</Label>
+                                <Select name="classId" required>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a class" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {classes.map((classItem) => (
+                                            <SelectItem key={classItem.id} value={classItem.id}>
+                                                {classItem.title} {classItem.subject && `(${classItem.subject})`}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="file">File (PDF)</Label>
@@ -321,6 +355,12 @@ export default function ResourcesPage() {
                                         <div className="flex items-center gap-2">
                                             <User className="h-3 w-3" />
                                             <span>Uploaded by {resource.uploader.first_name} {resource.uploader.last_name}</span>
+                                        </div>
+                                    )}
+                                    {resource.class && (
+                                        <div className="flex items-center gap-2">
+                                            <BookOpen className="h-3 w-3" />
+                                            <span>{resource.class.title} {resource.class.subject && `(${resource.class.subject})`}</span>
                                         </div>
                                     )}
                                 </div>

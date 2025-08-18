@@ -2,6 +2,7 @@ import { ClassDetails } from "@/components/class-details"
 import { notFound } from "next/navigation"
 import { BackButton } from "@/components/back-button"
 import { getClassById } from "@/lib/get/get-classes"
+import { getParentStudents } from "@/lib/get/get-parents"
 import { createClient } from "@/utils/supabase/server"
 
 export default async function ClassPage({ params }: { params: Promise<{ classId: string }> }) {
@@ -20,12 +21,9 @@ export default async function ClassPage({ params }: { params: Promise<{ classId:
     const { data: { user } } = await supabase.auth.getUser()
     let userParentStudents: string[] = []
     if (user) {
-        const { data: parentStudents } = await supabase
-            .from('parent_students')
-            .select('student_id')
-            .eq('parent_id', user.id)
+        const parentStudents = await getParentStudents(user.id)
         if (parentStudents) {
-            userParentStudents = parentStudents.map(ps => ps.student_id)
+            userParentStudents = parentStudents.map(student => student.student_id)
         }
     }
 

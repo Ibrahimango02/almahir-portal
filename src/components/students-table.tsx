@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
+import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, User, Users } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
@@ -22,9 +22,10 @@ import { StatusBadge } from "./status-badge"
 import { getStudentParents } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
-import { format, parseISO } from "date-fns"
+
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
+import { Badge } from "@/components/ui/badge"
 
 // Define types for related data
 type ParentType = {
@@ -105,6 +106,24 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
     return `/${currentUserRole}/students/${action}/${studentId}`
   }
 
+  const getStudentTypeBadge = (studentType: 'independent' | 'dependent') => {
+    if (studentType === 'independent') {
+      return (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+          <User className="h-3 w-3 mr-1" />
+          Independent
+        </Badge>
+      )
+    } else {
+      return (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+          <Users className="h-3 w-3 mr-1" />
+          Dependent
+        </Badge>
+      )
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Table Container */}
@@ -114,11 +133,11 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
             <TableHeader>
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Student</TableHead>
+                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[120px]">Type</TableHead>
                 {!isTeacher && <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Contact</TableHead>}
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
                 <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
                 {(isAdmin || isModerator) && <TableHead className="w-[50px] px-4"></TableHead>}
               </TableRow>
             </TableHeader>
@@ -165,17 +184,32 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                     </div>
                   </TableCell>
 
+                  {/* Student Type */}
+                  <TableCell className="py-2 px-3">
+                    {getStudentTypeBadge(student.student_type)}
+                  </TableCell>
+
                   {/* Contact Info */}
                   {!isTeacher && (
                     <TableCell className="py-2 px-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-xs">
                           <Mail className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          <span>{student.email || 'None'}</span>
+                          <span>
+                            {student.student_type === 'dependent'
+                              ? 'See parent contact'
+                              : (student.email || 'None')
+                            }
+                          </span>
                         </div>
                         <div className="flex items-center gap-1.5 text-xs">
                           <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                          <span>{student.phone || 'None'}</span>
+                          <span>
+                            {student.student_type === 'dependent'
+                              ? 'See parent contact'
+                              : (student.phone || 'None')
+                            }
+                          </span>
                         </div>
                       </div>
                     </TableCell>
@@ -215,15 +249,6 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                   <TableCell className="py-2 px-3 text-center">
                     <div className="max-w-[100px] mx-auto">
                       <StatusBadge status={convertStatusToPrefixedFormat(student.status, 'user')} />
-                    </div>
-                  </TableCell>
-
-                  {/* Join Date */}
-                  <TableCell className="py-2 px-3">
-                    <div className="text-xs">
-                      <p className="font-medium">
-                        {format(parseISO(student.created_at), "MMM dd, yyyy")}
-                      </p>
                     </div>
                   </TableCell>
 

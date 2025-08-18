@@ -10,9 +10,10 @@ import { ScheduleCalendarView } from "@/components/schedule-calendar-view"
 import { ScheduleListView } from "@/components/schedule-list-view"
 import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
 import { MonthlyListScheduleView } from "@/components/monthly-list-schedule-view"
-import { getClassesByParentId } from "@/lib/get/get-classes"
+import { getClassesByParentId, getClassesByStudentId } from "@/lib/get/get-classes"
 import { createClient } from "@/utils/supabase/client"
 import { ClassType } from "@/types"
+import { useStudentSwitcher } from "@/contexts/StudentSwitcherContext"
 
 export default function ParentSchedulePage() {
     const [view, setView] = useState<"calendar" | "list" | "monthly" | "monthly-list">("calendar")
@@ -23,22 +24,40 @@ export default function ParentSchedulePage() {
     const [classData, setClassData] = useState<ClassType[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
+    // Use the StudentSwitcherContext
+    const { selectedStudent, isParentView } = useStudentSwitcher()
+
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true)
             try {
                 const supabase = createClient()
                 const { data: { user } } = await supabase.auth.getUser()
+
                 if (user) {
-                    const data = await getClassesByParentId(user.id)
+                    let data: ClassType[]
+
+                    if (isParentView) {
+                        // Fetch all classes for all children
+                        data = await getClassesByParentId(user.id)
+                    } else if (selectedStudent) {
+                        // Fetch classes for the specific selected student
+                        data = await getClassesByStudentId(selectedStudent.student_id)
+                    } else {
+                        data = []
+                    }
+
                     setClassData(data)
                 }
+            } catch (error) {
+                console.error("Error fetching classes:", error)
+                setClassData([])
             } finally {
                 setIsLoading(false)
             }
         }
         fetchData()
-    }, [])
+    }, [isParentView, selectedStudent])
 
     const navigateWeek = (direction: "next" | "prev") => {
         setCurrentWeekStart((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)))
@@ -48,10 +67,33 @@ export default function ParentSchedulePage() {
         setCurrentMonth((prev) => (direction === "next" ? addMonths(prev, 1) : subMonths(prev, 1)))
     }
 
+    // Get the current view title and description
+    const getViewInfo = () => {
+        if (isParentView) {
+            return {
+                title: "Class Schedule",
+                description: "View and manage your children's class schedule"
+            }
+        } else if (selectedStudent) {
+            return {
+                title: `${selectedStudent.first_name} ${selectedStudent.last_name}'s Schedule`,
+                description: `View and manage ${selectedStudent.first_name}'s class schedule`
+            }
+        }
+        return {
+            title: "Class Schedule",
+            description: "View and manage class schedule"
+        }
+    }
+
+    const viewInfo = getViewInfo()
+
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h1 className="text-3xl font-bold tracking-tight">Class Schedule</h1>
+                <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold tracking-tight">{viewInfo.title}</h1>
+                </div>
             </div>
 
             <Card>
@@ -90,10 +132,10 @@ export default function ParentSchedulePage() {
                         </div>
                     </div>
                     <CardDescription>
-                        {view === "calendar" && "View and manage your children's weekly class schedule"}
-                        {view === "list" && "View all scheduled classes for your children in list format"}
-                        {view === "monthly" && "View and manage your children's monthly class schedule"}
-                        {view === "monthly-list" && "View all scheduled classes for your children for the month in list format"}
+                        {view === "calendar" && (isParentView ? "View and manage your children's weekly class schedule" : "View and manage your weekly class schedule")}
+                        {view === "list" && (isParentView ? "View all scheduled classes for your children in list format" : "View all your scheduled classes in list format")}
+                        {view === "monthly" && (isParentView ? "View and manage your children's monthly class schedule" : "View and manage your monthly class schedule")}
+                        {view === "monthly-list" && (isParentView ? "View all scheduled classes for your children for the month in list format" : "View all your scheduled classes for the month in list format")}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

@@ -123,14 +123,14 @@ export default function EditTeacherPage() {
                 <Input
                   id="specialization"
                   name="specialization"
-                  placeholder="e.g. Mathematics, Physics"
+                  placeholder="e.g. Arabic, Quran"
                   value={formData.specialization}
                   onChange={handleChange}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+                <Label htmlFor="hourly_rate">Hourly Rate (CAD)</Label>
                 <Input
                   id="hourly_rate"
                   name="hourly_rate"

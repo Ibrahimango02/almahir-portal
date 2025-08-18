@@ -12,7 +12,7 @@ import { StatusBadge } from "./status-badge"
 import { getStudentParents } from "@/lib/get/get-students"
 import { StudentType } from "@/types"
 import AvatarIcon from "./avatar"
-import { format, parseISO } from "date-fns"
+
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 
 // Define types for related data
@@ -107,7 +107,6 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Location</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[250px]">Parents</TableHead>
                                         <TableHead className="h-12 px-4 font-semibold text-foreground/80 text-center w-[150px]">Status</TableHead>
-                                        <TableHead className="h-12 px-4 font-semibold text-foreground/80 w-[150px]">Joined</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -201,15 +200,6 @@ export function TeacherStudentsSection({ students, teacherName }: TeacherStudent
                                             <TableCell className="py-2 px-3 text-center">
                                                 <div className="max-w-[100px] mx-auto">
                                                     <StatusBadge status={convertStatusToPrefixedFormat(student.status, 'user')} />
-                                                </div>
-                                            </TableCell>
-
-                                            {/* Join Date */}
-                                            <TableCell className="py-2 px-3">
-                                                <div className="text-xs">
-                                                    <p className="font-medium">
-                                                        {format(parseISO(student.created_at), "MMM dd, yyyy")}
-                                                    </p>
                                                 </div>
                                             </TableCell>
 

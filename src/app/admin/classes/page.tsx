@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Plus, BookOpen, Clock, Search, Archive, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getActiveClasses, getArchivedClasses } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
@@ -119,7 +119,6 @@ export default function ClassesPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
-                    <p className="text-muted-foreground">Manage and view all classes</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -201,11 +200,7 @@ export default function ClassesPage() {
             </div>
 
             {/* Main Content Card */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>All Classes</CardTitle>
-                    <CardDescription>View and manage all classes in the system</CardDescription>
-                </CardHeader>
+            <Card className="border-0 shadow-none">
                 <CardContent>
                     {/* Filter Options */}
                     <div className="flex flex-wrap items-center gap-2 mb-6">

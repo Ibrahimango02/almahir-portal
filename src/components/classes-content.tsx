@@ -2,49 +2,53 @@
 
 import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { getClassesByTeacherId } from "@/lib/get/get-classes"
+import { getClassesByParentId, getClassesByStudentId } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
-import { createClient } from "@/utils/supabase/client"
 import ClassesTable from "@/components/classes-table"
+import { useStudentSwitcher } from "@/contexts/StudentSwitcherContext"
 
-export default function TeacherClassesPage() {
+interface ClassesContentProps {
+    currentUserId: string;
+}
+
+export function ClassesContent({ currentUserId }: ClassesContentProps) {
+    const { selectedStudent, isParentView } = useStudentSwitcher();
     const [classes, setClasses] = useState<ClassType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
-    const [currentUserId, setCurrentUserId] = useState<string | null>(null)
     const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
-
-    useEffect(() => {
-        const getCurrentUser = async () => {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                setCurrentUserId(user.id)
-            }
-        }
-
-        getCurrentUser()
-    }, [])
 
     useEffect(() => {
         const fetchClasses = async () => {
             if (!currentUserId) return
 
             try {
-                const data = await getClassesByTeacherId(currentUserId)
+                setIsLoading(true);
+                let data: ClassType[];
+
+                if (isParentView) {
+                    data = await getClassesByParentId(currentUserId);
+                } else if (selectedStudent) {
+                    data = await getClassesByStudentId(selectedStudent.student_id);
+                } else {
+                    data = [];
+                }
+
                 setClasses(data)
                 setFilteredClasses(data)
             } catch (error) {
                 console.error("Error fetching classes:", error)
+                setClasses([])
+                setFilteredClasses([])
             } finally {
                 setIsLoading(false)
             }
         }
 
         fetchClasses()
-    }, [currentUserId])
+    }, [currentUserId, selectedStudent, isParentView])
 
     useEffect(() => {
         const filtered = classes.filter((classItem) => {
@@ -74,13 +78,22 @@ export default function TeacherClassesPage() {
         setFilteredClasses(filtered)
     }, [searchQuery, classes])
 
+    // Determine title and description based on current view
+    const currentTitle = isParentView ? "All Classes" : `${selectedStudent?.first_name}'s Classes`;
+    const currentDescription = isParentView
+        ? "View and manage all classes in the system"
+        : `View classes that ${selectedStudent?.first_name} is enrolled in`;
+
     return (
         <div className="flex flex-col gap-6">
-            {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Classes</h1>
-                    <p className="text-muted-foreground">View and manage your assigned classes</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Classes</h1>
+                    {!isParentView && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Switch to Parent View to see all classes
+                        </p>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <div className="relative w-full md:w-64">
@@ -95,21 +108,27 @@ export default function TeacherClassesPage() {
                     </div>
                 </div>
             </div>
-
             {/* Main Content Card */}
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle>My Classes</CardTitle>
+                    <CardTitle>{currentTitle}</CardTitle>
+                    <CardDescription>{currentDescription}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ClassesTable
                         classes={filteredClasses}
                         isLoading={isLoading}
-                        userType="teacher"
-                        emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "You haven't been assigned to any classes yet"}
+                        userType={isParentView ? "parent" : "student"}
+                        emptyStateMessage={
+                            searchQuery
+                                ? "Try adjusting your search terms"
+                                : isParentView
+                                    ? "You haven't been assigned to any classes yet"
+                                    : `${selectedStudent?.first_name} isn't enrolled in any classes yet`
+                        }
                     />
                 </CardContent>
             </Card>
         </div>
     )
-}
+} 

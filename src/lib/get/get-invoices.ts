@@ -48,6 +48,7 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
             updated_at: invoice.updated_at,
             student: undefined,
             subscription: undefined,
+            parent: undefined,
         }));
     }
 
@@ -55,28 +56,70 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
     const studentIds = studentSubscriptions.map((ss: { student_id: string }) => ss.student_id);
     const subscriptionIds = studentSubscriptions.map((ss: { subscription_id: string }) => ss.subscription_id);
 
-    // Get students and subscriptions data
-    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
-        supabase
+    // Get students data to determine their type
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('id, student_type, profile_id')
+        .in('id', studentIds);
+
+    if (!studentsData) {
+        return invoices.map((invoice: {
+            id: string;
+            student_subscription: string;
+            months: string;
+            issue_date: string;
+            due_date: string;
+            paid_date: string | null;
+            status: string;
+            created_at: string;
+            updated_at: string;
+        }) => ({
+            invoice_id: invoice.id,
+            student_subscription: invoice.student_subscription,
+            months: invoice.months,
+            issue_date: invoice.issue_date,
+            due_date: invoice.due_date,
+            paid_date: invoice.paid_date,
+            status: invoice.status,
+            created_at: invoice.created_at,
+            updated_at: invoice.updated_at,
+            student: undefined,
+            subscription: undefined,
+            parent: undefined,
+        }));
+    }
+
+    // Separate independent and dependent students
+    const independentStudentIds = studentsData
+        .filter((s: { student_type: string; profile_id: string | null }) => s.student_type === 'independent' && s.profile_id)
+        .map((s: { profile_id: string }) => s.profile_id);
+
+    const dependentStudentIds = studentsData
+        .filter((s: { student_type: string }) => s.student_type === 'dependent')
+        .map((s: { id: string }) => s.id);
+
+    // Get profiles for independent students and child profiles for dependent students
+    const [independentProfilesData, childProfilesData, subscriptionsData] = await Promise.all([
+        independentStudentIds.length > 0 ? supabase
             .from('profiles')
             .select('id, first_name, last_name')
-            .in('id', studentIds),
+            .in('id', independentStudentIds) : Promise.resolve({ data: [] }),
+        dependentStudentIds.length > 0 ? supabase
+            .from('child_profiles')
+            .select('student_id, first_name, last_name, parent_profile_id')
+            .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .in('id', subscriptionIds),
-        supabase
-            .from('parent_students')
-            .select('student_id, parent_id')
-            .in('student_id', studentIds)
+            .in('id', subscriptionIds)
     ]);
 
-    const students = studentsData.data || [];
+    const independentProfiles = independentProfilesData.data || [];
+    const childProfiles = childProfilesData.data || [];
     const subscriptions = subscriptionsData.data || [];
-    const parentStudents = parentStudentsData.data || [];
 
-    // Get unique parent IDs
-    const parentIds = [...new Set(parentStudents.map((ps: { parent_id: string }) => ps.parent_id))];
+    // Get unique parent IDs from child profiles
+    const parentIds = [...new Set(childProfiles.map((cp: { parent_profile_id: string }) => cp.parent_profile_id))];
     let parents: { id: string; first_name: string; last_name: string }[] = [];
     if (parentIds.length > 0) {
         const { data: parentProfiles } = await supabase
@@ -97,23 +140,65 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
         created_at: string;
         updated_at: string;
     }) => {
-        const studentSubscription = studentSubscriptions.find((ss: { id: string }) => ss.id === invoice.student_subscription);
-        const student = studentSubscription ? students.find((s: { id: string }) => s.id === studentSubscription.student_id) : null;
-        const subscription = studentSubscription ? subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id) : null;
-        // Find parent for this student
+        const studentSubscription = studentSubscriptions?.find((ss: { id: string }) => ss.id === invoice.student_subscription);
+        if (!studentSubscription) {
+            return {
+                invoice_id: invoice.id,
+                student_subscription: invoice.student_subscription,
+                months: invoice.months,
+                issue_date: invoice.issue_date,
+                due_date: invoice.due_date,
+                paid_date: invoice.paid_date,
+                status: invoice.status,
+                created_at: invoice.created_at,
+                updated_at: invoice.updated_at,
+                student: undefined,
+                subscription: undefined,
+                parent: undefined,
+            };
+        }
+
+        const studentData = studentsData?.find((s: { id: string }) => s.id === studentSubscription.student_id);
+        let student = undefined;
         let parent = undefined;
-        const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
-        if (parentStudent) {
-            const parentProfile = parents.find((p: { id: string }) => p.id === parentStudent.parent_id);
-            if (parentProfile) {
-                parent = {
-                    parent_id: parentProfile.id,
-                    first_name: parentProfile.first_name,
-                    last_name: parentProfile.last_name,
-                };
+
+        if (studentData) {
+            if (studentData.student_type === 'independent' && studentData.profile_id) {
+                // Independent student
+                const profile = independentProfiles.find((p: { id: string }) => p.id === studentData.profile_id);
+                if (profile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: profile.first_name,
+                        last_name: profile.last_name,
+                    };
+                    // Independent students don't have parents in this context
+                }
+            } else if (studentData.student_type === 'dependent') {
+                // Dependent student
+                const childProfile = childProfiles.find((cp: { student_id: string }) => cp.student_id === studentData.id);
+                if (childProfile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: childProfile.first_name,
+                        last_name: childProfile.last_name,
+                    };
+                    // Find parent for this dependent student
+                    const parentProfile = parents.find((p: { id: string }) => p.id === childProfile.parent_profile_id);
+                    if (parentProfile) {
+                        parent = {
+                            parent_id: parentProfile.id,
+                            first_name: parentProfile.first_name,
+                            last_name: parentProfile.last_name,
+                        };
+                    }
+                }
             }
         }
-        return {
+
+        const subscription = subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id);
+
+        const result = {
             invoice_id: invoice.id,
             student_subscription: invoice.student_subscription,
             months: invoice.months,
@@ -124,7 +209,7 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
             created_at: invoice.created_at,
             updated_at: invoice.updated_at,
             student: student ? {
-                student_id: student.id,
+                id: student.id,
                 first_name: student.first_name,
                 last_name: student.last_name,
             } : undefined,
@@ -135,6 +220,8 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
             } : undefined,
             parent,
         };
+
+        return result;
     });
 }
 
@@ -181,43 +268,85 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
 
     const studentSubscription = studentSubscriptions[0];
 
-    // Get student, subscription, and parent data
-    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
-        supabase
-            .from('profiles')
-            .select('id, first_name, last_name')
-            .eq('id', studentSubscription.student_id),
-        supabase
-            .from('subscriptions')
-            .select('id, name, total_amount')
-            .eq('id', studentSubscription.subscription_id),
-        supabase
-            .from('parent_students')
-            .select('student_id, parent_id')
-            .eq('student_id', studentSubscription.student_id)
-    ]);
+    // Get student data to determine their type
+    const { data: studentData } = await supabase
+        .from('students')
+        .select('id, student_type, profile_id')
+        .eq('id', studentSubscription.student_id)
+        .single();
 
-    const student = studentsData.data?.[0];
-    const subscription = subscriptionsData.data?.[0];
-    const parentStudents = parentStudentsData.data || [];
+    if (!studentData) {
+        return {
+            invoice_id: invoice.id,
+            student_subscription: invoice.student_subscription,
+            months: invoice.months,
+            issue_date: invoice.issue_date,
+            due_date: invoice.due_date,
+            paid_date: invoice.paid_date,
+            status: invoice.status,
+            created_at: invoice.created_at,
+            updated_at: invoice.updated_at,
+            student: undefined,
+            subscription: undefined,
+            parent: undefined,
+        };
+    }
 
-    // Find parent for this student
+    let student = undefined;
     let parent = undefined;
-    const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
-    if (parentStudent) {
-        const { data: parentProfiles } = await supabase
+
+    if (studentData.student_type === 'independent' && studentData.profile_id) {
+        // Independent student - get profile from profiles table
+        const { data: profile } = await supabase
             .from('profiles')
             .select('id, first_name, last_name')
-            .eq('id', parentStudent.parent_id);
-        const parentProfile = parentProfiles?.[0];
-        if (parentProfile) {
-            parent = {
-                parent_id: parentProfile.id,
-                first_name: parentProfile.first_name,
-                last_name: parentProfile.last_name,
+            .eq('id', studentData.profile_id)
+            .single();
+
+        if (profile) {
+            student = {
+                id: studentData.id,
+                first_name: profile.first_name,
+                last_name: profile.last_name,
             };
+            // Independent students don't have parents in this context
+        }
+    } else if (studentData.student_type === 'dependent') {
+        // Dependent student - get profile from child_profiles table
+        const { data: childProfile } = await supabase
+            .from('child_profiles')
+            .select('student_id, first_name, last_name, parent_profile_id')
+            .eq('student_id', studentData.id)
+            .single();
+
+        if (childProfile) {
+            student = {
+                id: studentData.id,
+                first_name: childProfile.first_name,
+                last_name: childProfile.last_name,
+            };
+            // Find parent for this dependent student
+            const { data: parentProfile } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name')
+                .eq('id', childProfile.parent_profile_id)
+                .single();
+            if (parentProfile) {
+                parent = {
+                    parent_id: parentProfile.id,
+                    first_name: parentProfile.first_name,
+                    last_name: parentProfile.last_name,
+                };
+            }
         }
     }
+
+    // Get subscription data
+    const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('id, name, total_amount')
+        .eq('id', studentSubscription.subscription_id)
+        .single();
 
     return {
         invoice_id: invoice.id,
@@ -230,7 +359,7 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
         created_at: invoice.created_at,
         updated_at: invoice.updated_at,
         student: student ? {
-            student_id: student.id,
+            id: student.id,
             first_name: student.first_name,
             last_name: student.last_name,
         } : undefined,
@@ -241,22 +370,6 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
         } : undefined,
         parent,
     };
-}
-
-export async function getLastInvoiceId(): Promise<string | null> {
-    const supabase = createClient();
-
-    const { data: invoices, error } = await supabase
-        .from('student_invoices')
-        .select('id')
-        .order('issue_date', { ascending: false })
-        .limit(1);
-
-    if (error) {
-        throw error;
-    }
-
-    return invoices?.[0]?.id ?? null;
 }
 
 export async function getInvoicesByStudentId(studentId: string): Promise<StudentInvoiceType[] | null> {
@@ -329,28 +442,70 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
     const studentIds = studentSubscriptionsWithData.map((ss: { student_id: string }) => ss.student_id);
     const subscriptionIds = studentSubscriptionsWithData.map((ss: { subscription_id: string }) => ss.subscription_id);
 
-    // Get students, subscriptions, and parent data
-    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
-        supabase
+    // Get students data to determine their type
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('id, student_type, profile_id')
+        .in('id', studentIds);
+
+    if (!studentsData) {
+        return invoices.map((invoice: {
+            id: string;
+            student_subscription: string;
+            months: string;
+            issue_date: string;
+            due_date: string;
+            paid_date: string | null;
+            status: string;
+            created_at: string;
+            updated_at: string;
+        }) => ({
+            invoice_id: invoice.id,
+            student_subscription: invoice.student_subscription,
+            months: invoice.months,
+            issue_date: invoice.issue_date,
+            due_date: invoice.due_date,
+            paid_date: invoice.paid_date,
+            status: invoice.status,
+            created_at: invoice.created_at,
+            updated_at: invoice.updated_at,
+            student: undefined,
+            subscription: undefined,
+            parent: undefined,
+        }));
+    }
+
+    // Separate independent and dependent students
+    const independentStudentIds = studentsData
+        .filter((s: { student_type: string; profile_id: string | null }) => s.student_type === 'independent' && s.profile_id)
+        .map((s: { profile_id: string }) => s.profile_id);
+
+    const dependentStudentIds = studentsData
+        .filter((s: { student_type: string }) => s.student_type === 'dependent')
+        .map((s: { id: string }) => s.id);
+
+    // Get profiles for independent students and child profiles for dependent students
+    const [independentProfilesData, childProfilesData, subscriptionsData] = await Promise.all([
+        independentStudentIds.length > 0 ? supabase
             .from('profiles')
             .select('id, first_name, last_name')
-            .in('id', studentIds),
+            .in('id', independentStudentIds) : Promise.resolve({ data: [] }),
+        dependentStudentIds.length > 0 ? supabase
+            .from('child_profiles')
+            .select('student_id, first_name, last_name, parent_profile_id')
+            .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .in('id', subscriptionIds),
-        supabase
-            .from('parent_students')
-            .select('student_id, parent_id')
-            .in('student_id', studentIds)
+            .in('id', subscriptionIds)
     ]);
 
-    const students = studentsData.data || [];
+    const independentProfiles = independentProfilesData.data || [];
+    const childProfiles = childProfilesData.data || [];
     const subscriptions = subscriptionsData.data || [];
-    const parentStudents = parentStudentsData.data || [];
 
-    // Get unique parent IDs
-    const parentIds = [...new Set(parentStudents.map((ps: { parent_id: string }) => ps.parent_id))];
+    // Get unique parent IDs from child profiles
+    const parentIds = [...new Set(childProfiles.map((cp: { parent_profile_id: string }) => cp.parent_profile_id))];
     let parents: { id: string; first_name: string; last_name: string }[] = [];
     if (parentIds.length > 0) {
         const { data: parentProfiles } = await supabase
@@ -373,24 +528,64 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
         updated_at: string;
     }) => {
         const studentSubscription = studentSubscriptionsWithData.find((ss: { id: string }) => ss.id === invoice.student_subscription);
-        const student = studentSubscription ? students.find((s: { id: string }) => s.id === studentSubscription.student_id) : null;
-        const subscription = studentSubscription ? subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id) : null;
+        if (!studentSubscription) {
+            return {
+                invoice_id: invoice.id,
+                student_subscription: invoice.student_subscription,
+                months: invoice.months,
+                issue_date: invoice.issue_date,
+                due_date: invoice.due_date,
+                paid_date: invoice.paid_date,
+                status: invoice.status,
+                created_at: invoice.created_at,
+                updated_at: invoice.updated_at,
+                student: undefined,
+                subscription: undefined,
+                parent: undefined,
+            };
+        }
 
-        // Find parent for this student
+        const studentData = studentsData.find((s: { id: string }) => s.id === studentSubscription.student_id);
+        let student = undefined;
         let parent = undefined;
-        const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
-        if (parentStudent) {
-            const parentProfile = parents.find((p: { id: string }) => p.id === parentStudent.parent_id);
-            if (parentProfile) {
-                parent = {
-                    parent_id: parentProfile.id,
-                    first_name: parentProfile.first_name,
-                    last_name: parentProfile.last_name,
-                };
+
+        if (studentData) {
+            if (studentData.student_type === 'independent' && studentData.profile_id) {
+                // Independent student
+                const profile = independentProfiles.find((p: { id: string }) => p.id === studentData.profile_id);
+                if (profile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: profile.first_name,
+                        last_name: profile.last_name,
+                    };
+                    // Independent students don't have parents in this context
+                }
+            } else if (studentData.student_type === 'dependent') {
+                // Dependent student
+                const childProfile = childProfiles.find((cp: { student_id: string }) => cp.student_id === studentData.id);
+                if (childProfile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: childProfile.first_name,
+                        last_name: childProfile.last_name,
+                    };
+                    // Find parent for this dependent student
+                    const parentProfile = parents.find((p: { id: string }) => p.id === childProfile.parent_profile_id);
+                    if (parentProfile) {
+                        parent = {
+                            parent_id: parentProfile.id,
+                            first_name: parentProfile.first_name,
+                            last_name: parentProfile.last_name,
+                        };
+                    }
+                }
             }
         }
 
-        return {
+        const subscription = subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id);
+
+        const result = {
             invoice_id: invoice.id,
             student_subscription: invoice.student_subscription,
             months: invoice.months,
@@ -401,7 +596,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
             created_at: invoice.created_at,
             updated_at: invoice.updated_at,
             student: student ? {
-                student_id: student.id,
+                id: student.id,
                 first_name: student.first_name,
                 last_name: student.last_name,
             } : undefined,
@@ -412,6 +607,8 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
             } : undefined,
             parent,
         };
+
+        return result;
     });
 }
 
@@ -419,14 +616,14 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
     const supabase = createClient();
 
     // 1. Get all students of this parent
-    const { data: parentStudentRelations } = await supabase
-        .from('parent_students')
+    const { data: childProfileIds } = await supabase
+        .from('child_profiles')
         .select('student_id')
-        .eq('parent_id', parentId);
+        .eq('parent_profile_id', parentId);
 
-    if (!parentStudentRelations || parentStudentRelations.length === 0) return [];
+    if (!childProfileIds || childProfileIds.length === 0) return [];
 
-    const parentStudentIds = parentStudentRelations.map(ps => ps.student_id);
+    const parentStudentIds = childProfileIds.map(cp => cp.student_id);
 
     // 2. Get all student subscriptions for these students
     const { data: studentSubscriptions, error: subscriptionError } = await supabase
@@ -462,27 +659,70 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
     const studentIds = studentSubscriptions.map((ss: { student_id: string }) => ss.student_id);
     const subscriptionIds = studentSubscriptions.map((ss: { subscription_id: string }) => ss.subscription_id);
 
-    const [studentsData, subscriptionsData, parentStudentsData] = await Promise.all([
-        supabase
+    // Get students data to determine their type
+    const { data: studentsData } = await supabase
+        .from('students')
+        .select('id, student_type, profile_id')
+        .in('id', studentIds);
+
+    if (!studentsData) {
+        return invoices.map((invoice: {
+            id: string;
+            student_subscription: string;
+            months: string;
+            issue_date: string;
+            due_date: string;
+            paid_date: string | null;
+            status: string;
+            created_at: string;
+            updated_at: string;
+        }) => ({
+            invoice_id: invoice.id,
+            student_subscription: invoice.student_subscription,
+            months: invoice.months,
+            issue_date: invoice.issue_date,
+            due_date: invoice.due_date,
+            paid_date: invoice.paid_date,
+            status: invoice.status,
+            created_at: invoice.created_at,
+            updated_at: invoice.updated_at,
+            student: undefined,
+            subscription: undefined,
+            parent: undefined,
+        }));
+    }
+
+    // Separate independent and dependent students
+    const independentStudentIds = studentsData
+        .filter((s: { student_type: string; profile_id: string | null }) => s.student_type === 'independent' && s.profile_id)
+        .map((s: { profile_id: string }) => s.profile_id);
+
+    const dependentStudentIds = studentsData
+        .filter((s: { student_type: string }) => s.student_type === 'dependent')
+        .map((s: { id: string }) => s.id);
+
+    // Get profiles for independent students and child profiles for dependent students
+    const [independentProfilesData, childProfilesData, subscriptionsData] = await Promise.all([
+        independentStudentIds.length > 0 ? supabase
             .from('profiles')
             .select('id, first_name, last_name')
-            .in('id', studentIds),
+            .in('id', independentStudentIds) : Promise.resolve({ data: [] }),
+        dependentStudentIds.length > 0 ? supabase
+            .from('child_profiles')
+            .select('student_id, first_name, last_name, parent_profile_id')
+            .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
             .select('id, name, total_amount')
-            .in('id', subscriptionIds),
-        supabase
-            .from('parent_students')
-            .select('student_id, parent_id')
-            .in('student_id', studentIds)
+            .in('id', subscriptionIds)
     ]);
 
-    const students = studentsData.data || [];
+    const independentProfiles = independentProfilesData.data || [];
+    const childProfiles = childProfilesData.data || [];
     const subscriptions = subscriptionsData.data || [];
-    const parentStudents = parentStudentsData.data || [];
 
-    // Get unique parent IDs
-    const parentIds = [...new Set(parentStudents.map((ps: { parent_id: string }) => ps.parent_id))];
+    // Get unique parent IDs from child profiles
+    const parentIds = [...new Set(childProfiles.map((cp: { parent_profile_id: string }) => cp.parent_profile_id))];
     let parents: { id: string; first_name: string; last_name: string }[] = [];
     if (parentIds.length > 0) {
         const { data: parentProfiles } = await supabase
@@ -505,24 +745,64 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
         updated_at: string;
     }) => {
         const studentSubscription = studentSubscriptions.find((ss: { id: string }) => ss.id === invoice.student_subscription);
-        const student = studentSubscription ? students.find((s: { id: string }) => s.id === studentSubscription.student_id) : null;
-        const subscription = studentSubscription ? subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id) : null;
+        if (!studentSubscription) {
+            return {
+                invoice_id: invoice.id,
+                student_subscription: invoice.student_subscription,
+                months: invoice.months,
+                issue_date: invoice.issue_date,
+                due_date: invoice.due_date,
+                paid_date: invoice.paid_date,
+                status: invoice.status,
+                created_at: invoice.created_at,
+                updated_at: invoice.updated_at,
+                student: undefined,
+                subscription: undefined,
+                parent: undefined,
+            };
+        }
 
-        // Find parent for this student
+        const studentData = studentsData.find((s: { id: string }) => s.id === studentSubscription.student_id);
+        let student = undefined;
         let parent = undefined;
-        const parentStudent = parentStudents.find((ps: { student_id: string }) => ps.student_id === student?.id);
-        if (parentStudent) {
-            const parentProfile = parents.find((p: { id: string }) => p.id === parentStudent.parent_id);
-            if (parentProfile) {
-                parent = {
-                    parent_id: parentProfile.id,
-                    first_name: parentProfile.first_name,
-                    last_name: parentProfile.last_name,
-                };
+
+        if (studentData) {
+            if (studentData.student_type === 'independent' && studentData.profile_id) {
+                // Independent student
+                const profile = independentProfiles.find((p: { id: string }) => p.id === studentData.profile_id);
+                if (profile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: profile.first_name,
+                        last_name: profile.last_name,
+                    };
+                    // Independent students don't have parents in this context
+                }
+            } else if (studentData.student_type === 'dependent') {
+                // Dependent student
+                const childProfile = childProfiles.find((cp: { student_id: string }) => cp.student_id === studentData.id);
+                if (childProfile) {
+                    student = {
+                        id: studentData.id,
+                        first_name: childProfile.first_name,
+                        last_name: childProfile.last_name,
+                    };
+                    // Find parent for this dependent student
+                    const parentProfile = parents.find((p: { id: string }) => p.id === childProfile.parent_profile_id);
+                    if (parentProfile) {
+                        parent = {
+                            parent_id: parentProfile.id,
+                            first_name: parentProfile.first_name,
+                            last_name: parentProfile.last_name,
+                        };
+                    }
+                }
             }
         }
 
-        return {
+        const subscription = subscriptions.find((sub: { id: string }) => sub.id === studentSubscription.subscription_id);
+
+        const result = {
             invoice_id: invoice.id,
             student_subscription: invoice.student_subscription,
             months: invoice.months,
@@ -533,7 +813,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
             created_at: invoice.created_at,
             updated_at: invoice.updated_at,
             student: student ? {
-                student_id: student.id,
+                id: student.id,
                 first_name: student.first_name,
                 last_name: student.last_name,
             } : undefined,
@@ -544,5 +824,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
             } : undefined,
             parent,
         };
+
+        return result;
     });
 }

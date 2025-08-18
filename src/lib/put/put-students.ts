@@ -3,7 +3,18 @@ import { createClient } from "@/utils/supabase/client"
 export async function updateStudent(studentId: string, data: { grade_level?: string; notes?: string; status: string }) {
     const supabase = createClient()
 
-    // Start a transaction by updating both tables
+    // First, check if this is a dependent or independent student
+    const { data: student, error: studentFetchError } = await supabase
+        .from('students')
+        .select('student_type, profile_id')
+        .eq('id', studentId)
+        .single()
+
+    if (studentFetchError || !student) {
+        throw new Error(`Failed to fetch student: ${studentFetchError?.message}`)
+    }
+
+    // Update student table
     const { error: studentError } = await supabase
         .from('students')
         .update({
@@ -11,22 +22,39 @@ export async function updateStudent(studentId: string, data: { grade_level?: str
             notes: data.notes,
             updated_at: new Date().toISOString()
         })
-        .eq('profile_id', studentId)
+        .eq('id', studentId)
 
     if (studentError) {
         throw new Error(`Failed to update student: ${studentError.message}`)
     }
 
-    const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-            status: data.status,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', studentId)
+    // Update status based on student type
+    if (student.student_type === 'dependent') {
+        // For dependent students, update status in child_profiles
+        const { error: childProfileError } = await supabase
+            .from('child_profiles')
+            .update({
+                status: data.status,
+                updated_at: new Date().toISOString()
+            })
+            .eq('student_id', studentId)
 
-    if (profileError) {
-        throw new Error(`Failed to update profile: ${profileError.message}`)
+        if (childProfileError) {
+            throw new Error(`Failed to update child profile: ${childProfileError.message}`)
+        }
+    } else if (student.student_type === 'independent' && student.profile_id) {
+        // For independent students, update status in profiles
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+                status: data.status,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', student.profile_id)
+
+        if (profileError) {
+            throw new Error(`Failed to update profile: ${profileError.message}`)
+        }
     }
 
     return { success: true }
