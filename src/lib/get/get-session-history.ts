@@ -135,8 +135,17 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
             .eq('student_id', studentId)
             .in('session_id', sessionIds)
 
-        // Combine the data
-        const result = sessions.map(session => {
+        // Filter sessions to only include those that exist in session_history
+        const sessionsWithHistory = sessions.filter(session =>
+            sessionHistory?.some(h => h.session_id === session.id)
+        )
+
+        if (sessionsWithHistory.length === 0) {
+            return []
+        }
+
+        // Combine the data for sessions that have history
+        const result = sessionsWithHistory.map(session => {
             const classData = classes?.find(c => c.id === session.class_id)
             const history = sessionHistory?.find(h => h.session_id === session.id)
             const attendance = studentAttendance?.find(a => a.session_id === session.id)
@@ -155,20 +164,8 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
             }
         })
 
-        // Filter to only past sessions or those with specific notes, then sort by date (newest first)
-        const now = new Date();
-        const noteMatch = (sessionNotes: string) => {
-            if (!sessionNotes) return false;
-            const lower = sessionNotes.toLowerCase();
-            return (
-                lower.includes('session ended') ||
-                lower.includes('session cancelled') ||
-                lower.includes('session absence')
-            );
-        };
-        return result
-            .filter(session => new Date(session.end_date) < now || noteMatch(session.notes))
-            .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
+        // Sort by date (newest first) - no need to filter by date since we only want sessions with history
+        return result.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
 
     } catch (error) {
         console.error('Error fetching student session history:', error)

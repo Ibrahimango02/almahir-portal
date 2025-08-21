@@ -1,13 +1,11 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CircleOff, Calendar, LogOut, UserX, Trash2 } from "lucide-react"
+import { Video, Power, Play, CircleOff, Calendar, LogOut, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
-import { updateTeacherAttendance } from "@/lib/put/put-teachers"
-import { updateStudentAttendance } from "@/lib/put/put-students"
+import { updateSession } from "@/lib/put/put-classes"
 import { deleteSession } from "@/lib/delete/delete-classes"
 import { createRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { localToUtc, getUserTimezone } from "@/lib/utils/timezone"
@@ -22,6 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { SessionRemarksForm } from "./session-remarks-form"
 
 type ClassActionButtonsProps = {
   classData: {
@@ -63,7 +62,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [rescheduleDate, setRescheduleDate] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showRemarksReminderDialog, setShowRemarksReminderDialog] = useState(false)
+  const [showSessionRemarksDialog, setShowSessionRemarksDialog] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
@@ -136,20 +135,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
 
   const handleZoomSession = async () => {
     if (classData.class_link) {
-      // Update attendance if user role and ID are provided
-      if (userRole && userId) {
-        try {
-          if (userRole === 'admin' || userRole === 'teacher') {
-            await updateTeacherAttendance(userId, classData.session_id, 'present')
-          } else if (userRole === 'student') {
-            await updateStudentAttendance(userId, classData.session_id, 'present')
-          }
-        } catch (error) {
-          console.error('Error updating attendance:', error)
-          // Don't block the call joining if attendance update fails
-        }
-      }
-
       window.open(classData.class_link, "_blank")
       toast({
         title: "Joining session video call",
@@ -222,40 +207,38 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const handleEndSession = async () => {
     setIsLoading(true)
     try {
-      // Mark all students as absent
-      const allStudentsAbsent: Record<string, boolean> = {}
-      classData.students.forEach(student => {
-        allStudentsAbsent[student.student_id] = false
-      })
+      // Get current attendance data from classData
+      const studentAttendance = classData.attendance || {}
 
-      // Mark all teachers as absent
-      const allTeachersAbsent: Record<string, boolean> = {}
-      classData.teachers.forEach(teacher => {
-        allTeachersAbsent[teacher.teacher_id] = false
-      })
-
-      const attendanceResult = await updateSessionAttendance({
-        sessionId: classData.session_id,
-        studentAttendance: allStudentsAbsent,
-        teacherAttendance: allTeachersAbsent
-      })
-
-      if (!attendanceResult.success) {
-        throw new Error("Failed to update attendance records")
+      // If no attendance data exists, assume students are present (default behavior)
+      // This prevents automatically marking all sessions as absence
+      if (Object.keys(studentAttendance).length === 0) {
+        // No attendance data available, assume students are present
+        // Teachers would typically mark attendance before ending a session
+        classData.students.forEach(student => {
+          studentAttendance[student.student_id] = true // Assume present by default
+        })
       }
 
       const result = await updateSession({
         sessionId: classData.session_id,
-        action: 'end'
+        action: 'end',
+        studentAttendance
       })
 
       if (result.success) {
-        onStatusChange("complete")
+        // Determine the status based on attendance
+        const hasPresentStudents = Object.values(studentAttendance).some(isPresent => isPresent)
+        const newStatus = hasPresentStudents ? 'complete' : 'absence'
+
+        onStatusChange(newStatus)
         toast({
-          title: "Session Ended",
-          description: "The session has been ended",
+          title: hasPresentStudents ? "Session Ended" : "Session Marked as Absence",
+          description: hasPresentStudents
+            ? "The session has been ended. Please ensure attendance has been recorded before the session is marked as complete."
+            : "The session has been marked as absence since no students were present.",
         })
-        setShowRemarksReminderDialog(true)
+        setShowSessionRemarksDialog(true)
       } else {
         throw new Error("Failed to end session")
       }
@@ -360,57 +343,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     await handleRescheduleOrCancellation(cancellationReason.trim(), rescheduleDate.trim())
   }
 
-  const handleAbsence = async () => {
-    setIsLoading(true)
-    try {
-      // First mark all students as absent
-      const allStudentsAbsent: Record<string, boolean> = {}
-      classData.students.forEach(student => {
-        allStudentsAbsent[student.student_id] = false
-      })
-
-      // Mark all teachers as absent
-      const allTeachersAbsent: Record<string, boolean> = {}
-      classData.teachers.forEach(teacher => {
-        allTeachersAbsent[teacher.teacher_id] = false
-      })
-
-      const attendanceResult = await updateSessionAttendance({
-        sessionId: classData.session_id,
-        studentAttendance: allStudentsAbsent,
-        teacherAttendance: allTeachersAbsent
-      })
-
-      if (!attendanceResult.success) {
-        throw new Error("Failed to update attendance records")
-      }
-
-      // Then mark the class as absence
-      const result = await updateSession({
-        sessionId: classData.session_id,
-        action: 'absence'
-      })
-
-      if (result.success) {
-        onStatusChange("absence")
-        toast({
-          title: "Session Marked as Absence",
-          description: "The session has been marked as absence and all students and teachers have been marked as absent",
-        })
-      } else {
-        throw new Error("Failed to mark absence")
-      }
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to mark absence. Please try again.",
-        variant: "destructive"
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleDeleteSession = async () => {
     setIsDeleting(true)
     try {
@@ -501,11 +433,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: isLoading
           },
           button3: {
-            icon: UserX,
-            onClick: () => { },
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Mark as Absence \n(Disabled)",
-            disabled: true
+            icon: LogOut,
+            onClick: handleLeaveSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            disabled: isLoading || !canCancelSession()
           },
           button4: {
             icon: Calendar,
@@ -538,11 +470,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: isLoading
           },
           button3: {
-            icon: UserX,
-            onClick: handleAbsence,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-amber-700 bg-amber-600 hover:bg-amber-700 text-white hover:shadow-md transition-all duration-200 p-0",
-            title: "Mark as Absence",
-            disabled: isLoading
+            icon: LogOut,
+            onClick: handleLeaveSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            disabled: isLoading || !canCancelSession()
           },
           button4: {
             icon: Calendar,
@@ -575,11 +507,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: true
           },
           button3: {
-            icon: UserX,
-            onClick: () => { },
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Mark as Absence \n(Disabled)",
-            disabled: true
+            icon: LogOut,
+            onClick: handleLeaveSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            disabled: isLoading || !canCancelSession()
           },
           button4: {
             icon: Calendar,
@@ -612,11 +544,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: true
           },
           button3: {
-            icon: UserX,
-            onClick: () => { },
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Mark as Absence \n(Disabled)",
-            disabled: true
+            icon: LogOut,
+            onClick: handleLeaveSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            disabled: isLoading || !canCancelSession()
           },
           button4: {
             icon: Calendar,
@@ -665,7 +597,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             </div>
 
             {/* Button 3 - Cancel/Reschedule (hidden for parents) */}
-            {userRole !== 'parent' && (
+            {userRole !== 'parent' && userRole !== 'student' && (
               <div className="relative" title={config.button3.title}>
                 <Button
                   onClick={config.button3.onClick}
@@ -705,7 +637,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         )}
 
         {/* Show Reschedule/Cancel button for students even when showOnlyJoinCall is true (hidden for parents) */}
-        {showOnlyJoinCall && userRole === 'student' && (
+        {showOnlyJoinCall && (userRole === 'student' || userRole === 'parent') && (
           <div className="relative" title={config.button3.title}>
             <Button
               onClick={config.button3.onClick}
@@ -837,23 +769,21 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         </DialogContent>
       </Dialog>
 
-      {/* Session Remarks Reminder Dialog */}
-      <Dialog open={showRemarksReminderDialog} onOpenChange={setShowRemarksReminderDialog}>
-        <DialogContent>
+      {/* Session Remarks Form Dialog */}
+      <Dialog open={showSessionRemarksDialog} onOpenChange={setShowSessionRemarksDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Session Remarks Reminder</DialogTitle>
+            <DialogTitle>Session Remarks & Student Notes</DialogTitle>
             <DialogDescription>
-              The session has been ended. Please remember to add remarks for this session.
+              The session has been ended. Please provide a summary of the session and individual student notes.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button
-              onClick={() => setShowRemarksReminderDialog(false)}
-              className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
-            >
-              OK
-            </Button>
-          </DialogFooter>
+
+          <SessionRemarksForm
+            sessionId={classData.session_id}
+            students={classData.students}
+            onClose={() => setShowSessionRemarksDialog(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

@@ -11,6 +11,7 @@ import { ScheduleListView } from "@/components/schedule-list-view"
 import { MonthlyScheduleView } from "@/components/monthly-schedule-view"
 import { MonthlyListScheduleView } from "@/components/monthly-list-schedule-view"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
+import { getStudentId } from "@/lib/get/get-students"
 import { createClient } from "@/utils/supabase/client"
 import { ClassType } from "@/types"
 
@@ -30,7 +31,15 @@ export default function StudentSchedulePage() {
                 const supabase = createClient()
                 const { data: { user } } = await supabase.auth.getUser()
                 if (user) {
-                    const data = await getClassesByStudentId(user.id)
+                    // Get the student ID using the profile ID
+                    const studentId = await getStudentId(user.id)
+
+                    if (!studentId) {
+                        console.log("No student record found for profile ID:", user.id)
+                        return
+                    }
+
+                    const data = await getClassesByStudentId(studentId)
                     setClassData(data)
                 }
             } finally {

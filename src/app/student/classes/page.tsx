@@ -5,6 +5,7 @@ import { Search } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
+import { getStudentId } from "@/lib/get/get-students"
 import { ClassType } from "@/types"
 import { createClient } from "@/utils/supabase/client"
 import ClassesTable from "@/components/classes-table"
@@ -33,7 +34,14 @@ export default function StudentClassesPage() {
             if (!currentUserId) return
 
             try {
-                const data = await getClassesByStudentId(currentUserId)
+                // Get the student ID using the profile ID
+                const studentId = await getStudentId(currentUserId)
+
+                if (!studentId) {
+                    return
+                }
+
+                const data = await getClassesByStudentId(studentId)
                 setClasses(data)
                 setFilteredClasses(data)
             } catch (error) {

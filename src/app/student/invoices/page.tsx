@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { StudentInvoicesTable } from "@/components/student-invoices-table"
 import { getInvoicesByStudentId } from "@/lib/get/get-invoices"
+import { getStudentId } from "@/lib/get/get-students"
 import { createClient } from "@/utils/supabase/client"
 import { StudentInvoiceType } from "@/types"
 
@@ -21,8 +22,16 @@ export default function StudentInvoicesPage() {
         getCurrentUser()
     }, [])
 
-    const fetchInvoices = async (studentId: string) => {
+    const fetchInvoices = async (profileId: string) => {
         try {
+            // Get the student ID using the profile ID
+            const studentId = await getStudentId(profileId)
+
+            if (!studentId) {
+                console.log("No student record found for profile ID:", profileId)
+                return
+            }
+
             const data = await getInvoicesByStudentId(studentId)
             setInvoices(data || [])
         } catch {

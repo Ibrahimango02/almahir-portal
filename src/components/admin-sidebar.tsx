@@ -92,13 +92,13 @@ const userRoutes = [
   },
   {
     label: "Teachers",
-    icon: User,
+    icon: UserPen,
     href: "/admin/teachers",
     color: "text-green-600",
   },
   {
     label: "Students",
-    icon: UserPen,
+    icon: User,
     href: "/admin/students",
     color: "text-green-600",
   },

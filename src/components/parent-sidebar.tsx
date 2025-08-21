@@ -8,7 +8,6 @@ import {
   Bookmark,
   FolderOpen,
   Receipt,
-  UserPen,
   Home,
   LogOut,
   Menu,
@@ -48,7 +47,7 @@ const routes = [
   },
   {
     label: "Students",
-    icon: UserPen,
+    icon: User,
     href: "/parent/students",
     color: "text-green-600",
   },

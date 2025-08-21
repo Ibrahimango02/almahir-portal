@@ -76,7 +76,7 @@ export default async function AdminDashboard() {
 
       {/* Classes Today */}
 
-      <h2 className="text-xl font-semibold tracking-tight">Classes Today</h2>
+      <h2 className="text-xl font-semibold tracking-tight">Sessions Today</h2>
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-l-4 border-l-blue-400/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

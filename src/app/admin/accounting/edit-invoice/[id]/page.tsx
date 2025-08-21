@@ -17,60 +17,7 @@ import { StudentInvoiceType } from "@/types"
 import { getInvoiceById } from "@/lib/get/get-invoices"
 import { updateStudentInvoice } from "@/lib/put/put-student-invoices"
 import { useToast } from "@/hooks/use-toast"
-
-// Function to convert month numbers to month names
-const formatMonthRange = (monthRange: string): string => {
-    if (!monthRange) return '-'
-
-    const monthNames = [
-        'January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'
-    ]
-
-    const months = monthRange.split('-')
-
-    if (months.length === 1) {
-        const month = parseInt(months[0]) - 1
-        if (isNaN(month) || month < 0 || month > 11) {
-            return monthRange
-        }
-        return monthNames[month]
-    } else if (months.length === 2) {
-        const startPart = months[0]
-        const endPart = months[1]
-
-        if (startPart.includes('/') && endPart.includes('/')) {
-            const [startMonth, startYear] = startPart.split('/').map(Number)
-            const [endMonth, endYear] = endPart.split('/').map(Number)
-
-            const startMonthIndex = startMonth - 1
-            const endMonthIndex = endMonth - 1
-
-            if (isNaN(startMonthIndex) || isNaN(endMonthIndex) || startMonthIndex < 0 || startMonthIndex > 11 || endMonthIndex < 0 || endMonthIndex > 11) {
-                return monthRange
-            }
-
-            const startName = monthNames[startMonthIndex]
-            const endName = monthNames[endMonthIndex]
-
-            return `${startName} ${startYear} - ${endName} ${endYear}`
-        } else {
-            const startMonth = parseInt(months[0]) - 1
-            const endMonth = parseInt(months[1]) - 1
-
-            if (isNaN(startMonth) || isNaN(endMonth) || startMonth < 0 || startMonth > 11 || endMonth < 0 || endMonth > 11) {
-                return monthRange
-            }
-
-            const startName = monthNames[startMonth]
-            const endName = monthNames[endMonth]
-
-            return startMonth === endMonth ? startName : `${startName} - ${endName}`
-        }
-    }
-
-    return monthRange
-}
+import { formatMonthRange } from "@/lib/utils/format-month-range"
 
 export default function EditInvoicePage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter()

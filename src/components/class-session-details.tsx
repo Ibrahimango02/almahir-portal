@@ -15,14 +15,16 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import {
   CalendarDays,
-  Users,
+  User,
   UserPen,
   Clock,
+  CheckCircle,
 } from "lucide-react"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 import { SessionRemarks } from "./session-remarks"
 import { AttendanceStatusBadge } from "./attendance-status-badge"
+import { AttendanceTracker } from "./attendance-tracker"
 import { getSessionAttendanceForAll } from "@/lib/get/get-classes"
 import { CancellationReasonDisplay } from "./cancellation-reason-display"
 import { getUserNameById } from "@/lib/utils/get-user-name"
@@ -113,6 +115,23 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
     fetchAttendanceData()
   }, [classData.session_id])
 
+  // Refresh attendance data when session status changes
+  useEffect(() => {
+    const refreshAttendanceData = async () => {
+      try {
+        const data = await getSessionAttendanceForAll(classData.session_id)
+        setAttendanceData(data)
+      } catch (error) {
+        console.error('Error refreshing attendance data after status change:', error)
+      }
+    }
+
+    // Only refresh if the status has changed from the original status
+    if (currentStatus !== classData.status) {
+      refreshAttendanceData()
+    }
+  }, [currentStatus, classData.session_id, classData.status])
+
   // Fetch cancelled by name if session is cancelled
   useEffect(() => {
     const fetchCancelledByName = async () => {
@@ -132,7 +151,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
   // Fetch session history for completed sessions
   useEffect(() => {
     const fetchSessionHistory = async () => {
-      if (currentStatus === 'complete') {
+      if (currentStatus === 'complete' || currentStatus === 'absence') {
         setLoadingSessionHistory(true)
         try {
           const history = await getSessionHistory(classData.session_id)
@@ -166,7 +185,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
   const scheduledDuration = formatDuration(durationMinutes)
 
   // Get actual duration from session history for completed sessions
-  const actualDuration = currentStatus === 'complete' && sessionHistory?.duration
+  const actualDuration = (currentStatus === 'complete' || currentStatus === 'absence') && sessionHistory?.duration
     ? formatIntervalDuration(sessionHistory.duration)
     : null
 
@@ -225,7 +244,11 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
     cancelled_by: classData.cancelled_by || null,
     class_link: classData.class_link,
     teachers: classData.teachers || [],
-    students: classData.students || []
+    students: classData.students || [],
+    attendance: attendanceData.studentAttendance.reduce((acc, student) => {
+      acc[student.student_id] = student.attendance_status === 'present'
+      return acc
+    }, {} as Record<string, boolean>)
   }
 
   // Ensure arrays are defined
@@ -274,7 +297,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
         )}
 
         {/* Show actual session times and duration for completed sessions */}
-        {currentStatus === 'complete' && (
+        {(currentStatus === 'complete' || currentStatus === 'absence') && (
           <div className="px-6 pt-4">
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
@@ -416,7 +439,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
                 {/* Students Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-5 w-5" />
+                    <User className="h-5 w-5" />
                     <h3 className="text-sm font-medium">Students</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{enrolledStudents.length}</span>
                   </div>
@@ -471,13 +494,45 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
                     </div>
                   ) : (
                     <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No students enrolled</p>
                     </div>
                   )}
                 </div>
               </div>
 
+            </div>
+          </div>
+
+          {/* Attendance Tracker Section */}
+          <div className="mt-6 pt-6 border-t">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <CheckCircle className="h-5 w-5" />
+                <h3 className="text-sm font-medium">Attendance</h3>
+              </div>
+              <AttendanceTracker
+                sessionId={classData.session_id}
+                sessionDate={classData.start_date}
+                students={classData.students}
+                teachers={classData.teachers}
+                currentStatus={currentStatus}
+                onStatusChange={setCurrentStatus}
+                userRole={userRole}
+                existingAttendance={attendanceData}
+                onAttendanceUpdate={() => {
+                  // Refresh attendance data
+                  const fetchAttendanceData = async () => {
+                    try {
+                      const data = await getSessionAttendanceForAll(classData.session_id)
+                      setAttendanceData(data)
+                    } catch (error) {
+                      console.error('Error refreshing attendance data:', error)
+                    }
+                  }
+                  fetchAttendanceData()
+                }}
+              />
             </div>
           </div>
 

@@ -216,59 +216,79 @@ export function RescheduleRequestsTable() {
                     {requests.map((request) => (
                         <div
                             key={request.id}
-                            className="border rounded-md p-2 hover:shadow-sm transition-shadow cursor-pointer hover:bg-gray-50"
+                            className="group border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-white"
                             onClick={() => handleCardClick(request.session.class_id, request.session_id)}
                         >
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-semibold text-sm truncate">{request.session.class.title}</h3>
+                                    {/* Header Section */}
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                        <h3 className="font-semibold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                                            {request.session.class.title}
+                                        </h3>
                                     </div>
 
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                                        <div className="flex items-center gap-1">
-                                            <User className="h-3 w-3" />
-                                            <span className="truncate">{`${request.requester.first_name} ${request.requester.last_name}`}</span>
+                                    {/* User and Date Info */}
+                                    <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center">
+                                                <User className="h-2.5 w-2.5 text-blue-600" />
+                                            </div>
+                                            <span className="font-medium">{`${request.requester.first_name} ${request.requester.last_name}`}</span>
                                         </div>
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="h-3 w-3" />
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                                <Calendar className="h-2.5 w-2.5 text-gray-600" />
+                                            </div>
                                             <span>{formatDateTime(request.created_at, "MMM d, yyyy", getUserTimezone())}</span>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                                        <div className="flex items-start gap-1.5">
-                                            <FileText className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                            <div>
-                                                <span className="font-medium text-muted-foreground">Reason:</span>
-                                                <p className="text-muted-foreground mt-0.5 leading-tight">{request.reason}</p>
+                                    {/* Details Grid */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                                        {/* Reason Section */}
+                                        <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                            <div className="flex items-start gap-1.5 mb-1.5">
+                                                <div className="w-4 h-4 bg-orange-100 rounded-full flex items-center justify-center mt-0.5">
+                                                    <FileText className="h-2.5 w-2.5 text-orange-600" />
+                                                </div>
+                                                <span className="font-medium text-gray-700 text-xs">Reason for Reschedule</span>
                                             </div>
+                                            <p className="text-gray-600 text-xs leading-relaxed pl-5">{request.reason}</p>
                                         </div>
 
-                                        <div className="flex items-start gap-2">
-                                            <Calendar className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                                            <div>
-                                                <span className="font-medium text-muted-foreground">New Date:</span>
-                                                <p className="text-muted-foreground mt-1 leading-relaxed">
-                                                    {formatDateTime(utcToLocal(request.requested_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
-                                                </p>
+                                        {/* New Date Section */}
+                                        <div className="bg-blue-50 rounded-md p-2.5 border border-blue-100">
+                                            <div className="flex items-start gap-1.5 mb-1.5">
+                                                <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                                                    <Calendar className="h-2.5 w-2.5 text-blue-600" />
+                                                </div>
+                                                <span className="font-medium text-gray-700 text-xs">Proposed New Date</span>
                                             </div>
+                                            <p className="text-blue-700 font-medium text-xs leading-relaxed pl-5">
+                                                {formatDateTime(utcToLocal(request.requested_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Action Buttons */}
                                 <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                                     <Button
                                         size="sm"
                                         onClick={() => handleApproveReschedule(request.id, request.requested_date)}
                                         disabled={processing === request.id}
-                                        className="h-7 w-7 p-0 bg-green-600 hover:bg-green-700"
+                                        className="h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
                                         title="Approve Reschedule"
                                     >
                                         {processing === request.id ? (
                                             <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                         ) : (
-                                            <Check className="h-3 w-3" />
+                                            <>
+                                                <Check className="h-3 w-3 mr-1" />
+                                                <span className="text-xs font-medium">Approve</span>
+                                            </>
                                         )}
                                     </Button>
 
@@ -277,13 +297,16 @@ export function RescheduleRequestsTable() {
                                         variant="outline"
                                         onClick={() => handleRejectReschedule(request.id)}
                                         disabled={processing === request.id}
-                                        className="h-7 w-7 p-0 border-red-500 text-red-600 hover:bg-red-50"
+                                        className="h-7 px-2.5 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 shadow-sm hover:shadow-md transition-all duration-200"
                                         title="Reject Reschedule"
                                     >
                                         {processing === request.id ? (
                                             <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                                         ) : (
-                                            <X className="h-3 w-3" />
+                                            <>
+                                                <X className="h-3 w-3 mr-1" />
+                                                <span className="text-xs font-medium">Reject</span>
+                                            </>
                                         )}
                                     </Button>
                                 </div>

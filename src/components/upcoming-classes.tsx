@@ -7,7 +7,7 @@ import {
     convertUtcDateTimeToLocal,
 } from "@/lib/utils/timezone"
 import { formatDuration } from "@/lib/utils"
-import { CalendarDays, Clock, Users } from "lucide-react"
+import { CalendarDays, Clock, UserPen } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useEffect, useState } from "react"
@@ -190,7 +190,7 @@ export function UpcomingClasses({ sessions, isLoading, userType }: UpcomingClass
                                         <>
                                             <span className="text-muted-foreground">•</span>
                                             <span className="flex items-center gap-1 text-muted-foreground">
-                                                <Users className="h-3 w-3" />
+                                                <UserPen className="h-3 w-3" />
                                                 {session.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
                                             </span>
                                         </>

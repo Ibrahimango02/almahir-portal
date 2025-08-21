@@ -1,4 +1,4 @@
-import { CheckCircle, HelpCircle, UserX } from "lucide-react"
+import { CheckCircle, HelpCircle, CircleX } from "lucide-react"
 
 interface AttendanceStatusBadgeProps {
     status: string
@@ -20,7 +20,7 @@ export function AttendanceStatusBadge({ status, size = "sm" }: AttendanceStatusB
                 }
             case 'absent':
                 return {
-                    icon: UserX,
+                    icon: CircleX,
                     className: "text-red-600"
                 }
             default:

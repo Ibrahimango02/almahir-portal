@@ -2,6 +2,25 @@ import { createClient } from '@/utils/supabase/client'
 import { StudentType, TeacherType, ParentType, StudentAttendanceType } from '@/types'
 import { calculateAge } from '@/lib/utils'
 
+export async function getStudentId(profileId: string): Promise<string | null> {
+    const supabase = createClient()
+
+    // Get the student ID from the students table using the profile ID
+    const { data: student, error } = await supabase
+        .from('students')
+        .select('id')
+        .eq('profile_id', profileId)
+        .eq('student_type', 'independent')
+        .single()
+
+    if (error) {
+        console.error('Error fetching student ID:', error)
+        return null
+    }
+
+    return student?.id || null
+}
+
 export async function getStudents(): Promise<StudentType[]> {
     const supabase = createClient()
 

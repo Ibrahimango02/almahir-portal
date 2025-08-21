@@ -4,7 +4,9 @@ import { RecentClasses } from "@/components/recent-classes";
 import { UpcomingClasses } from "@/components/upcoming-classes";
 import { ClientDateDisplay } from "@/components/client-date-display";
 import { getStudentSessionsToday } from "@/lib/get/get-classes";
+import { getStudentId } from "@/lib/get/get-students";
 import { createClient } from "@/utils/supabase/server";
+import { ClassSessionType } from "@/types";
 
 export default async function StudentDashboard() {
     const supabase = await createClient();
@@ -17,8 +19,14 @@ export default async function StudentDashboard() {
         .eq('id', user?.id)
         .single();
 
-    // Fetch student sessions data for the unified components
-    const sessionsData = user ? await getStudentSessionsToday(user.id) : [];
+    // Get student ID and fetch student sessions data for the unified components
+    let sessionsData: ClassSessionType[] = [];
+    if (user) {
+        const studentId = await getStudentId(user.id);
+        if (studentId) {
+            sessionsData = await getStudentSessionsToday(studentId);
+        }
+    }
 
     return (
         <div className="flex flex-col gap-6">

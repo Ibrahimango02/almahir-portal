@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, Download, Calendar, HardDrive, User, BookOpen } from "lucide-react"
 import { getResourcesByStudentTeachersWithClassInfo } from "@/lib/get/get-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
+import { getStudentId } from "@/lib/get/get-students"
 import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -31,7 +32,15 @@ export default function StudentResourcesPage() {
         if (!currentUserId) return
 
         try {
-            const data = await getResourcesByStudentTeachersWithClassInfo(currentUserId)
+            // Get the student ID using the profile ID
+            const studentId = await getStudentId(currentUserId)
+
+            if (!studentId) {
+                console.log("No student record found for profile ID:", currentUserId)
+                return
+            }
+
+            const data = await getResourcesByStudentTeachersWithClassInfo(studentId)
 
             // Fetch uploader information for each resource
             const resourcesWithUploaders = await Promise.all(

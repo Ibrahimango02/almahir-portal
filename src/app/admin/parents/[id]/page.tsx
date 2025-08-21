@@ -13,6 +13,7 @@ import AvatarIcon from "@/components/avatar"
 import { getInvoicesByParentId } from "@/lib/get/get-invoices"
 import { createClient } from "@/utils/supabase/server"
 import { checkIfAdmin } from "@/lib/get/get-profiles"
+import { formatMonthRange } from "@/lib/utils/format-month-range"
 
 export default async function ParentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Get current user ID
@@ -180,7 +181,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                                 </td>
                                 <td className="px-4 py-2 text-sm">
                                   <span className="inline-block bg-muted px-2 py-0.5 rounded-full text-xs font-medium text-primary">
-                                    {invoice.months || '-'}
+                                    {formatMonthRange(invoice.months)}
                                   </span>
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap text-sm">
