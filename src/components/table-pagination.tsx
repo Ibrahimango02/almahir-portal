@@ -20,7 +20,7 @@ export function TablePagination({
     pageSize,
     onPageSizeChange,
 }: TablePaginationProps) {
-    const pageSizeOptions = [5, 10, 20, 50, 100]
+    const pageSizeOptions = [5, 10, 20, 50, 100, 500]
 
     return (
         <div className="flex items-center justify-end px-2">

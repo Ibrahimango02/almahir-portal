@@ -39,7 +39,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
     const router = useRouter()
     const [classCount, setClassCount] = useState<Record<string, number>>({})
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [pageSize, setPageSize] = useState(100)
 
     // Filter out non-admins, only show admins
     const adminsOnly = admins.filter(admin => admin.role === 'admin')

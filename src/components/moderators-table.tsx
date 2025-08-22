@@ -18,7 +18,7 @@ interface ModeratorsTableProps {
 
 export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [pageSize, setPageSize] = useState(100)
 
     // Pagination logic
     const totalItems = moderators.length

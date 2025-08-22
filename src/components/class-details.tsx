@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
-import { CalendarDays, Users, UserPen, Clock, Edit } from "lucide-react"
+import { CalendarDays, User, UserPen, Clock, Edit } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
@@ -268,7 +268,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                 {/* Students Section */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-5 w-5" />
+                    <User className="h-5 w-5" />
                     <h3 className="text-sm font-medium">Students</h3>
                     <span className="text-xs bg-muted px-2 py-1 rounded-full">{enrolledStudents.length}</span>
                   </div>
@@ -311,7 +311,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     </div>
                   ) : (
                     <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">No students enrolled</p>
                     </div>
                   )}

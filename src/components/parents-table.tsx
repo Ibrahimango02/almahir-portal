@@ -35,7 +35,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
   const router = useRouter()
   const [studentData, setStudentData] = useState<Record<string, StudentType[]>>({})
   const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  const [pageSize, setPageSize] = useState(100)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
 
   useEffect(() => {
