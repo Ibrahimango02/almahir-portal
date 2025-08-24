@@ -106,8 +106,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     return now >= fiveMinutesBefore && now <= endTime
   }
 
-  // Check if cancel button should be enabled (only if current time is 2 hours before start time)
+  // Check if cancel button should be enabled (only if current time is 2 hours before start time and status is scheduled)
   const canCancelSession = () => {
+    // Only allow cancellation if status is 'scheduled'
+    if (currentStatus !== 'scheduled') {
+      return false
+    }
+
     const now = new Date()
     const startTime = new Date(classData.start_time)
     const twoHoursBefore = new Date(startTime.getTime() - 2 * 60 * 60 * 1000) // 2 hours before start time
@@ -409,11 +414,15 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button4: {
             icon: Calendar,
             onClick: handleRescheduleSession,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0",
-            title: "Reschedule Session",
-            disabled: isLoading
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${currentStatus === 'scheduled' ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: currentStatus === 'scheduled' ? "Reschedule Session" : "Reschedule Session (Disabled)",
+            disabled: isLoading || currentStatus !== 'scheduled'
           },
-          button5: deleteButton
+          button5: {
+            ...deleteButton,
+            disabled: isLoading || currentStatus !== 'scheduled',
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-500 ${currentStatus === 'scheduled' ? 'bg-white text-red-600 hover:bg-red-100' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`
+          }
         }
 
       case "pending":
@@ -516,9 +525,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button4: {
             icon: Calendar,
             onClick: handleRescheduleSession,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0",
-            title: "Reschedule Session",
-            disabled: isLoading
+            className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50",
+            title: "Reschedule Session (Disabled)",
+            disabled: true
           },
           button5: {
             ...deleteButton,

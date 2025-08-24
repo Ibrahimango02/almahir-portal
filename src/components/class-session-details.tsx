@@ -62,6 +62,7 @@ interface ClassSessionDetailsProps {
     status: string
     cancellation_reason?: string | null
     cancelled_by?: string | null
+    reschedule_date?: string | null
     class_link: string | null
     teachers: Array<{
       teacher_id: string
@@ -292,6 +293,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
             <CancellationReasonDisplay
               cancellationReason={classData.cancellation_reason}
               cancelledByName={cancelledByName}
+              rescheduleDate={classData.reschedule_date}
             />
           </div>
         )}

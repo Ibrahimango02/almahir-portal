@@ -180,9 +180,9 @@ export type SessionType = {
     start_date: string // ISO datetime in UTC (timestamptz)
     end_date: string // ISO datetime in UTC (timestamptz)
     status: string
-    cancellation_reason?: string
     cancelled_by?: string | null
-    rescheduled_by?: string | null
+    cancellation_reason?: string
+    reschedule_date?: string | null
     created_at: string
     updated_at: string | null
 }
@@ -196,9 +196,9 @@ export type ClassSessionType = {
     start_date: string // ISO datetime in UTC (timestamptz)
     end_date: string // ISO datetime in UTC (timestamptz)
     status: string
-    cancellation_reason?: string
     cancelled_by?: string | null
-    rescheduled_by?: string | null
+    cancellation_reason?: string
+    reschedule_date?: string | null
     class_link: string | null
     teachers: TeacherType[]
     students: StudentType[]

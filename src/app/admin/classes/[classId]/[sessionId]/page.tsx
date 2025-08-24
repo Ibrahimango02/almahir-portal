@@ -30,7 +30,7 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
     status: classSessionData.status,
     cancellation_reason: classSessionData.cancellation_reason || null,
     cancelled_by: classSessionData.cancelled_by || null,
-    rescheduled_by: classSessionData.rescheduled_by || null,
+    reschedule_date: classSessionData.reschedule_date || null,
     class_link: classSessionData.class_link,
     teachers: classSessionData.teachers || [],
     students: classSessionData.students || []

@@ -28,8 +28,9 @@ export default async function ClassSessionPage({ params }: { params: Promise<{ c
         start_date: classSessionData.start_date,
         end_date: classSessionData.end_date,
         status: classSessionData.status,
-        cancellation_reason: classSessionData.cancellation_reason || null,
         cancelled_by: classSessionData.cancelled_by || null,
+        cancellation_reason: classSessionData.cancellation_reason || null,
+        reschedule_date: classSessionData.reschedule_date || null,
         class_link: classSessionData.class_link,
         teachers: classSessionData.teachers || [],
         students: classSessionData.students || []

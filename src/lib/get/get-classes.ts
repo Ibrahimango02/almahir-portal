@@ -182,6 +182,13 @@ export async function getClasses(): Promise<ClassType[]> {
         console.error('Error fetching class sessions:', sessionError)
     }
 
+    // Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
     // Get all unique teacher IDs
     const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
 
@@ -264,15 +271,22 @@ export async function getClasses(): Promise<ClassType[]> {
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                cancellation_reason: session.cancellation_reason || null,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || []
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || []
 
         // Parse days_repeated using the helper function
         const daysRepeated = parseDaysRepeated(classItem.days_repeated)
@@ -345,6 +359,13 @@ export async function getClassesToday(): Promise<ClassType[]> {
     if (sessionError) {
         console.error('Error fetching class sessions:', sessionError)
     }
+
+    // Get reschedule requests for today's sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
 
     // Get all unique teacher IDs
     const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
@@ -428,15 +449,22 @@ export async function getClassesToday(): Promise<ClassType[]> {
         // Get today's sessions for this class
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                cancellation_reason: session.cancellation_reason || null,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || []
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || []
 
         // Parse days_repeated to an array if it's a string
         let daysRepeated = classItem.days_repeated
@@ -487,16 +515,23 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
 
     if (!sessions || sessions.length === 0) return [];
 
-    // 2. Get all class IDs for these sessions
+    // 2. Get reschedule requests for today's sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds);
+
+    // 3. Get all class IDs for these sessions
     const sessionClassIds = [...new Set(sessions.map(s => s.class_id))];
 
-    // 3. Get class details for these sessions
+    // 4. Get class details for these sessions
     const { data: classes } = await supabase
         .from('classes')
         .select('*')
         .in('id', sessionClassIds);
 
-    // 4. Get all teachers for these classes
+    // 5. Get all teachers for these classes
     const { data: classTeachers } = await supabase
         .from('class_teachers')
         .select('class_id, teacher_id')
@@ -513,13 +548,13 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
         .select('*')
         .in('profile_id', teacherIds);
 
-    // 5. Get students for these classes
+    // 6. Get students for these classes
     const { data: classStudents } = await supabase
         .from('class_students')
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student data
+    // 7. Get student data
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
     const { data: studentData } = await supabase
         .from('students')
@@ -539,9 +574,12 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
         .select('*')
         .in('student_id', studentIds);
 
-    // 7. Build the result
+    // 8. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
         const classData = classes?.find(c => c.id === session.class_id);
+
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id);
 
         // Teachers for this class
         const teachers = (classTeachers
@@ -592,7 +630,9 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
             start_date: session.start_date,
             end_date: session.end_date,
             status: session.status,
-            cancellation_reason: session.cancellation_reason || null,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
             students: enrolledStudents
@@ -635,6 +675,13 @@ export async function getActiveClasses(): Promise<ClassType[]> {
         .from('class_sessions')
         .select('*')
         .in('class_id', classIds)
+
+    // Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
 
     // Get all unique teacher IDs
     const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
@@ -718,14 +765,22 @@ export async function getActiveClasses(): Promise<ClassType[]> {
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || []
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || []
 
         // Parse days_repeated to an array if it's a string
         let daysRepeated = classItem.days_repeated
@@ -789,6 +844,13 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
         .select('*')
         .in('class_id', classIds)
 
+    // Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
     // Get all unique teacher IDs
     const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
 
@@ -871,14 +933,22 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classItem.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || []
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || []
 
         // Parse days_repeated to an array if it's a string
         let daysRepeated = classItem.days_repeated
@@ -1001,14 +1071,29 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         .select('*')
         .eq('class_id', classData.id);
 
-    const sessions: SessionType[] = classSessions?.map(session => ({
-        session_id: session.id,
-        start_date: session.start_date,
-        end_date: session.end_date,
-        status: session.status,
-        created_at: session.created_at,
-        updated_at: session.updated_at || null
-    })) || [];
+    // Get reschedule requests for these sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
+    const sessions: SessionType[] = classSessions?.map(session => {
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+        return {
+            session_id: session.id,
+            start_date: session.start_date,
+            end_date: session.end_date,
+            status: session.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
+            created_at: session.created_at,
+            updated_at: session.updated_at || null
+        }
+    }) || [];
 
     // Parse days_repeated to an array if it's a string
     let daysRepeated = classData.days_repeated;
@@ -1143,6 +1228,13 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
         console.error('Error fetching class sessions:', sessionError);
     }
 
+    // Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
     // Compose the result
     const result: ClassType[] = classes.map(classData => {
         // Teachers for this class
@@ -1189,14 +1281,22 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classData.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || [];
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || [];
 
         // Parse days_repeated using the helper function
         const daysRepeated = parseDaysRepeated(classData.days_repeated)
@@ -1298,6 +1398,13 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
         console.error('Error fetching class sessions:', sessionError);
     }
 
+    // Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
     // Compose the result
     const result: ClassType[] = classes.map(classData => {
         // Teachers for this class
@@ -1344,14 +1451,22 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
             ?.filter(session => session.class_id === classData.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || [];
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || [];
 
         // Parse days_repeated using the helper function
         const daysRepeated = parseDaysRepeated(classData.days_repeated)
@@ -1401,6 +1516,13 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
     if (!classData) {
         return null
     }
+
+    // Get reschedule request for this session
+    const { data: rescheduleRequest } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single()
 
     // Get teachers for this class
     const { data: classTeachers } = await supabase
@@ -1485,8 +1607,9 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         start_date: sessionData.start_date,
         end_date: sessionData.end_date,
         status: sessionData.status,
-        cancellation_reason: sessionData.cancellation_reason || null,
-        cancelled_by: sessionData.cancelled_by || null,
+        cancelled_by: rescheduleRequest?.requested_by || null,
+        cancellation_reason: rescheduleRequest?.reason || null,
+        reschedule_date: rescheduleRequest?.requested_date || null,
         class_link: classData.class_link || null,
         teachers: teachers,
         students: students
@@ -1591,24 +1714,37 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         return [];
     }
 
+    // Get reschedule requests for these sessions
+    const sessionIds = classSessions.map(s => s.id);
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds);
+
     // Format each session to match ClassSessionType, including class and participants info
-    const formattedSessions: ClassSessionType[] = classSessions.map(session => ({
-        class_id: classData.id,
-        session_id: session.id,
-        title: classData.title,
-        description: classData.description || null,
-        subject: classData.subject,
-        start_date: session.start_date,
-        end_date: session.end_date,
-        status: session.status,
-        cancellation_reason: session.cancellation_reason || null,
-        cancelled_by: session.cancelled_by || null,
-        class_link: classData.class_link || null,
-        teachers: teachers,
-        students: students,
-        created_at: classData.created_at,
-        updated_at: classData.updated_at || null
-    }));
+    const formattedSessions: ClassSessionType[] = classSessions.map(session => {
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id);
+
+        return {
+            class_id: classData.id,
+            session_id: session.id,
+            title: classData.title,
+            description: classData.description || null,
+            subject: classData.subject,
+            start_date: session.start_date,
+            end_date: session.end_date,
+            status: session.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
+            class_link: classData.class_link || null,
+            teachers: teachers,
+            students: students,
+            created_at: classData.created_at,
+            updated_at: classData.updated_at || null
+        };
+    });
 
     return formattedSessions;
 }
@@ -1635,6 +1771,13 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
         .from('class_sessions')
         .select('*')
         .in('class_id', classIds)
+
+    // Get reschedule requests for all sessions
+    const sessionIds = sessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
 
     // Get all teachers for these classes
     const { data: classTeachers } = await supabase
@@ -1687,6 +1830,9 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
         const classData = classes?.find(c => c.id === sessionData.class_id)
         if (!classData) return
 
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === sessionData.id)
+
         // Get teachers for this class
         const classTeacherIds = classTeachers
             ?.filter(ct => ct.class_id === classData.id)
@@ -1737,6 +1883,9 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
             start_date: sessionData.start_date,
             end_date: sessionData.end_date,
             status: sessionData.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData.class_link || null,
             teachers: teachers,
             students: students
@@ -1776,14 +1925,21 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
 
     if (!sessions || sessions.length === 0) return [];
 
-    // 3. Get class details for these sessions
+    // 3. Get reschedule requests for today's sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds);
+
+    // 4. Get class details for these sessions
     const sessionClassIds = [...new Set(sessions.map(s => s.class_id))];
     const { data: classes } = await supabase
         .from('classes')
         .select('*')
         .in('id', sessionClassIds);
 
-    // 4. Get all teachers for these classes
+    // 5. Get all teachers for these classes
     const { data: classTeachers } = await supabase
         .from('class_teachers')
         .select('class_id, teacher_id')
@@ -1800,13 +1956,13 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
         .select('*')
         .in('profile_id', teacherIds);
 
-    // 5. Get students for these classes
+    // 6. Get students for these classes
     const { data: classStudents } = await supabase
         .from('class_students')
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student data from students table
+    // 7. Get student data from students table
     const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])];
     const { data: studentData } = await supabase
         .from('students')
@@ -1826,9 +1982,12 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
         .select('*')
         .in('student_id', studentIds);
 
-    // 7. Build the result
+    // 8. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
         const classData = classes?.find(c => c.id === session.class_id);
+
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id);
 
         // Teachers for this class
         const teachers = (classTeachers
@@ -1879,6 +2038,9 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
             start_date: session.start_date,
             end_date: session.end_date,
             status: session.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
             students: enrolledStudents
@@ -1918,14 +2080,21 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
 
     if (!sessions || sessions.length === 0) return [];
 
-    // 3. Get class details for these sessions
+    // 3. Get reschedule requests for today's sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds);
+
+    // 4. Get class details for these sessions
     const sessionClassIds = [...new Set(sessions.map(s => s.class_id))];
     const { data: classes } = await supabase
         .from('classes')
         .select('*')
         .in('id', sessionClassIds);
 
-    // 4. Get all teachers for these classes
+    // 5. Get all teachers for these classes
     const { data: classTeachers } = await supabase
         .from('class_teachers')
         .select('class_id, teacher_id')
@@ -1942,13 +2111,13 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
         .select('*')
         .in('profile_id', teacherIds);
 
-    // 5. Get students for these classes
+    // 6. Get students for these classes
     const { data: classStudentsAll } = await supabase
         .from('class_students')
         .select('class_id, student_id')
         .in('class_id', sessionClassIds);
 
-    // 6. Get student data from students table
+    // 7. Get student data from students table
     const studentIds = [...new Set(classStudentsAll?.map(cs => cs.student_id) || [])];
     const { data: studentData } = await supabase
         .from('students')
@@ -1968,9 +2137,12 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
         .select('*')
         .in('student_id', studentIds);
 
-    // 7. Build the result
+    // 8. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
         const classData = classes?.find(c => c.id === session.class_id);
+
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id);
 
         // Teachers for this class
         const teachers = (classTeachers
@@ -2021,6 +2193,9 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
             start_date: session.start_date,
             end_date: session.end_date,
             status: session.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
             students: enrolledStudents
@@ -2052,6 +2227,13 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
         .from('class_sessions')
         .select('*')
         .in('class_id', classIds)
+
+    // Get reschedule requests for all sessions
+    const sessionIds = sessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
 
     // Get all teachers for these classes
     const { data: classTeachers } = await supabase
@@ -2104,6 +2286,9 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
         const classData = classes?.find(c => c.id === sessionData.class_id)
         if (!classData) return
 
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === sessionData.id)
+
         // Get teachers for this class
         const classTeacherIds = classTeachers
             ?.filter(ct => ct.class_id === classData.id)
@@ -2154,6 +2339,9 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
             start_date: sessionData.start_date,
             end_date: sessionData.end_date,
             status: sessionData.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData.class_link || null,
             teachers: teachers,
             students: students
@@ -2308,15 +2496,22 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
 
     if (!sessions || sessions.length === 0) return []
 
+    // 4. Get reschedule requests for today's sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds);
+
     const sessionClassIds = sessions.map(s => s.class_id)
 
-    // 4. Get class details
+    // 5. Get class details
     const { data: classes } = await supabase
         .from('classes')
         .select('*')
         .in('id', sessionClassIds)
 
-    // 5. Get all teachers for these classes
+    // 6. Get all teachers for these classes
     const { data: classTeachers } = await supabase
         .from('class_teachers')
         .select('class_id, teacher_id')
@@ -2334,7 +2529,7 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
         .select('*')
         .in('profile_id', teacherIds)
 
-    // 6. Get all students for these classes
+    // 7. Get all students for these classes
     const { data: classStudentsAll } = await supabase
         .from('class_students')
         .select('class_id, student_id')
@@ -2361,9 +2556,12 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
         .select('*')
         .in('student_id', studentIds)
 
-    // 7. Build the result
+    // 8. Build the result
     const result: ClassSessionType[] = sessions.map(session => {
-        const classData = classes?.find(c => c.id === session.class_id)
+        const classData = classes?.find(c => c.id === session.class_id);
+
+        // Find reschedule request for this session
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id);
 
         // Teachers for this class
         const teachers = (classTeachers
@@ -2414,6 +2612,9 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
             start_date: session.start_date,
             end_date: session.end_date,
             status: session.status,
+            cancelled_by: rescheduleRequest?.requested_by || null,
+            cancellation_reason: rescheduleRequest?.reason || null,
+            reschedule_date: rescheduleRequest?.requested_date || null,
             class_link: classData?.class_link || null,
             teachers: teachers,
             students: enrolledStudents
@@ -2505,7 +2706,14 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
         .select('*')
         .in('class_id', classIds)
 
-    // 7. Build the result
+    // 7. Get reschedule requests for all sessions
+    const sessionIds = classSessions?.map(s => s.id) || []
+    const { data: rescheduleRequests } = await supabase
+        .from('reschedule_requests')
+        .select('*')
+        .in('session_id', sessionIds)
+
+    // 8. Build the result
     const result: ClassType[] = classes.map(classData => {
         // Teachers for this class
         const classTeacherIds = classTeachers
@@ -2551,14 +2759,22 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
         // Sessions for this class
         const sessions = classSessions
             ?.filter(session => session.class_id === classData.id)
-            .map(session => ({
-                session_id: session.id,
-                start_date: session.start_date,
-                end_date: session.end_date,
-                status: session.status,
-                created_at: session.created_at,
-                updated_at: session.updated_at || null
-            })) || []
+            .map(session => {
+                // Find reschedule request for this session
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+
+                return {
+                    session_id: session.id,
+                    start_date: session.start_date,
+                    end_date: session.end_date,
+                    status: session.status,
+                    cancelled_by: rescheduleRequest?.requested_by || null,
+                    cancellation_reason: rescheduleRequest?.reason || null,
+                    reschedule_date: rescheduleRequest?.requested_date || null,
+                    created_at: session.created_at,
+                    updated_at: session.updated_at || null
+                }
+            }) || []
 
         // Parse days_repeated to an array if it's a string
         let daysRepeated = classData.days_repeated

@@ -1,17 +1,19 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, User } from "lucide-react"
+import { AlertTriangle, User, Calendar } from "lucide-react"
 
 type CancellationReasonDisplayProps = {
     cancellationReason: string | null
     cancelledByName?: string | null
+    rescheduleDate?: string | null
     className?: string
 }
 
 export function CancellationReasonDisplay({
     cancellationReason,
     cancelledByName,
+    rescheduleDate,
     className
 }: CancellationReasonDisplayProps) {
     if (!cancellationReason) {
@@ -38,6 +40,13 @@ export function CancellationReasonDisplay({
                     <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-400">
                         <User className="h-3 w-3" />
                         <span>Cancelled by: <span className="font-medium">{cancelledByName}</span></span>
+                    </div>
+                )}
+
+                {rescheduleDate && (
+                    <div className="flex items-center gap-2 text-sm text-red-700 dark:text-red-400">
+                        <Calendar className="h-3 w-3" />
+                        <span>Rescheduled to: <span className="font-medium">{new Date(rescheduleDate).toLocaleDateString()}</span></span>
                     </div>
                 )}
             </CardContent>
