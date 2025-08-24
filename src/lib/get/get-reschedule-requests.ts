@@ -69,7 +69,7 @@ export async function getPendingRescheduleRequests(): Promise<RescheduleRequestW
                     role
                 )
             `)
-            .eq('status', 'requested')
+            .eq('status', 'pending')
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -135,7 +135,7 @@ export async function getPendingRescheduleRequestsCount(): Promise<number> {
         const { count, error } = await supabase
             .from('reschedule_requests')
             .select('*', { count: 'exact', head: true })
-            .eq('status', 'requested')
+            .eq('status', 'pending')
 
         if (error) {
             console.error('Error fetching pending reschedule requests count:', error)

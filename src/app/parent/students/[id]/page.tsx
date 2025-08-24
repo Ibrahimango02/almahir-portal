@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Users, BookOpen, Clock, User, Mail, UserPen, CreditCard, Receipt, DollarSign } from "lucide-react"
+import { Users, BookOpen, Clock, UserPen, CreditCard, Receipt, DollarSign } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -139,22 +139,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 <div className="flex flex-col items-center justify-center">
                                     <span className="text-2xl font-bold text-primary">{studentSessionCount}</span>
                                     <span className="text-xs text-muted-foreground">Sessions</span>
-                                </div>
-                            </div>
-
-                            <Separator />
-
-                            {/* Contact Information */}
-                            <div>
-                                <h3 className="text-base font-semibold flex items-center mb-3">
-                                    <User className="h-4 w-4 mr-2 text-primary" />
-                                    Contact Information
-                                </h3>
-                                <div className="space-y-3 pl-6">
-                                    <div className="flex items-start">
-                                        <Mail className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm break-all">{student.email}</span>
-                                    </div>
                                 </div>
                             </div>
 

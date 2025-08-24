@@ -40,6 +40,7 @@ export async function getTeachers(): Promise<TeacherType[]> {
             hourly_rate: teacher?.hourly_rate || null,
             notes: teacher?.notes || null,
             is_admin: teacher?.is_admin ?? false,
+            moderator_id: teacher?.moderator_id || null,
             created_at: teacherProfile.created_at,
             updated_at: teacherProfile.updated_at || null,
         }
@@ -87,6 +88,7 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
         hourly_rate: teacher?.hourly_rate || null,
         notes: teacher?.notes || null,
         is_admin: teacher?.is_admin ?? false,
+        moderator_id: teacher?.moderator_id || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }
@@ -250,6 +252,55 @@ export async function getActiveTeachersCount() {
     }
 
     return count
+}
+
+export async function getTeachersByModeratorId(moderatorId: string): Promise<TeacherType[]> {
+    const supabase = createClient()
+
+    // Get all teachers assigned to this moderator
+    const { data: teachers } = await supabase
+        .from('teachers')
+        .select('*')
+        .eq('moderator_id', moderatorId)
+
+    if (!teachers || teachers.length === 0) return []
+
+    // Get the teacher profiles
+    const teacherIds = teachers.map(teacher => teacher.profile_id)
+    const { data: teacherProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', teacherIds)
+
+    if (!teacherProfiles) return []
+
+    // Combine the data into TeacherType objects
+    const result: TeacherType[] = teacherProfiles.map(profile => {
+        const teacher = teachers.find(t => t.profile_id === profile.id)
+
+        return {
+            teacher_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email,
+            phone: profile.phone || null,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            specialization: teacher?.specialization || null,
+            hourly_rate: teacher?.hourly_rate || null,
+            notes: teacher?.notes || null,
+            is_admin: teacher?.is_admin ?? false,
+            moderator_id: teacher?.moderator_id || null,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at || null
+        }
+    })
+
+    return result
 }
 
 

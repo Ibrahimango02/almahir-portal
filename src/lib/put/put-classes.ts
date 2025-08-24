@@ -318,35 +318,13 @@ export async function updateClass(params: {
 export async function updateSession(params: {
     sessionId: string;
     action: string;
-    newStartDate?: string;
-    newEndDate?: string;
     studentAttendance?: Record<string, boolean>;
 }) {
     const supabase = createClient()
-    const { sessionId, action, newStartDate, newEndDate, studentAttendance } = params
+    const { sessionId, action, studentAttendance } = params
 
     try {
         switch (action.toLowerCase()) {
-            case 'reschedule': {
-                if (newStartDate && newEndDate) {
-                    // Update the existing session with new dates
-                    const { error: updateError } = await supabase
-                        .from('class_sessions')
-                        .update({
-                            status: 'scheduled',
-                            start_date: newStartDate,
-                            end_date: newEndDate,
-                            updated_at: new Date().toISOString()
-                        })
-                        .eq('id', sessionId)
-
-                    if (updateError) throw updateError
-                    break;
-                } else {
-                    throw new Error('New start date and end date are required for rescheduling')
-                }
-            }
-
             case 'initiate': {
                 // Create class history record and update session status
                 const { error: historyError } = await supabase
@@ -520,6 +498,128 @@ export async function updateSession(params: {
         return { success: true }
     } catch (error) {
         console.error('Error updating session:', error)
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
+    }
+}
+
+export async function rescheduleSession(params: {
+    sessionId: string;
+    newStartDate: string;
+    newEndDate: string;
+}): Promise<{ success: boolean; error?: { message: string } }> {
+    const supabase = createClient()
+    const { sessionId, newStartDate, newEndDate } = params
+
+    try {
+        // 1. Get the current session details
+        const { data: currentSession, error: fetchError } = await supabase
+            .from('class_sessions')
+            .select('*')
+            .eq('id', sessionId)
+            .single()
+
+        if (fetchError) throw fetchError
+        if (!currentSession) throw new Error('Session not found')
+
+        // 2. Validate that the new date is in the future
+        const newStart = new Date(newStartDate)
+        const now = new Date()
+        if (newStart <= now) {
+            throw new Error('New session date must be in the future')
+        }
+
+        // 3. Cancel the current session
+        const { error: cancelError } = await supabase
+            .from('class_sessions')
+            .update({
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', sessionId)
+
+        if (cancelError) throw cancelError
+
+        // 4. Create a new session with the new dates
+        const { data: newSession, error: createError } = await supabase
+            .from('class_sessions')
+            .insert({
+                class_id: currentSession.class_id,
+                start_date: newStartDate,
+                end_date: newEndDate,
+                status: 'scheduled',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            })
+            .select('id')
+            .single()
+
+        if (createError) throw createError
+        if (!newSession) throw new Error('Failed to create new session')
+
+        // 5. Get current teacher and student assignments for the class
+        const { data: currentTeachers } = await supabase
+            .from('class_teachers')
+            .select('teacher_id')
+            .eq('class_id', currentSession.class_id)
+
+        const { data: currentStudents } = await supabase
+            .from('class_students')
+            .select('student_id')
+            .eq('class_id', currentSession.class_id)
+
+        // 6. Create attendance records for the new session
+        const teacherAttendanceRecords = []
+        const studentAttendanceRecords = []
+
+        // Create teacher attendance records
+        if (currentTeachers && currentTeachers.length > 0) {
+            for (const teacher of currentTeachers) {
+                teacherAttendanceRecords.push({
+                    session_id: newSession.id,
+                    teacher_id: teacher.teacher_id,
+                    attendance_status: 'expected'
+                })
+            }
+        }
+
+        // Create student attendance records
+        if (currentStudents && currentStudents.length > 0) {
+            for (const student of currentStudents) {
+                studentAttendanceRecords.push({
+                    session_id: newSession.id,
+                    student_id: student.student_id,
+                    attendance_status: 'expected'
+                })
+            }
+        }
+
+        // Insert teacher attendance records
+        if (teacherAttendanceRecords.length > 0) {
+            const { error: teacherAttendanceError } = await supabase
+                .from('teacher_attendance')
+                .insert(teacherAttendanceRecords)
+
+            if (teacherAttendanceError) {
+                console.error('Error creating teacher attendance records:', teacherAttendanceError)
+                // Don't throw error here as the main operations were successful
+            }
+        }
+
+        // Insert student attendance records
+        if (studentAttendanceRecords.length > 0) {
+            const { error: studentAttendanceError } = await supabase
+                .from('student_attendance')
+                .insert(studentAttendanceRecords)
+
+            if (studentAttendanceError) {
+                console.error('Error creating student attendance records:', studentAttendanceError)
+                // Don't throw error here as the main operations were successful
+            }
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error rescheduling session:', error)
         return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }

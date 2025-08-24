@@ -1,5 +1,7 @@
 import { createClient } from '@/utils/supabase/client'
 import { RescheduleRequestType } from '@/types'
+import { NotificationService } from '@/lib/services/notification-service'
+import { getAdminIds } from '@/lib/get/get-admins'
 
 export async function createRescheduleRequest(params: {
     sessionId: string
@@ -15,6 +17,26 @@ export async function createRescheduleRequest(params: {
             throw new Error('Session ID, requested by, requested date, and reason are required')
         }
 
+        // Get session and class details for notification
+        const { data: sessionData } = await supabase
+            .from('class_sessions')
+            .select(`
+                *,
+                class:classes(
+                    title,
+                    subject
+                )
+            `)
+            .eq('id', params.sessionId)
+            .single()
+
+        // Get requester details
+        const { data: requesterData } = await supabase
+            .from('profiles')
+            .select('first_name, last_name')
+            .eq('id', params.requestedBy)
+            .single()
+
         // Create the reschedule request
         const { data, error } = await supabase
             .from('reschedule_requests')
@@ -23,7 +45,7 @@ export async function createRescheduleRequest(params: {
                 requested_by: params.requestedBy,
                 requested_date: params.requestedDate,
                 reason: params.reason,
-                status: 'requested'
+                status: 'pending'
             })
             .select()
             .single()
@@ -31,6 +53,21 @@ export async function createRescheduleRequest(params: {
         if (error) {
             console.error('Supabase error:', error)
             throw new Error(`Database error: ${error.message}`)
+        }
+
+        // Send notifications to admins
+        if (data && sessionData && requesterData) {
+            const adminIds = await getAdminIds()
+            const requesterName = `${requesterData.first_name} ${requesterData.last_name}`
+            //const className = sessionData.class?.title || 'Unknown Class'
+            const sessionDate = sessionData.start_date
+
+            await NotificationService.notifyRescheduleRequest(
+                adminIds,
+                requesterName,
+                sessionDate,
+                params.requestedDate
+            )
         }
 
         return { success: true, data }
@@ -58,6 +95,26 @@ export async function updateRescheduleRequest(params: {
             throw new Error('Request ID, status, and processed by are required')
         }
 
+        // Get the reschedule request details before updating
+        const { data: requestData } = await supabase
+            .from('reschedule_requests')
+            .select(`
+                *,
+                session:class_sessions(
+                    *,
+                    class:classes(
+                        title,
+                        subject
+                    )
+                ),
+                requester:profiles!requested_by(
+                    first_name,
+                    last_name
+                )
+            `)
+            .eq('id', params.id)
+            .single()
+
         // Update the reschedule request
         const { data, error } = await supabase
             .from('reschedule_requests')
@@ -73,6 +130,20 @@ export async function updateRescheduleRequest(params: {
         if (error) {
             console.error('Supabase error:', error)
             throw new Error(`Database error: ${error.message}`)
+        }
+
+        // Send notification to requester about the decision
+        if (data && requestData && requestData.requester) {
+            const requesterId = requestData.requested_by
+            const className = requestData.session?.class?.title || 'Unknown Class'
+            const status = params.status === 'approved' ? 'approved' : 'rejected'
+
+            await NotificationService.notifySystem(
+                [requesterId],
+                `Reschedule Request ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+                `Your request to reschedule ${className} has been ${status}`,
+                params.status === 'approved' ? 'success' : 'warning'
+            )
         }
 
         return { success: true, data }

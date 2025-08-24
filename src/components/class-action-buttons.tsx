@@ -596,8 +596,8 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               </Button>
             </div>
 
-            {/* Button 3 - Cancel/Reschedule (hidden for parents) */}
-            {userRole !== 'parent' && userRole !== 'student' && (
+            {/* Button 3 - Cancel/Reschedule (hidden for parents, students, and admins) */}
+            {userRole !== 'parent' && userRole !== 'student' && userRole !== 'admin' && (
               <div className="relative" title={config.button3.title}>
                 <Button
                   onClick={config.button3.onClick}
@@ -657,12 +657,18 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             <DialogTitle>
               {userRole === 'teacher' || userRole === 'student' ? 'Request Session Reschedule' : 'Cancel Session'}
             </DialogTitle>
-            <DialogDescription>
-              {userRole === 'teacher' || userRole === 'student'
-                ? "Please provide a reason for rescheduling this session and select a new desired date in your local timezone. This request will be sent to administrators for approval. The session remains active until approved."
-                : "Please provide a reason for cancelling this session. This information will be visible to administrators."
-              }
-            </DialogDescription>
+            {(
+              <div className="text-sm text-muted-foreground">
+                Current session date: {new Date(classData.start_time).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

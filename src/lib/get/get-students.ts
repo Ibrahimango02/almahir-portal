@@ -287,6 +287,7 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
             created_at: profile.created_at,
             updated_at: profile.updated_at || null,
             is_admin: teacher?.is_admin ?? false,
+            moderator_id: teacher?.moderator_id || null,
         }
     })
 

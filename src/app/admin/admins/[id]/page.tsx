@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, User, Calendar, Plus, BookOpen } from "lucide-react"
+import { Mail, Phone, Calendar, Plus, BookOpen, Contact } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
@@ -119,7 +119,7 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                             {/* Contact Information */}
                             <div>
                                 <h3 className="text-base font-semibold flex items-center mb-3">
-                                    <User className="h-4 w-4 mr-2 text-primary" />
+                                    <Contact className="h-4 w-4 mr-2 text-primary" />
                                     Contact Information
                                 </h3>
                                 <div className="space-y-3 pl-6">

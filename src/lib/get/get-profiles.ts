@@ -117,6 +117,23 @@ export async function getModerators(): Promise<ProfileType[]> {
     return profiles
 }
 
+export async function getModeratorById(id: string): Promise<ProfileType | null> {
+    const supabase = createClient()
+
+    const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .eq('role', 'moderator')
+        .single()
+
+    if (error) {
+        return null
+    }
+
+    return profile
+}
+
 export async function getAdminById(id: string): Promise<AdminType> {
     const supabase = createClient()
 

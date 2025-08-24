@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Calendar, User, FileText, Check, X } from "lucide-react"
+import { Calendar, User, UserPen, FileText, Check, X } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { updateSession } from "@/lib/put/put-classes"
+import { rescheduleSession } from "@/lib/put/put-classes"
 import { updateRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { getPendingRescheduleRequests } from "@/lib/get/get-reschedule-requests"
 import { RescheduleRequestWithDetailsType } from "@/types"
@@ -13,7 +13,7 @@ import { getProfile } from "@/lib/get/get-profiles"
 import { utcToLocal, getUserTimezone, formatDateTime } from "@/lib/utils/timezone"
 import { useRouter } from "next/navigation"
 
-export function RescheduleRequestsTable() {
+export function RescheduleRequestsTable({ onCountUpdate }: { onCountUpdate?: () => void }) {
     const [requests, setRequests] = useState<RescheduleRequestWithDetailsType[]>([])
     const [loading, setLoading] = useState(true)
     const [processing, setProcessing] = useState<string | null>(null)
@@ -25,6 +25,10 @@ export function RescheduleRequestsTable() {
         try {
             const data = await getPendingRescheduleRequests()
             setRequests(data)
+            // Call the callback to update the count in the parent component
+            if (onCountUpdate) {
+                onCountUpdate()
+            }
         } catch (error) {
             console.error('Error fetching reschedule requests:', error)
             toast({
@@ -35,10 +39,15 @@ export function RescheduleRequestsTable() {
         } finally {
             setLoading(false)
         }
-    }, [toast])
+    }, [toast, onCountUpdate])
 
     useEffect(() => {
         fetchRescheduleRequests()
+
+        // Set up polling every 30 seconds for real-time updates
+        const interval = setInterval(fetchRescheduleRequests, 30000)
+
+        return () => clearInterval(interval)
     }, [fetchRescheduleRequests])
 
     useEffect(() => {
@@ -86,7 +95,7 @@ export function RescheduleRequestsTable() {
             // Create new end date based on duration (keeping it in UTC)
             const newEndDate = new Date(requestedDate.getTime() + durationMs)
 
-            // First, reschedule the session
+            // Use the new rescheduleSession function
             console.log('Rescheduling session:', {
                 sessionId: originalRequest.session_id,
                 newStartDate: requestedDate.toISOString(),
@@ -95,9 +104,8 @@ export function RescheduleRequestsTable() {
                 originalEnd: originalRequest.session.end_date
             })
 
-            const result = await updateSession({
+            const result = await rescheduleSession({
                 sessionId: originalRequest.session_id,
-                action: 'reschedule',
                 newStartDate: requestedDate.toISOString(),
                 newEndDate: newEndDate.toISOString(),
             })
@@ -223,7 +231,6 @@ export function RescheduleRequestsTable() {
                                 <div className="flex-1 min-w-0">
                                     {/* Header Section */}
                                     <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                                         <h3 className="font-semibold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">
                                             {request.session.class.title}
                                         </h3>
@@ -232,44 +239,55 @@ export function RescheduleRequestsTable() {
                                     {/* User and Date Info */}
                                     <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
                                         <div className="flex items-center gap-1.5">
-                                            <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center">
-                                                <User className="h-2.5 w-2.5 text-blue-600" />
-                                            </div>
-                                            <span className="font-medium">{`${request.requester.first_name} ${request.requester.last_name}`}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
                                             <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                                <Calendar className="h-2.5 w-2.5 text-gray-600" />
+                                                {request.requester.role === 'teacher' ? (
+                                                    <UserPen className="h-2.5 w-2.5 text-gray-600" />
+                                                ) : (
+                                                    <User className="h-2.5 w-2.5 text-gray-600" />
+                                                )}
                                             </div>
-                                            <span>{formatDateTime(request.created_at, "MMM d, yyyy", getUserTimezone())}</span>
+                                            <span className="font-medium">{`${request.requester.first_name} ${request.requester.last_name} (${request.requester.role.charAt(0).toUpperCase() + request.requester.role.slice(1)})`}</span>
                                         </div>
                                     </div>
 
-                                    {/* Details Grid */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                                        {/* Reason Section */}
+                                    {/* Session Dates Section */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+                                        {/* Current Session Date */}
                                         <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
                                             <div className="flex items-start gap-1.5 mb-1.5">
-                                                <div className="w-4 h-4 bg-orange-100 rounded-full flex items-center justify-center mt-0.5">
-                                                    <FileText className="h-2.5 w-2.5 text-orange-600" />
+                                                <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
+                                                    <Calendar className="h-2.5 w-2.5 text-gray-600" />
                                                 </div>
-                                                <span className="font-medium text-gray-700 text-xs">Reason for Reschedule</span>
+                                                <span className="font-medium text-gray-700 text-xs">Current Date</span>
                                             </div>
-                                            <p className="text-gray-600 text-xs leading-relaxed pl-5">{request.reason}</p>
+                                            <p className="text-gray-600 font-medium text-xs leading-relaxed pl-5">
+                                                {formatDateTime(utcToLocal(request.session.start_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
+                                            </p>
                                         </div>
 
-                                        {/* New Date Section */}
+                                        {/* Proposed New Date */}
                                         <div className="bg-blue-50 rounded-md p-2.5 border border-blue-100">
                                             <div className="flex items-start gap-1.5 mb-1.5">
                                                 <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
                                                     <Calendar className="h-2.5 w-2.5 text-blue-600" />
                                                 </div>
-                                                <span className="font-medium text-gray-700 text-xs">Proposed New Date</span>
+                                                <span className="font-medium text-gray-700 text-xs">New Date</span>
                                             </div>
                                             <p className="text-blue-700 font-medium text-xs leading-relaxed pl-5">
                                                 {formatDateTime(utcToLocal(request.requested_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
                                             </p>
                                         </div>
+                                    </div>
+
+                                    {/* Reason Section */}
+                                    <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                        <div className="flex items-start gap-1.5 mb-1.5">
+                                            <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
+                                                <FileText className="h-2.5 w-2.5" />
+                                            </div>
+                                            <span className="font-medium text-gray-700 text-xs">Reason for Reschedule</span>
+                                        </div>
+                                        <p className="text-gray-700 text-xs leading-relaxed pl-5">{request.reason}</p>
                                     </div>
                                 </div>
 

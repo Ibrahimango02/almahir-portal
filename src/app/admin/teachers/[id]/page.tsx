@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, BookOpen, User, Calendar, Edit, Plus, Clock, Receipt } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, UserPen, Users, BookOpen, GraduationCap } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
@@ -19,7 +19,7 @@ import { getSessionRemarks } from "@/lib/get/get-session-remarks"
 import { getTeacherPaymentsByTeacherId } from "@/lib/get/get-teacher-payments"
 import { format, parseISO } from "date-fns"
 import { createClient } from "@/utils/supabase/server"
-import { checkIfAdmin } from "@/lib/get/get-profiles"
+import { checkIfAdmin, getModeratorById } from "@/lib/get/get-profiles"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Get current user ID
@@ -48,6 +48,9 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
   const teacherAvailability = await getTeacherAvailability(teacher.teacher_id)
   const teacherStudents = await getTeacherStudents(teacher.teacher_id)
   const teacherClasses = await getClassesByTeacherId(teacher.teacher_id)
+
+  // Fetch moderator information if assigned
+  const moderator = teacher.moderator_id ? await getModeratorById(teacher.moderator_id) : null
 
   // Fetch session history and attendance for each session
   const sessionsWithHistory = await getTeacherSessionHistory(teacher.teacher_id)
@@ -116,6 +119,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                 <Badge variant="secondary" className="font-medium">
                   Teacher
                 </Badge>
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center">
                 {teacher.specialization && (
                   <Badge variant="outline" className="font-medium">
                     {teacher.specialization}
@@ -141,10 +146,22 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
               <Separator />
 
+              <div className="flex items-start">
+                <UserPen className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Moderator: </span>
+                  {moderator ? (
+                    <span className="font-medium">{moderator.first_name} {moderator.last_name}</span>
+                  ) : (
+                    <span className="text-muted-foreground italic">No moderator assigned</span>
+                  )}
+                </div>
+              </div>
+
               {/* Contact Information */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <User className="h-4 w-4 mr-2 text-primary" />
+                  <Contact className="h-4 w-4 mr-2 text-primary" />
                   Contact Information
                 </h3>
                 <div className="space-y-3 pl-6">
@@ -222,7 +239,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               </div>
               <Button asChild style={{ backgroundColor: "#3d8f5b", color: "white" }}>
                 <Link href={`/admin/teachers/assign-class/${teacher.teacher_id}`}>
-                  <Plus className="mr-2 h-4 w-4" />
+                  <Users className="mr-2 h-4 w-4" />
                   Assign Class
                 </Link>
               </Button>
@@ -347,7 +364,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
+            <Calendar className="h-5 w-5 text-primary" />
             Sessions History
           </CardTitle>
         </CardHeader>
@@ -462,7 +479,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
             </div>
           ) : (
             <div className="text-center py-6">
-              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <Calendar className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="text-base font-medium text-muted-foreground mb-1">
                 No Past Sessions
               </h3>
@@ -479,7 +496,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
+              <GraduationCap className="h-5 w-5 text-primary" />
               Payments <span className="text-xs bg-muted px-2 py-1 rounded-full">{teacherPayments ? teacherPayments.length : 0}</span>
             </CardTitle>
           </CardHeader>
@@ -539,7 +556,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               </div>
             ) : (
               <div className="text-center py-6">
-                <Receipt className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <GraduationCap className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                 <h3 className="text-base font-medium text-muted-foreground mb-1">
                   No Payments
                 </h3>

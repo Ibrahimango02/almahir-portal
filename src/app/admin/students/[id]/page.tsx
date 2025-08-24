@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, User, Users, Edit, BookOpen, Clock, Plus, CreditCard, Receipt, DollarSign } from "lucide-react"
+import { Mail, Users, Edit, BookOpen, Clock, Plus, CreditCard, Receipt, DollarSign, Contact } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -155,7 +155,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               {/* Contact Information */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <User className="h-4 w-4 mr-2 text-primary" />
+                  <Contact className="h-4 w-4 mr-2 text-primary" />
                   Contact Information
                 </h3>
                 <div className="space-y-3 pl-6">

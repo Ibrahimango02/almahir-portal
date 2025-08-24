@@ -114,6 +114,7 @@ export type TeacherType = {
     hourly_rate: number | null
     notes: string | null
     is_admin: boolean
+    moderator_id: string | null
     created_at: string
     updated_at: string | null
 }
@@ -411,3 +412,25 @@ export type TeacherPaymentType = {
         end_date: string;
     };
 };
+
+// Notification types
+export type NotificationType = {
+    id: string
+    user_id: string
+    title: string
+    message: string
+    type: 'info' | 'success' | 'warning' | 'error'
+    is_read: boolean
+    action_url?: string
+    metadata?: Record<string, string | number | boolean | null>
+    created_at: string
+    updated_at: string
+}
+
+export type CreateNotificationType = Omit<NotificationType, 'id' | 'is_read' | 'created_at' | 'updated_at'>
+
+export type NotificationCounts = {
+    total: number
+    unread: number
+    by_type: Record<string, number>
+}

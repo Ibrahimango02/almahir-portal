@@ -25,6 +25,7 @@ import { getProfile } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"
 import { StudentSwitcher } from "@/components/student-switcher"
 import { useStudentSwitcher } from "@/contexts/StudentSwitcherContext"
+import { NotificationBell } from "@/components/notification-bell"
 
 const routes = [
   {
@@ -123,11 +124,19 @@ export function ParentSidebar() {
         )}
       >
         <div className="flex flex-col items-center justify-center p-4 border-b border-gray-200 dark:border-gray-800/60">
-          <Link href="/parent/dashboard" className="flex flex-col items-center justify-center w-full">
-            <div className="flex items-center justify-center w-full py-2">
+          <div className="relative flex items-center justify-center w-full py-2">
+            <Link href="/parent/dashboard" className="flex flex-col items-center justify-center">
               <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={100} height={100} className="object-contain" />
-            </div>
-          </Link>
+            </Link>
+
+            {/* Notification Bell - Bottom right of logo */}
+            {profile && (
+              <div className="absolute -bottom-2 -right-2">
+                <NotificationBell userId={profile.id} />
+              </div>
+            )}
+          </div>
+
           <Button
             variant="ghost"
             size="icon"

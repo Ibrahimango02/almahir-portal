@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, User, Users, Calendar, Edit, Receipt, CreditCard } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, Users, Receipt, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -94,7 +94,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
               {/* Contact Information */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <User className="h-4 w-4 mr-2 text-primary" />
+                  <Contact className="h-4 w-4 mr-2 text-primary" />
                   Contact Information
                 </h3>
                 <div className="space-y-3 pl-6">

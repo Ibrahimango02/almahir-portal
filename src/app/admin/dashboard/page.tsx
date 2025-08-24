@@ -1,13 +1,11 @@
+"use client"
+
 import {
-  BookCheck,
-  BookOpen,
   BookX,
   Calendar,
   CheckCircle,
   Clock,
-  GraduationCapIcon as Graduation,
   Play,
-  UserPen,
   UserX
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,42 +15,118 @@ import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
 import { ClientDateDisplay } from "@/components/client-date-display"
 import { RescheduleRequestsTable } from "@/components/reschedule-requests-table"
-import { getSessionsToday, getWeeklySessionsCount, getSessionsCountByStatus, getActiveClassesCount } from "@/lib/get/get-classes"
+import { getSessionsToday, getSessionsCountByStatus } from "@/lib/get/get-classes"
 import { getPendingRescheduleRequestsCount } from "@/lib/get/get-reschedule-requests"
-import { getActiveStudentsCount } from "@/lib/get/get-students"
-import { getActiveTeachersCount } from "@/lib/get/get-teachers"
-import { createClient } from "@/utils/supabase/server"
+import { createClient } from "@/utils/supabase/client"
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { ClassSessionType } from "@/types"
 
-export default async function AdminDashboard() {
-  const supabase = await createClient()
+export default function AdminDashboard() {
+  const [profile, setProfile] = useState<{ id: string; first_name: string; last_name: string } | null>(null)
+  const [todaysClasses, setTodaysClasses] = useState({
+    scheduled: 0,
+    running: 0,
+    pending: 0,
+    complete: 0,
+    cancelled: 0,
+    absence: 0,
+  })
+  const [pendingRescheduleCount, setPendingRescheduleCount] = useState(0)
+  const [sessionsData, setSessionsData] = useState<ClassSessionType[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
-  // Get user profile
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('first_name, last_name')
-    .eq('id', user?.id)
-    .single()
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const supabase = createClient()
 
+        // Get user profile
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name')
+            .eq('id', user.id)
+            .single()
+          setProfile(profileData)
+        }
 
-  // Fetch todaysClasses inside the component to ensure fresh data on each page load
-  const todaysClasses = {
-    scheduled: await getSessionsCountByStatus("scheduled"),
-    running: await getSessionsCountByStatus("running"),
-    pending: await getSessionsCountByStatus("pending"),
-    complete: await getSessionsCountByStatus("complete"),
-    cancelled: await getSessionsCountByStatus("cancelled"),
-    absence: await getSessionsCountByStatus("absence"),
+        // Fetch all dashboard data
+        const [
+          scheduledCount,
+          runningCount,
+          pendingCount,
+          completeCount,
+          cancelledCount,
+          absenceCount,
+          pendingRescheduleCountData,
+          sessionsDataData
+        ] = await Promise.all([
+          getSessionsCountByStatus("scheduled"),
+          getSessionsCountByStatus("running"),
+          getSessionsCountByStatus("pending"),
+          getSessionsCountByStatus("complete"),
+          getSessionsCountByStatus("cancelled"),
+          getSessionsCountByStatus("absence"),
+          getPendingRescheduleRequestsCount(),
+          getSessionsToday()
+        ])
+
+        setTodaysClasses({
+          scheduled: scheduledCount || 0,
+          running: runningCount || 0,
+          pending: pendingCount || 0,
+          complete: completeCount || 0,
+          cancelled: cancelledCount || 0,
+          absence: absenceCount || 0,
+        })
+        setPendingRescheduleCount(pendingRescheduleCountData || 0)
+        setSessionsData(sessionsDataData || [])
+        setLastUpdated(new Date())
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+
+    // Set up polling every 30 seconds to refresh dashboard data
+    const interval = setInterval(fetchData, 30000)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  // Function to update pending reschedule count (will be called by RescheduleRequestsTable)
+  const updatePendingRescheduleCount = async () => {
+    try {
+      const newCount = await getPendingRescheduleRequestsCount()
+      setPendingRescheduleCount(newCount)
+    } catch (error) {
+      console.error('Error updating pending reschedule count:', error)
+    }
   }
 
-  const studentsCount = await getActiveStudentsCount()
-  const teachersCount = await getActiveTeachersCount()
-  const weeklySessionsCount = await getWeeklySessionsCount()
-  const activeClassesCount = await getActiveClassesCount()
-  const pendingRescheduleCount = await getPendingRescheduleRequestsCount()
-
-  // Fetch sessions data for today using getSessionsToday()
-  const sessionsData = await getSessionsToday()
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="w-full flex items-center bg-green-800 min-h-[110px] shadow-md" style={{ borderBottom: '4px solid #34d399' }}>
+          <div className="flex-1 flex justify-center items-center">
+            <div className="h-8 w-64 bg-white/20 rounded animate-pulse"></div>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-20">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <span>Loading dashboard...</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,9 +148,50 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* Classes Today */}
+      {/* Sessions Today */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold tracking-tight">Sessions Today</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const [
+                scheduledCount,
+                runningCount,
+                pendingCount,
+                completeCount,
+                cancelledCount,
+                absenceCount,
+              ] = await Promise.all([
+                getSessionsCountByStatus("scheduled"),
+                getSessionsCountByStatus("running"),
+                getSessionsCountByStatus("pending"),
+                getSessionsCountByStatus("complete"),
+                getSessionsCountByStatus("cancelled"),
+                getSessionsCountByStatus("absence"),
+              ])
 
-      <h2 className="text-xl font-semibold tracking-tight">Sessions Today</h2>
+              setTodaysClasses({
+                scheduled: scheduledCount || 0,
+                running: runningCount || 0,
+                pending: pendingCount || 0,
+                complete: completeCount || 0,
+                cancelled: cancelledCount || 0,
+                absence: absenceCount || 0,
+              })
+              setLastUpdated(new Date())
+            }}
+          >
+            Refresh
+          </Button>
+        </div>
+        {lastUpdated && (
+          <p className="text-sm text-muted-foreground">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </p>
+        )}
+      </div>
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-l-4 border-l-blue-400/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -140,98 +255,34 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Classes Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-5">
-          <CardHeader>
-            <CardTitle>Classes Overview</CardTitle>
-            <CardDescription>View and manage your upcoming and recent classes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="upcoming" className="space-y-4">
-              <TabsList className="bg-muted/80">
-                <TabsTrigger value="recent">Recent</TabsTrigger>
-                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
-              </TabsList>
-              <TabsContent value="upcoming" className="space-y-4">
-                <UpcomingClasses
-                  sessions={sessionsData}
-                  isLoading={false}
-                  userType="admin"
-                />
-              </TabsContent>
-              <TabsContent value="recent" className="space-y-4">
-                <RecentClasses
-                  sessions={sessionsData}
-                  isLoading={false}
-                  userType="admin"
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        {/* Academy Stats */}
-
-        <Card className="col-span-2">
-          <CardHeader>
-            <CardTitle>Academy Stats</CardTitle>
-            <CardDescription>Overview of students, teachers and classes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <Graduation className="h-5 w-5 text-green-700 dark:text-green-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Active Students</p>
-                </div>
-                <div className="ml-auto">{studentsCount}</div>
-              </div>
-
-              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <UserPen className="h-5 w-5 text-green-700 dark:text-green-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Active Teachers</p>
-                </div>
-                <div className="ml-auto">{teachersCount}</div>
-              </div>
-
-              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <BookCheck className="h-5 w-5 text-green-700 dark:text-green-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Weekly Sessions</p>
-                </div>
-                <div className="ml-auto">{weeklySessionsCount}</div>
-              </div>
-
-              <div className="flex items-center gap-4 p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <BookOpen className="h-5 w-5 text-green-700 dark:text-green-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Active Classes</p>
-                </div>
-                <div className="ml-auto">{activeClassesCount}</div>
-              </div>
-
-              <div className="flex items-center gap-4 p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                  <Calendar className="h-5 w-5 text-orange-700 dark:text-orange-300" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium leading-none">Pending Reschedules</p>
-                </div>
-                <div className="ml-auto">{pendingRescheduleCount}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Classes Overview</CardTitle>
+          <CardDescription>View and manage your upcoming and recent classes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="upcoming" className="space-y-4">
+            <TabsList className="bg-muted/80">
+              <TabsTrigger value="recent">Recent</TabsTrigger>
+              <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+            </TabsList>
+            <TabsContent value="upcoming" className="space-y-4">
+              <UpcomingClasses
+                sessions={sessionsData}
+                isLoading={false}
+                userType="admin"
+              />
+            </TabsContent>
+            <TabsContent value="recent" className="space-y-4">
+              <RecentClasses
+                sessions={sessionsData}
+                isLoading={false}
+                userType="admin"
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Reschedule Requests */}
       <div className="space-y-4">
@@ -243,7 +294,7 @@ export default async function AdminDashboard() {
             </Badge>
           )}
         </div>
-        <RescheduleRequestsTable />
+        <RescheduleRequestsTable onCountUpdate={updatePendingRescheduleCount} />
       </div>
     </div>
   )

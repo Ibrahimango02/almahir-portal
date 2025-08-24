@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { useToast } from "@/components/ui/use-toast"
 import { BackButton } from "@/components/back-button"
 import { getSessionById } from "@/lib/get/get-classes"
-import { updateSession } from "@/lib/put/put-classes"
+import { rescheduleSession } from "@/lib/put/put-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
@@ -174,9 +174,8 @@ export default function ReschedulePage() {
         timezone
       );
 
-      const result = await updateSession({
+      const result = await rescheduleSession({
         sessionId: sessionId,
-        action: 'reschedule',
         newStartDate: startUtc.toISOString(),
         newEndDate: endUtc.toISOString(),
       })
@@ -193,7 +192,7 @@ export default function ReschedulePage() {
 
       // Redirect back to class details page
       setTimeout(() => {
-        router.push(`/admin/classes/${classId}/${sessionId}`)
+        router.push(`/admin/classes/${classId}`)
       }, 1500)
     } catch {
       toast({

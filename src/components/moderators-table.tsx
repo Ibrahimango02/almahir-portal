@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 import { ProfileType } from "@/types"
@@ -17,6 +18,7 @@ interface ModeratorsTableProps {
 }
 
 export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
+    const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(100)
 
@@ -45,7 +47,8 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                         {paginatedModerators.map((moderator) => (
                             <TableRow
                                 key={moderator.id}
-                                className="hover:bg-muted/100 transition-all duration-200 border-b border-border/30"
+                                className="hover:bg-muted/100 transition-all duration-200 border-b border-border/30 cursor-pointer"
+                                onClick={() => router.push(`/admin/moderators/${moderator.id}`)}
                             >
                                 {/* Moderator Info */}
                                 <TableCell className="py-3 px-4">
