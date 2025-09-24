@@ -51,13 +51,50 @@ export default function InviteUserPage() {
             const data = await response.json()
 
             if (!response.ok) {
-                throw new Error(data.error || 'Failed to send invitation')
+                // Show specific error messages based on the error type
+                let errorTitle = "Error sending invitation"
+                let errorDescription = data.error || "Please try again."
+                const variant: "default" | "destructive" = "destructive"
+
+                // Handle specific error cases
+                switch (data.error) {
+                    case 'User already has a pending invitation':
+                        errorTitle = "Invitation Already Exists"
+                        errorDescription = "This user already has a pending invitation. Please wait for them to accept or let the invitation expire."
+                        break
+                    case 'Invalid email format':
+                        errorTitle = "Invalid Email"
+                        errorDescription = "Please enter a valid email address."
+                        break
+                    case 'Invalid role specified':
+                        errorTitle = "Invalid Role"
+                        errorDescription = "Please select a valid role for the user."
+                        break
+                    case 'Full name, email, and role are required':
+                        errorTitle = "Missing Information"
+                        errorDescription = "Please fill in all required fields."
+                        break
+                    case 'Failed to send email. Please check email configuration.':
+                        errorTitle = "Email Delivery Failed"
+                        errorDescription = "The invitation was created but we couldn't send the email. Please contact support."
+                        break
+                    default:
+                        // Use the default error message from the server
+                        errorDescription = data.error || "An unexpected error occurred. Please try again."
+                }
+
+                toast({
+                    title: errorTitle,
+                    description: errorDescription,
+                    variant: variant,
+                })
+                throw new Error(data.error)
             }
 
             // Show success message
             toast({
                 title: "Invitation sent successfully!",
-                description: `An invitation has been sent to ${formData.fullName}`,
+                description: `An invitation has been sent to ${formData.email}`,
             })
 
             // Reset form
@@ -69,11 +106,7 @@ export default function InviteUserPage() {
             }, 2000)
         } catch (error) {
             console.error('Error sending invitation:', error)
-            toast({
-                title: "Error sending invitation",
-                description: error instanceof Error ? error.message : "Please try again.",
-                variant: "destructive",
-            })
+            // Don't show another toast here since we already showed one for the specific error
         } finally {
             setIsSubmitting(false)
         }
@@ -81,7 +114,6 @@ export default function InviteUserPage() {
 
     return (
         <div className="flex flex-col gap-6 min-h-screen py-12 px-4 bg-background">
-
             <h1 className="text-4xl font-bold tracking-tight text-center mb-8">Invite User</h1>
 
             <Card className="max-w-4xl mx-auto w-full shadow-lg">

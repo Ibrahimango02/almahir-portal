@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
             .from('invitations')
             .select('*')
             .eq('email', email)
-            .eq('status', 'pending')
+            .in('status', ['pending', 'accepted'])
             .single()
 
         if (existingInvitation) {

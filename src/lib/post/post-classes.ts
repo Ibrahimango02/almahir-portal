@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 import { addDays, format } from 'date-fns'
+import { createClassChatRoom, addParticipantsToChatRoom } from "@/lib/utils/chat-room-utils"
 
 type ClassData = {
     title: string
@@ -26,6 +27,10 @@ type ClassData = {
 export async function createClass(classData: ClassData) {
     const supabase = createClient()
 
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    const currentUserId = user?.id
+
     try {
         // First, create the class record
         const { data: classRecord, error: classError } = await supabase
@@ -45,6 +50,14 @@ export async function createClass(classData: ClassData) {
 
         if (classError) {
             throw new Error(`Failed to create class: ${classError.message}`)
+        }
+
+        // Create chat room for the class
+        try {
+            await createClassChatRoom(classRecord.id, classData.title, currentUserId);
+        } catch (chatError) {
+            console.error('Error creating class chat room:', chatError);
+            // Don't throw error here as the main class creation was successful
         }
 
         // Assign teachers to class
@@ -77,6 +90,31 @@ export async function createClass(classData: ClassData) {
             if (studentError) {
                 throw new Error(`Failed to enroll students: ${studentError.message}`)
             }
+        }
+
+        // Add all participants to the class chat room
+        try {
+            const allParticipantIds = [
+                ...classData.teacher_id,
+                ...(classData.student_ids || [])
+            ];
+
+            if (allParticipantIds.length > 0) {
+                // Get the chat room for this class
+                const { data: chatRoom } = await supabase
+                    .from('chat_rooms')
+                    .select('id')
+                    .eq('class_id', classRecord.id)
+                    .eq('type', 'class')
+                    .single();
+
+                if (chatRoom) {
+                    await addParticipantsToChatRoom(chatRoom.id, allParticipantIds, 'member');
+                }
+            }
+        } catch (chatError) {
+            console.error('Error adding participants to class chat room:', chatError);
+            // Don't throw error here as the main operations were successful
         }
 
         // Create teacher-student relationships for all combinations

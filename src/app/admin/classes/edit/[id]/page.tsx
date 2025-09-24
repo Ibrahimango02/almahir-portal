@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { TimePicker } from "@/components/ui/time-picker"
@@ -35,6 +35,8 @@ import { StudentConflictDisplay } from "@/components/student-conflict-display"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SubjectsCombobox } from "@/components/subjects-combobox"
+import { TeachersCombobox } from "@/components/teachers-combobox"
+import { StudentsCombobox } from "@/components/students-combobox"
 
 // Form schema for editing class
 const formSchema = z.object({
@@ -365,6 +367,15 @@ export default function EditClassPage() {
                 }
             })
 
+            // Determine class link - use provided link or fallback to first teacher's class_link
+            let finalClassLink = values.classLink || null;
+            if (!finalClassLink && values.teacherIds.length > 0) {
+                const firstTeacher = teachers.find(t => t.teacher_id === values.teacherIds[0]);
+                if (firstTeacher?.class_link) {
+                    finalClassLink = firstTeacher.class_link;
+                }
+            }
+
             // Prepare update data for basic class information (excluding teacher and student assignments)
             const updateData = {
                 classId: classId,
@@ -374,7 +385,7 @@ export default function EditClassPage() {
                 start_date: localToUtc(values.startDate, timezone).toISOString(),
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
                 days_repeated: daysRepeatedWithTimes,
-                class_link: values.classLink || null,
+                class_link: finalClassLink,
                 times: timesWithUtc,
             }
 
@@ -729,59 +740,24 @@ export default function EditClassPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="text-sm font-medium text-gray-700">Select Teachers</FormLabel>
-                                                <Select
-                                                    onValueChange={(value) => {
-                                                        const currentValues = field.value || [];
-                                                        if (!currentValues.includes(value)) {
-                                                            field.onChange([...currentValues, value]);
-                                                        }
-                                                    }}
-                                                    value={field.value?.[field.value.length - 1] || ""}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
-                                                            <SelectValue placeholder="Select teachers" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {teachers.map((teacher) => (
-                                                            <SelectItem
-                                                                key={teacher.teacher_id}
-                                                                value={teacher.teacher_id}
-                                                                disabled={field.value?.includes(teacher.teacher_id)}
-                                                            >
-                                                                {teacher.first_name} {teacher.last_name} {teacher.specialization ? `(${teacher.specialization})` : ""}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <div className="mt-3">
-                                                    {field.value && field.value.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {field.value.map((teacherId) => {
-                                                                const teacher = teachers.find(t => t.teacher_id === teacherId);
-                                                                return teacher ? (
-                                                                    <div
-                                                                        key={teacherId}
-                                                                        className="flex items-center gap-2 bg-[#3d8f5b]/10 border border-[#3d8f5b]/20 px-3 py-2 rounded-lg text-sm"
-                                                                    >
-                                                                        <span className="text-[#3d8f5b] font-medium">{teacher.first_name} {teacher.last_name}</span>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                field.onChange(field.value.filter(id => id !== teacherId));
-                                                                            }}
-                                                                            className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
-                                                                        >
-                                                                            ×
-                                                                        </button>
-                                                                    </div>
-                                                                ) : null;
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <FormDescription className="text-sm text-gray-600">Select one or more teachers for this class</FormDescription>
+                                                <FormControl>
+                                                    <TeachersCombobox
+                                                        teachers={teachers}
+                                                        selectedTeacherIds={field.value || []}
+                                                        onTeacherSelect={(teacherId) => {
+                                                            const currentValues = field.value || []
+                                                            if (currentValues.includes(teacherId)) {
+                                                                // Remove teacher if already selected
+                                                                field.onChange(currentValues.filter(id => id !== teacherId))
+                                                            } else {
+                                                                // Add teacher if not selected
+                                                                field.onChange([...currentValues, teacherId])
+                                                            }
+                                                        }}
+                                                        placeholder="Search and select teachers"
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-sm text-gray-600">Search and select one or more teachers for this class</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -842,59 +818,24 @@ export default function EditClassPage() {
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="text-sm font-medium text-gray-700">Select Students (Optional)</FormLabel>
-                                                <Select
-                                                    onValueChange={(value) => {
-                                                        const currentValues = field.value || [];
-                                                        if (!currentValues.includes(value)) {
-                                                            field.onChange([...currentValues, value]);
-                                                        }
-                                                    }}
-                                                    value={field.value?.[field.value.length - 1] || ""}
-                                                >
-                                                    <FormControl>
-                                                        <SelectTrigger className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
-                                                            <SelectValue placeholder="Select student" />
-                                                        </SelectTrigger>
-                                                    </FormControl>
-                                                    <SelectContent>
-                                                        {students.map((student) => (
-                                                            <SelectItem
-                                                                key={student.student_id}
-                                                                value={student.student_id}
-                                                                disabled={field.value?.includes(student.student_id)}
-                                                            >
-                                                                {student.first_name} {student.last_name} (Age: {student.age}, Grade: {student.grade_level || "N/A"})
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <div className="mt-3">
-                                                    {field.value && field.value.length > 0 && (
-                                                        <div className="flex flex-wrap gap-2">
-                                                            {field.value.map((studentId) => {
-                                                                const student = students.find(s => s.student_id === studentId);
-                                                                return student ? (
-                                                                    <div
-                                                                        key={studentId}
-                                                                        className="flex items-center gap-2 bg-[#3d8f5b]/10 border border-[#3d8f5b]/20 px-3 py-2 rounded-lg text-sm"
-                                                                    >
-                                                                        <span className="text-[#3d8f5b] font-medium">{student.first_name} {student.last_name}</span>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                field.onChange(field.value?.filter(id => id !== studentId));
-                                                                            }}
-                                                                            className="text-[#3d8f5b] hover:text-[#3d8f5b]/70 transition-colors"
-                                                                        >
-                                                                            ×
-                                                                        </button>
-                                                                    </div>
-                                                                ) : null;
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <FormDescription className="text-sm text-gray-600">Select students to enroll in this class</FormDescription>
+                                                <FormControl>
+                                                    <StudentsCombobox
+                                                        students={students}
+                                                        selectedStudentIds={field.value || []}
+                                                        onStudentSelect={(studentId) => {
+                                                            const currentValues = field.value || []
+                                                            if (currentValues.includes(studentId)) {
+                                                                // Remove student if already selected
+                                                                field.onChange(currentValues.filter(id => id !== studentId))
+                                                            } else {
+                                                                // Add student if not selected
+                                                                field.onChange([...currentValues, studentId])
+                                                            }
+                                                        }}
+                                                        placeholder="Search and select students"
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-sm text-gray-600">Search and select students to enroll in this class</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -945,13 +886,13 @@ export default function EditClassPage() {
                                                 <FormLabel className="text-sm font-medium text-gray-700">Class Link (Optional)</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="https://meet.google.com/..."
+                                                        placeholder="https://meet.google.com/... (leave empty to use teacher's default link)"
                                                         className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
                                                         {...field}
                                                     />
                                                 </FormControl>
                                                 <FormDescription className="text-sm text-gray-600">
-                                                    Meeting link for online classes
+                                                    Meeting link for online classes. If empty, the first teacher&apos;s default class link will be used.
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>

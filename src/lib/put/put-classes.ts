@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
+import { addClassParticipantsToChat } from "@/lib/utils/chat-room-utils"
 import { addDays, format } from 'date-fns'
 
 export async function updateClass(params: {
@@ -878,6 +879,14 @@ export async function updateClassAssignments(params: {
                 .insert(teacherAssignments)
 
             if (insertTeacherError) throw insertTeacherError
+
+            // Add new teachers to chat room
+            try {
+                await addClassParticipantsToChat(classId, teacher_ids);
+            } catch (chatError) {
+                console.error('Error adding new teachers to chat room:', chatError);
+                // Don't throw error here as the main operation was successful
+            }
         }
 
         // Add new student assignments
@@ -892,6 +901,14 @@ export async function updateClassAssignments(params: {
                 .insert(studentEnrollments)
 
             if (insertStudentError) throw insertStudentError
+
+            // Add new students to chat room
+            try {
+                await addClassParticipantsToChat(classId, student_ids);
+            } catch (chatError) {
+                console.error('Error adding new students to chat room:', chatError);
+                // Don't throw error here as the main operation was successful
+            }
         }
 
         // Create teacher-student relationships for all combinations

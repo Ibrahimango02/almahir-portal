@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { TimezoneProvider } from "@/contexts/TimezoneContext"
+import { ChatClientWrapper } from "@/components/chat-client-wrapper"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <TimezoneProvider>
             {children}
+            <ChatClientWrapper />
             <Toaster />
           </TimezoneProvider>
         </ThemeProvider>
