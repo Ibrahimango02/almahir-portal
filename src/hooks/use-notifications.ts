@@ -30,6 +30,29 @@ export function useNotifications(userId: string) {
         }
     }, [userId])
 
+    // Handle connection errors with retry logic
+    const handleConnectionError = useCallback(() => {
+        if (retryCountRef.current < maxRetries) {
+            retryCountRef.current++
+            const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000) // Exponential backoff, max 30s
+
+            console.log(`Retrying connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`)
+
+            retryTimeoutRef.current = setTimeout(() => {
+                // Call establishConnection via ref to avoid circular dependency
+                if (establishConnectionRef.current) {
+                    establishConnectionRef.current()
+                }
+            }, delay)
+        } else {
+            console.error('Max retry attempts reached for real-time notifications')
+            setConnectionError('Failed to establish connection after multiple attempts')
+        }
+    }, [maxRetries])
+
+    // Use ref to store establishConnection to avoid circular dependency
+    const establishConnectionRef = useRef<(() => void) | null>(null)
+
     // Function to establish real-time connection
     const establishConnection = useCallback(() => {
         if (!userId) return
@@ -129,24 +152,10 @@ export function useNotifications(userId: string) {
             setConnectionError('Failed to establish connection')
             handleConnectionError()
         }
-    }, [userId])
+    }, [userId, handleConnectionError])
 
-    // Handle connection errors with retry logic
-    const handleConnectionError = useCallback(() => {
-        if (retryCountRef.current < maxRetries) {
-            retryCountRef.current++
-            const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000) // Exponential backoff, max 30s
-
-            console.log(`Retrying connection in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`)
-
-            retryTimeoutRef.current = setTimeout(() => {
-                establishConnection()
-            }, delay)
-        } else {
-            console.error('Max retry attempts reached for real-time notifications')
-            setConnectionError('Failed to establish connection after multiple attempts')
-        }
-    }, [establishConnection, maxRetries])
+    // Update the ref whenever establishConnection changes
+    establishConnectionRef.current = establishConnection
 
     // Manual reconnection function
     const reconnect = useCallback(() => {
@@ -158,6 +167,9 @@ export function useNotifications(userId: string) {
     useEffect(() => {
         if (!userId) return
 
+        // Copy supabase ref to avoid stale closure warning
+        const currentSupabase = supabaseRef.current
+
         // Load initial notifications
         loadInitialNotifications()
 
@@ -166,7 +178,7 @@ export function useNotifications(userId: string) {
 
         // Set up visibility change listener for better connection management
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && !isConnected) {
+            if (document.visibilityState === 'visible') {
                 console.log('Tab became visible, attempting to reconnect...')
                 reconnect()
             }
@@ -204,8 +216,7 @@ export function useNotifications(userId: string) {
             if (channelRef.current) {
                 console.log('Cleaning up real-time notifications for user:', userId)
                 const currentChannel = channelRef.current
-                const supabase = supabaseRef.current
-                supabase.removeChannel(currentChannel)
+                currentSupabase.removeChannel(currentChannel)
                 channelRef.current = null
             }
         }

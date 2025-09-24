@@ -1,5 +1,4 @@
 import { createClient } from "@/utils/supabase/client"
-import { addClassParticipantsToChat } from "@/lib/utils/chat-room-utils"
 
 type AssignmentData = {
     student_id: string
@@ -87,16 +86,6 @@ export async function assignStudentToClasses(data: AssignmentData) {
 
         if (classStudentsError) {
             throw new Error(`Failed to assign student to classes: ${classStudentsError.message}`)
-        }
-
-        // Add student to chat rooms for each class
-        for (const class_id of data.class_ids) {
-            try {
-                await addClassParticipantsToChat(class_id, [data.student_id]);
-            } catch (chatError) {
-                console.error(`Error adding student to chat room for class ${class_id}:`, chatError);
-                // Don't throw error here as the main operation was successful
-            }
         }
 
         // Get teachers for each class to create teacher-student relationships
