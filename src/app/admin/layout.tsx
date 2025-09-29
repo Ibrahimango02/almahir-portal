@@ -32,7 +32,7 @@ export default function AdminLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-app-overlay">
         <div className="md:pl-60">
           <main className="p-4 md:p-6">
             <div className="flex items-center justify-center h-64">
@@ -45,7 +45,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app-overlay">
       {profile?.role === 'moderator' ? <ModeratorSidebar /> : <AdminSidebar />}
       <div className="md:pl-60">
         <main className="p-4 md:p-6">{children}</main>

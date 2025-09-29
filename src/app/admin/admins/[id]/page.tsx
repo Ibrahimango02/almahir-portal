@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Plus, BookOpen, Contact } from "lucide-react"
+import { Mail, Phone, Calendar, Plus, BookOpen, Contact, LibraryBig } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
@@ -201,8 +201,8 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5 text-primary" />
-                        Assigned Classes <span className="text-xs bg-muted px-2 py-1 rounded-full">{adminClasses.length}</span>
+                        <LibraryBig className="h-5 w-5 text-primary" />
+                        Classes <span className="text-xs bg-muted px-2 py-1 rounded-full">{adminClasses.length}</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -290,7 +290,7 @@ export default async function AdminDetailPage({ params }: { params: Promise<{ id
                         </div>
                     ) : (
                         <div className="text-center py-6">
-                            <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                            <LibraryBig className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                             <h3 className="text-base font-medium text-muted-foreground mb-1">
                                 No Classes Assigned
                             </h3>

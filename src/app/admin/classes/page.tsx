@@ -199,59 +199,57 @@ export default function ClassesPage() {
                 </Card>
             </div>
 
-            {/* Main Content Card */}
-            <Card className="border-0 shadow-none">
-                <CardContent>
-                    {/* Filter Options */}
-                    <div className="flex flex-wrap items-center gap-2 mb-6">
-                        <span className="text-sm font-medium text-muted-foreground">Filter by:</span>
-                        <Button
-                            variant={statusFilter === "all" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setStatusFilter("all")}
-                            className="h-8"
-                            style={statusFilter === "all" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
-                        >
-                            All
-                        </Button>
-                        <Button
-                            variant={statusFilter === "active" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setStatusFilter("active")}
-                            className="h-8"
-                            style={statusFilter === "active" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
-                        >
-                            Active
-                        </Button>
-                        <Button
-                            variant={statusFilter === "archived" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setStatusFilter("archived")}
-                            className="h-8"
-                            style={statusFilter === "archived" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
-                        >
-                            Archived
-                        </Button>
-                        <Button
-                            variant={statusFilter === "expires-soon" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setStatusFilter("expires-soon")}
-                            className="h-8"
-                            style={statusFilter === "expires-soon" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
-                        >
-                            Expires Soon
-                        </Button>
-                    </div>
+            {/* Main Content */}
+            <div>
+                {/* Filter Options */}
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                    <span className="text-sm font-medium text-muted-foreground">Filter by:</span>
+                    <Button
+                        variant={statusFilter === "all" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStatusFilter("all")}
+                        className="h-8"
+                        style={statusFilter === "all" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                    >
+                        All
+                    </Button>
+                    <Button
+                        variant={statusFilter === "active" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStatusFilter("active")}
+                        className="h-8"
+                        style={statusFilter === "active" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                    >
+                        Active
+                    </Button>
+                    <Button
+                        variant={statusFilter === "archived" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStatusFilter("archived")}
+                        className="h-8"
+                        style={statusFilter === "archived" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                    >
+                        Archived
+                    </Button>
+                    <Button
+                        variant={statusFilter === "expires-soon" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setStatusFilter("expires-soon")}
+                        className="h-8"
+                        style={statusFilter === "expires-soon" ? { backgroundColor: "#3d8f5b", color: "white" } : {}}
+                    >
+                        Expires Soon
+                    </Button>
+                </div>
 
-                    <ClassesTable
-                        classes={filteredClasses}
-                        isLoading={isLoading}
-                        userType="admin"
-                        emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "Get started by creating your first class"}
-                        showExpirationWarning={true}
-                    />
-                </CardContent>
-            </Card>
+                <ClassesTable
+                    classes={filteredClasses}
+                    isLoading={isLoading}
+                    userType="admin"
+                    emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "Get started by creating your first class"}
+                    showExpirationWarning={true}
+                />
+            </div>
         </div>
     )
 }

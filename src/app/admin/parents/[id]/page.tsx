@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Edit, Contact, Users, Receipt, CreditCard } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, DollarSign, User } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -114,7 +114,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
               {/* Students Section */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
-                  <Users className="h-4 w-4 mr-2 text-primary" />
+                  <User className="h-4 w-4 mr-2 text-primary" />
                   Students
                 </h3>
                 <div className="pl-6">
@@ -155,7 +155,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-2">
-                      <Receipt className="h-5 w-5 text-primary" />
+                      <DollarSign className="h-5 w-5 text-primary" />
                       Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{parentInvoices ? parentInvoices.length : 0}</span>
                     </CardTitle>
                   </CardHeader>
@@ -212,7 +212,7 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                       </div>
                     ) : (
                       <div className="text-center py-6">
-                        <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                        <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                         <h3 className="text-base font-medium text-muted-foreground mb-1">
                           No Invoices
                         </h3>

@@ -5,7 +5,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   CalendarDays,
-  Receipt,
+  DollarSign,
   Home,
   LogOut,
   Menu,
@@ -58,7 +58,7 @@ const routes = [
   },
   {
     label: "Accounting",
-    icon: Receipt,
+    icon: DollarSign,
     href: "/admin/accounting",
     color: "text-green-600",
   },

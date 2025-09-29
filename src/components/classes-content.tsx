@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { getClassesByParentId, getClassesByStudentId } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
@@ -78,12 +77,6 @@ export function ClassesContent({ currentUserId }: ClassesContentProps) {
         setFilteredClasses(filtered)
     }, [searchQuery, classes])
 
-    // Determine title and description based on current view
-    const currentTitle = isParentView ? "All Classes" : `${selectedStudent?.first_name}'s Classes`;
-    const currentDescription = isParentView
-        ? "View and manage all classes in the system"
-        : `View classes that ${selectedStudent?.first_name} is enrolled in`;
-
     return (
         <div className="flex flex-col gap-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -108,27 +101,21 @@ export function ClassesContent({ currentUserId }: ClassesContentProps) {
                     </div>
                 </div>
             </div>
-            {/* Main Content Card */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>{currentTitle}</CardTitle>
-                    <CardDescription>{currentDescription}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ClassesTable
-                        classes={filteredClasses}
-                        isLoading={isLoading}
-                        userType={isParentView ? "parent" : "student"}
-                        emptyStateMessage={
-                            searchQuery
-                                ? "Try adjusting your search terms"
-                                : isParentView
-                                    ? "You haven't been assigned to any classes yet"
-                                    : `${selectedStudent?.first_name} isn't enrolled in any classes yet`
-                        }
-                    />
-                </CardContent>
-            </Card>
+            {/* Main Content */}
+            <div>
+                <ClassesTable
+                    classes={filteredClasses}
+                    isLoading={isLoading}
+                    userType={isParentView ? "parent" : "student"}
+                    emptyStateMessage={
+                        searchQuery
+                            ? "Try adjusting your search terms"
+                            : isParentView
+                                ? "You haven't been assigned to any classes yet"
+                                : `${selectedStudent?.first_name} isn't enrolled in any classes yet`
+                    }
+                />
+            </div>
         </div>
     )
 } 

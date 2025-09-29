@@ -191,6 +191,7 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
+                                min={new Date().toISOString().split('T')[0]}
                                 required
                             />
                         </div>

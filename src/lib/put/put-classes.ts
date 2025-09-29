@@ -155,7 +155,7 @@ export async function updateClass(params: {
 
             // Separate sessions into past and future/current
             const now = new Date()
-            const futureSessions = existingSessions?.filter(session => new Date(session.start_date) >= now) || []
+            const futureSessions = existingSessions?.filter(session => new Date(session.start_date) > now) || []
 
             // Only delete future/current sessions, preserve past sessions
             // Attendance records will be automatically deleted due to CASCADE constraints

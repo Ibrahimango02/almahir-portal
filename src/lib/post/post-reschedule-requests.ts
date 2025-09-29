@@ -8,13 +8,14 @@ export async function createRescheduleRequest(params: {
     requestedBy: string
     requestedDate: string
     reason: string
+    timezone: string
 }): Promise<{ success: boolean; data?: RescheduleRequestType; error?: { message: string } }> {
     const supabase = createClient()
 
     try {
         // Validate required fields
-        if (!params.sessionId || !params.requestedBy || !params.requestedDate || !params.reason) {
-            throw new Error('Session ID, requested by, requested date, and reason are required')
+        if (!params.sessionId || !params.requestedBy || !params.requestedDate || !params.reason || !params.timezone) {
+            throw new Error('Session ID, requested by, requested date, reason, and timezone are required')
         }
 
         // Get session and class details for notification
@@ -45,7 +46,8 @@ export async function createRescheduleRequest(params: {
                 requested_by: params.requestedBy,
                 requested_date: params.requestedDate,
                 reason: params.reason,
-                status: 'pending'
+                status: 'pending',
+                timezone: params.timezone
             })
             .select()
             .single()

@@ -11,7 +11,7 @@ import { markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/post/p
 import { useToast } from '@/hooks/use-toast'
 import { useNotifications } from '@/hooks/use-notifications'
 import { formatDistanceToNow } from 'date-fns'
-import { useRouter } from 'next/navigation'
+
 
 interface NotificationBellProps {
     userId: string
@@ -25,7 +25,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     const [isAnimating, setIsAnimating] = useState(false)
     const { toast } = useToast()
     const previousCount = useRef(0)
-    const router = useRouter()
+
 
     // Use real-time notifications hook
     const { notifications: realTimeNotifications, isLoading: realTimeLoading } = useNotifications(userId)
@@ -184,23 +184,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
         }
     }
 
-    const handleNotificationClick = (notification: NotificationType, e?: React.MouseEvent) => {
-        // Prevent any default behavior
-        if (e) {
-            e.preventDefault()
-            e.stopPropagation()
-        }
 
-        // Mark as read when clicked
-        handleMarkAsRead(notification.id)
-
-        // Navigate to action URL if provided using Next.js router
-        if (notification.action_url) {
-            router.push(notification.action_url)
-        }
-
-        setIsOpen(false)
-    }
 
     return (
         <Popover
@@ -257,7 +241,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                             <div
                                 key={notification.id}
                                 className={`p-4 border-b last:border-b-0 ${getNotificationColor(notification.type)} cursor-pointer hover:bg-opacity-80 transition-all duration-200 hover:scale-[1.02]`}
-                                onClick={(e) => handleNotificationClick(notification, e)}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex-1">

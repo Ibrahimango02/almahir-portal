@@ -10,7 +10,7 @@ import { updateRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { getPendingRescheduleRequests } from "@/lib/get/get-reschedule-requests"
 import { RescheduleRequestWithDetailsType } from "@/types"
 import { getProfile } from "@/lib/get/get-profiles"
-import { utcToLocal, getUserTimezone, formatDateTime } from "@/lib/utils/timezone"
+import { formatDateTime } from "@/lib/utils/timezone"
 import { useRouter } from "next/navigation"
 
 export function RescheduleRequestsTable({ onCountUpdate }: { onCountUpdate?: () => void }) {
@@ -121,7 +121,7 @@ export function RescheduleRequestsTable({ onCountUpdate }: { onCountUpdate?: () 
                 if (updateResult.success) {
                     toast({
                         title: "Reschedule Approved",
-                        description: `The session has been rescheduled successfully to ${formatDateTime(utcToLocal(requestedDate, getUserTimezone()), "MMMM d, yyyy 'at' h:mm a", getUserTimezone())}`,
+                        description: `The session has been rescheduled successfully to ${formatDateTime(requestedDate.toISOString(), "MMMM d, yyyy 'at' h:mm a", originalRequest.timezone)}`,
                     })
 
                     // Refresh the list to show updated status
@@ -209,7 +209,6 @@ export function RescheduleRequestsTable({ onCountUpdate }: { onCountUpdate?: () 
             <Card className="border-0 shadow-none">
                 <CardContent className="pt-0">
                     <div className="text-center text-muted-foreground py-4">
-                        <Calendar className="h-6 w-6 mx-auto mb-1 opacity-50" />
                         <p className="text-sm">No pending reschedule requests</p>
                     </div>
                 </CardContent>
@@ -218,121 +217,119 @@ export function RescheduleRequestsTable({ onCountUpdate }: { onCountUpdate?: () 
     }
 
     return (
-        <Card className="border-0 shadow-none">
-            <CardContent className="pt-0">
-                <div className="space-y-2">
-                    {requests.map((request) => (
-                        <div
-                            key={request.id}
-                            className="group border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-white"
-                            onClick={() => handleCardClick(request.session.class_id, request.session_id)}
-                        >
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                    {/* Header Section */}
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="font-semibold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                                            {request.session.class.title}
-                                        </h3>
-                                    </div>
+        <div className="border-0 shadow-none">
+            <div className="space-y-2">
+                {requests.map((request) => (
+                    <div
+                        key={request.id}
+                        className="group bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer hover:bg-gradient-to-r hover:from-gray-50 hover:to-white"
+                        onClick={() => handleCardClick(request.session.class_id, request.session_id)}
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                                {/* Header Section */}
+                                <div className="flex items-center gap-2 mb-2">
+                                    <h3 className="font-semibold text-sm text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                                        {request.session.class.title}
+                                    </h3>
+                                </div>
 
-                                    {/* User and Date Info */}
-                                    <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
-                                                {request.requester.role === 'teacher' ? (
-                                                    <UserPen className="h-2.5 w-2.5 text-gray-600" />
-                                                ) : (
-                                                    <User className="h-2.5 w-2.5 text-gray-600" />
-                                                )}
-                                            </div>
-                                            <span className="font-medium">{`${request.requester.first_name} ${request.requester.last_name} (${request.requester.role.charAt(0).toUpperCase() + request.requester.role.slice(1)})`}</span>
+                                {/* User and Date Info */}
+                                <div className="flex items-center gap-3 text-xs text-gray-600 mb-3">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                            {request.requester.role === 'teacher' ? (
+                                                <UserPen className="h-2.5 w-2.5 text-gray-600" />
+                                            ) : (
+                                                <User className="h-2.5 w-2.5 text-gray-600" />
+                                            )}
                                         </div>
+                                        <span className="font-medium">{`${request.requester.first_name} ${request.requester.last_name} (${request.requester.role.charAt(0).toUpperCase() + request.requester.role.slice(1)})`}</span>
                                     </div>
+                                </div>
 
-                                    {/* Session Dates Section */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-                                        {/* Current Session Date */}
-                                        <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
-                                            <div className="flex items-start gap-1.5 mb-1.5">
-                                                <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
-                                                    <Calendar className="h-2.5 w-2.5 text-gray-600" />
-                                                </div>
-                                                <span className="font-medium text-gray-700 text-xs">Current Date</span>
-                                            </div>
-                                            <p className="text-gray-600 font-medium text-xs leading-relaxed pl-5">
-                                                {formatDateTime(utcToLocal(request.session.start_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
-                                            </p>
-                                        </div>
-
-                                        {/* Proposed New Date */}
-                                        <div className="bg-blue-50 rounded-md p-2.5 border border-blue-100">
-                                            <div className="flex items-start gap-1.5 mb-1.5">
-                                                <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
-                                                    <Calendar className="h-2.5 w-2.5 text-blue-600" />
-                                                </div>
-                                                <span className="font-medium text-gray-700 text-xs">New Date</span>
-                                            </div>
-                                            <p className="text-blue-700 font-medium text-xs leading-relaxed pl-5">
-                                                {formatDateTime(utcToLocal(request.requested_date, getUserTimezone()), "MMM d, yyyy 'at' h:mm a", getUserTimezone())}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Reason Section */}
+                                {/* Session Dates Section */}
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+                                    {/* Current Session Date */}
                                     <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
                                         <div className="flex items-start gap-1.5 mb-1.5">
                                             <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
-                                                <FileText className="h-2.5 w-2.5" />
+                                                <Calendar className="h-2.5 w-2.5 text-gray-600" />
                                             </div>
-                                            <span className="font-medium text-gray-700 text-xs">Reason for Reschedule</span>
+                                            <span className="font-medium text-gray-700 text-xs">Current Date</span>
                                         </div>
-                                        <p className="text-gray-700 text-xs leading-relaxed pl-5">{request.reason}</p>
+                                        <p className="text-gray-600 font-medium text-xs leading-relaxed pl-5">
+                                            {formatDateTime(request.session.start_date, "MMM d, yyyy 'at' h:mm a", request.timezone)} ({request.timezone})
+                                        </p>
+                                    </div>
+
+                                    {/* Proposed New Date */}
+                                    <div className="bg-blue-50 rounded-md p-2.5 border border-blue-100">
+                                        <div className="flex items-start gap-1.5 mb-1.5">
+                                            <div className="w-4 h-4 bg-blue-100 rounded-full flex items-center justify-center mt-0.5">
+                                                <Calendar className="h-2.5 w-2.5 text-blue-600" />
+                                            </div>
+                                            <span className="font-medium text-gray-700 text-xs">New Date</span>
+                                        </div>
+                                        <p className="text-blue-700 font-medium text-xs leading-relaxed pl-5">
+                                            {formatDateTime(request.requested_date, "MMM d, yyyy 'at' h:mm a", request.timezone)} ({request.timezone})
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                                    <Button
-                                        size="sm"
-                                        onClick={() => handleApproveReschedule(request.id, request.requested_date)}
-                                        disabled={processing === request.id}
-                                        className="h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
-                                        title="Approve Reschedule"
-                                    >
-                                        {processing === request.id ? (
-                                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        ) : (
-                                            <>
-                                                <Check className="h-3 w-3 mr-1" />
-                                                <span className="text-xs font-medium">Approve</span>
-                                            </>
-                                        )}
-                                    </Button>
-
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleRejectReschedule(request.id)}
-                                        disabled={processing === request.id}
-                                        className="h-7 px-2.5 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 shadow-sm hover:shadow-md transition-all duration-200"
-                                        title="Reject Reschedule"
-                                    >
-                                        {processing === request.id ? (
-                                            <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                        ) : (
-                                            <>
-                                                <X className="h-3 w-3 mr-1" />
-                                                <span className="text-xs font-medium">Reject</span>
-                                            </>
-                                        )}
-                                    </Button>
+                                {/* Reason Section */}
+                                <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                    <div className="flex items-start gap-1.5 mb-1.5">
+                                        <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center mt-0.5">
+                                            <FileText className="h-2.5 w-2.5" />
+                                        </div>
+                                        <span className="font-medium text-gray-700 text-xs">Reason for Reschedule</span>
+                                    </div>
+                                    <p className="text-gray-700 text-xs leading-relaxed pl-5">{request.reason}</p>
                                 </div>
                             </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleApproveReschedule(request.id, request.requested_date)}
+                                    disabled={processing === request.id}
+                                    className="h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
+                                    title="Approve Reschedule"
+                                >
+                                    {processing === request.id ? (
+                                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    ) : (
+                                        <>
+                                            <Check className="h-3 w-3 mr-1" />
+                                            <span className="text-xs font-medium">Approve</span>
+                                        </>
+                                    )}
+                                </Button>
+
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleRejectReschedule(request.id)}
+                                    disabled={processing === request.id}
+                                    className="h-7 px-2.5 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 shadow-sm hover:shadow-md transition-all duration-200"
+                                    title="Reject Reschedule"
+                                >
+                                    {processing === request.id ? (
+                                        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    ) : (
+                                        <>
+                                            <X className="h-3 w-3 mr-1" />
+                                            <span className="text-xs font-medium">Reject</span>
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                    </div>
+                ))}
+            </div>
+        </div>
     )
 } 

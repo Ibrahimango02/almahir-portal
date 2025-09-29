@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import {
   LibraryBig,
   CalendarDays,
-  Receipt,
+  DollarSign,
   FolderOpen,
   Home,
   LogOut,
@@ -52,7 +52,7 @@ const routes = [
   },
   {
     label: "Invoices",
-    icon: Receipt,
+    icon: DollarSign,
     href: "/student/invoices",
     color: "text-green-600",
   },

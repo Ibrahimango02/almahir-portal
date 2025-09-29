@@ -5,18 +5,17 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   CalendarDays,
-  UserPen,
+  User,
   Home,
   LogOut,
   Menu,
   MoreVertical,
   Settings,
-  User,
   X,
   Bookmark,
   LibraryBig,
   FolderOpen,
-  Receipt
+  DollarSign
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -47,7 +46,7 @@ const routes = [
   },
   {
     label: "Students",
-    icon: UserPen,
+    icon: User,
     href: "/teacher/students",
     color: "text-green-600",
   },
@@ -59,7 +58,7 @@ const routes = [
   },
   {
     label: "Payments",
-    icon: Receipt,
+    icon: DollarSign,
     href: "/teacher/payments",
     color: "text-green-600",
   },

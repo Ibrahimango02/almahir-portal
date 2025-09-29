@@ -132,6 +132,7 @@ export type RescheduleRequestType = {
     processed_at?: string
     created_at: string
     updated_at: string
+    timezone: string
 }
 
 export type RescheduleRequestWithDetailsType = RescheduleRequestType & {

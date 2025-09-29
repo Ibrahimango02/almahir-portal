@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Users, Edit, BookOpen, Clock, Plus, CreditCard, Receipt, DollarSign, Contact } from "lucide-react"
+import { Mail, Users, Edit, BookOpen, Clock, Plus, CreditCard, DollarSign, Contact, LibraryBig, History } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -273,7 +273,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
+            <LibraryBig className="h-5 w-5 text-primary" />
             Classes <span className="text-xs bg-muted px-2 py-1 rounded-full">{studentClasses.length}</span>
           </CardTitle>
         </CardHeader>
@@ -362,7 +362,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </div>
           ) : (
             <div className="text-center py-6">
-              <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <LibraryBig className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="text-base font-medium text-muted-foreground mb-1">
                 No Classes Enrolled
               </h3>
@@ -378,7 +378,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-primary" />
+            <History className="h-5 w-5 text-primary" />
             Sessions History
           </CardTitle>
         </CardHeader>
@@ -493,7 +493,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
             </div>
           ) : (
             <div className="text-center py-6">
-              <Clock className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
               <h3 className="text-base font-medium text-muted-foreground mb-1">
                 No Past Sessions
               </h3>
@@ -603,7 +603,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" />
+              <DollarSign className="h-5 w-5 text-primary" />
               Invoices <span className="text-xs bg-muted px-2 py-1 rounded-full">{invoices ? invoices.length : 0}</span>
             </CardTitle>
           </CardHeader>
@@ -660,7 +660,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
               </div>
             ) : (
               <div className="text-center py-6">
-                <Receipt className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <DollarSign className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                 <h3 className="text-base font-medium text-muted-foreground mb-1">
                   No Invoices
                 </h3>

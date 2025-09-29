@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Search } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Input } from "@/components/ui/input"
 import { getClassesByStudentId } from "@/lib/get/get-classes"
 import { getStudentId } from "@/lib/get/get-students"
@@ -101,20 +101,15 @@ export default function StudentClassesPage() {
                     </div>
                 </div>
             </div>
-            {/* Main Content Card */}
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>All Classes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ClassesTable
-                        classes={filteredClasses}
-                        isLoading={isLoading}
-                        userType="student"
-                        emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "You haven't been assigned to any classes yet"}
-                    />
-                </CardContent>
-            </Card>
+            {/* Main Content */}
+            <div>
+                <ClassesTable
+                    classes={filteredClasses}
+                    isLoading={isLoading}
+                    userType="student"
+                    emptyStateMessage={searchQuery ? "Try adjusting your search terms" : "You haven't been assigned to any classes yet"}
+                />
+            </div>
         </div>
     )
 }

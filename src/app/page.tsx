@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-b from-background to-muted/30">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-app-overlay">
       <div className="w-full max-w-md mx-auto">
         <div className="mb-8 flex flex-col items-center">
           <Image src="/logo.png" alt="Al-Mahir Academy Logo" width={200} height={200} className="object-contain mb-8" />

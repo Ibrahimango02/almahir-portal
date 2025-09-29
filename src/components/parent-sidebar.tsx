@@ -7,7 +7,7 @@ import {
   CalendarDays,
   Bookmark,
   FolderOpen,
-  Receipt,
+  DollarSign,
   Home,
   LogOut,
   Menu,
@@ -60,7 +60,7 @@ const routes = [
   },
   {
     label: "Invoices",
-    icon: Receipt,
+    icon: DollarSign,
     href: "/parent/invoices",
     color: "text-green-600",
   },
