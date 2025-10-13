@@ -24,17 +24,17 @@ export default function ParentsPage() {
   useEffect(() => {
     const filtered = parents.filter(parent => {
       const searchLower = searchQuery.toLowerCase()
-      const fullName = `${parent.first_name} ${parent.last_name}`.toLowerCase()
+      const fullName = `${parent.first_name ?? ''} ${parent.last_name ?? ''}`.toLowerCase()
       return (
         fullName.includes(searchLower) ||
-        parent.first_name.toLowerCase().includes(searchLower) ||
-        parent.last_name.toLowerCase().includes(searchLower) ||
-        parent.email.toLowerCase().includes(searchLower) ||
+        (parent.first_name?.toLowerCase().includes(searchLower) ?? false) ||
+        (parent.last_name?.toLowerCase().includes(searchLower) ?? false) ||
+        (parent.email?.toLowerCase().includes(searchLower) ?? false) ||
         (parent.phone?.toLowerCase().includes(searchLower) ?? false) ||
-        parent.country.toLowerCase().includes(searchLower) ||
-        parent.language.toLowerCase().includes(searchLower) ||
-        parent.status.toLowerCase().includes(searchLower) ||
-        parent.gender.toLowerCase().includes(searchLower)
+        (parent.country?.toLowerCase().includes(searchLower) ?? false) ||
+        (parent.language?.toLowerCase().includes(searchLower) ?? false) ||
+        (parent.status?.toLowerCase().includes(searchLower) ?? false) ||
+        (parent.gender?.toLowerCase().includes(searchLower) ?? false)
       )
     })
     setFilteredParents(filtered)

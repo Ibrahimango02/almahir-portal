@@ -85,10 +85,17 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
     }
   }, [students])
 
+  // Sort students alphabetically by name
+  const sortedStudents = [...students].sort((a, b) => {
+    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+
   // Calculate pagination
-  const totalItems = students.length
+  const totalItems = sortedStudents.length
   const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedStudents = students.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedStudents = sortedStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const isAdmin = currentUserRole === 'admin'
   const isModerator = currentUserRole === 'moderator'

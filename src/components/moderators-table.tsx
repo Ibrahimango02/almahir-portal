@@ -22,10 +22,17 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(100)
 
+    // Sort moderators alphabetically by name
+    const sortedModerators = [...moderators].sort((a, b) => {
+        const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+        const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+        return nameA.localeCompare(nameB)
+    })
+
     // Pagination logic
-    const totalItems = moderators.length
+    const totalItems = sortedModerators.length
     const totalPages = Math.ceil(totalItems / pageSize)
-    const paginatedModerators = moderators.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    const paginatedModerators = sortedModerators.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
     if (loading) {
         return <div>Loading...</div>

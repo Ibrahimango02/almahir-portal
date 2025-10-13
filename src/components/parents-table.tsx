@@ -75,10 +75,17 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
     }
   }, [parents])
 
+  // Sort parents alphabetically by name
+  const sortedParents = [...parents].sort((a, b) => {
+    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+
   // Calculate pagination
-  const totalItems = parents.length
+  const totalItems = sortedParents.length
   const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedParents = parents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedParents = sortedParents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const isAdmin = currentUserRole === 'admin'
 
