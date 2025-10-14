@@ -99,7 +99,7 @@ export default function SignupPage({ params }: { params: Promise<{ token: string
             }
 
             // Show success message and redirect to login
-            router.push("/login?message=Account created successfully! Please sign in.")
+            router.push("/")
         } catch (err) {
             console.error('Error creating account:', err)
             setError(err instanceof Error ? err.message : "Failed to create account. Please try again.")

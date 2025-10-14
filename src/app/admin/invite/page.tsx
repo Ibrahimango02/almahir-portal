@@ -100,10 +100,6 @@ export default function InviteUserPage() {
             // Reset form
             setFormData({ fullName: "", email: "", role: "" })
 
-            // Redirect back to dashboard after a short delay
-            setTimeout(() => {
-                router.push("/admin/dashboard")
-            }, 2000)
         } catch (error) {
             console.error('Error sending invitation:', error)
             // Don't show another toast here since we already showed one for the specific error
