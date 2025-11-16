@@ -11,7 +11,7 @@ type CreateDependentStudentData = {
     gender: string
     country: string
     language: string
-    birth_date: string
+    birth_date?: string
     grade_level: string
     parent_profile_id: string
 }
@@ -21,14 +21,23 @@ export async function createDependentStudent(data: CreateDependentStudentData) {
 
     try {
         // First, create the student record
+        const studentInsertData: {
+            student_type: string
+            birth_date?: string
+            notes: string
+        } = {
+            student_type: 'dependent',
+            notes: `This is ${data.first_name} ${data.last_name}`
+        }
+
+        // Only include birth_date if provided
+        if (data.birth_date && data.birth_date.trim() !== '') {
+            studentInsertData.birth_date = data.birth_date
+        }
+
         const { data: student, error: studentError } = await supabase
             .from('students')
-            .insert({
-                student_type: 'dependent',
-                birth_date: data.birth_date,
-                grade_level: data.grade_level,
-                notes: `This is ${data.first_name} ${data.last_name}`
-            })
+            .insert(studentInsertData)
             .select()
             .single()
 

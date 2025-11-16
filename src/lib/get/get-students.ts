@@ -238,6 +238,115 @@ export async function getStudentParents(id: string): Promise<ParentType[]> {
     }
 }
 
+/**
+ * Batch fetch parents for multiple students at once.
+ * Returns a map of student_id -> ParentType[]
+ */
+export async function getAllStudentParents(studentIds: string[]): Promise<Record<string, ParentType[]>> {
+    const supabase = createClient()
+
+    if (studentIds.length === 0) return {}
+
+    // Get all dependent students and their child_profiles in one query
+    const { data: dependentStudents } = await supabase
+        .from('students')
+        .select('id, student_type')
+        .in('id', studentIds)
+        .eq('student_type', 'dependent')
+
+    if (!dependentStudents || dependentStudents.length === 0) {
+        // No dependent students, return empty map
+        return studentIds.reduce((acc, id) => {
+            acc[id] = []
+            return acc
+        }, {} as Record<string, ParentType[]>)
+    }
+
+    const dependentStudentIds = dependentStudents.map(s => s.id)
+
+    // Get all child_profiles for dependent students in one query
+    const { data: childProfiles } = await supabase
+        .from('child_profiles')
+        .select('student_id, parent_profile_id')
+        .in('student_id', dependentStudentIds)
+
+    if (!childProfiles || childProfiles.length === 0) {
+        // No child profiles found, return empty map
+        return studentIds.reduce((acc, id) => {
+            acc[id] = []
+            return acc
+        }, {} as Record<string, ParentType[]>)
+    }
+
+    // Get unique parent profile IDs
+    const parentProfileIds = [...new Set(
+        childProfiles
+            .map(cp => cp.parent_profile_id)
+            .filter((id): id is string => id !== null)
+    )]
+
+    if (parentProfileIds.length === 0) {
+        return studentIds.reduce((acc, id) => {
+            acc[id] = []
+            return acc
+        }, {} as Record<string, ParentType[]>)
+    }
+
+    // Get all parent profiles in one query
+    const { data: parentProfiles } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', parentProfileIds)
+
+    if (!parentProfiles) {
+        return studentIds.reduce((acc, id) => {
+            acc[id] = []
+            return acc
+        }, {} as Record<string, ParentType[]>)
+    }
+
+    // Create a map of parent_profile_id -> ParentType
+    const parentMap = new Map<string, ParentType>()
+    parentProfiles.forEach(profile => {
+        parentMap.set(profile.id, {
+            parent_id: profile.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            gender: profile.gender,
+            country: profile.country,
+            language: profile.language,
+            email: profile.email ?? "",
+            phone: profile.phone || null,
+            status: profile.status,
+            role: profile.role,
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+            updated_at: profile.updated_at || null
+        })
+    })
+
+    // Create a map of student_id -> ParentType[]
+    const result: Record<string, ParentType[]> = {}
+
+    // Initialize all student IDs with empty arrays
+    studentIds.forEach(id => {
+        result[id] = []
+    })
+
+    // Map child_profiles to students
+    childProfiles.forEach(childProfile => {
+        const parent = childProfile.parent_profile_id ? parentMap.get(childProfile.parent_profile_id) : null
+        if (parent && childProfile.student_id) {
+            if (!result[childProfile.student_id]) {
+                result[childProfile.student_id] = []
+            }
+            result[childProfile.student_id].push(parent)
+        }
+    })
+
+    return result
+}
+
 export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
     const supabase = createClient()
 

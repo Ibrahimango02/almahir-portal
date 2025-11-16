@@ -19,7 +19,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
-import { getParentStudents } from "@/lib/get/get-parents"
+import { getAllParentStudents } from "@/lib/get/get-parents"
 import { ParentType, StudentType } from "@/types"
 import AvatarIcon from "./avatar"
 
@@ -57,22 +57,25 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
 
   useEffect(() => {
     const fetchStudentData = async () => {
-      const results: Record<string, StudentType[]> = {}
-      for (const parent of parents) {
-        try {
-          const students = await getParentStudents(parent.parent_id)
-          results[parent.parent_id] = students || []
-        } catch (error) {
-          console.error(`Failed to fetch students for parent ${parent.parent_id}:`, error)
-          results[parent.parent_id] = []
-        }
+      if (parents.length === 0) return
+
+      try {
+        // Batch fetch all students at once instead of one-by-one
+        const parentIds = parents.map(p => p.parent_id)
+        const studentResults = await getAllParentStudents(parentIds)
+        setStudentData(studentResults)
+      } catch (error) {
+        console.error('Failed to fetch student data:', error)
+        // Initialize with empty arrays for all parents
+        const emptyStudentData = parents.reduce((acc, parent) => {
+          acc[parent.parent_id] = []
+          return acc
+        }, {} as Record<string, StudentType[]>)
+        setStudentData(emptyStudentData)
       }
-      setStudentData(results)
     }
 
-    if (parents.length > 0) {
-      fetchStudentData()
-    }
+    fetchStudentData()
   }, [parents])
 
   // Sort parents alphabetically by name

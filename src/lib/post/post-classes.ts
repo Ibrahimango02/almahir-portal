@@ -129,15 +129,30 @@ export async function createClass(classData: ClassData) {
             const daySchedule = classData.days_repeated[lowercaseDayName as keyof typeof classData.days_repeated]
             if (daySchedule) {
                 try {
-                    // Create ISO datetime strings by combining the current date with the time
+                    // Parse HH:MM format from days_repeated (times are in UTC)
                     const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                     const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                    const sessionStartDate = new Date(currentDate)
-                    const sessionEndDate = new Date(currentDate)
+                    // Create session datetime by combining current date with UTC time
+                    const sessionStartDate = new Date(Date.UTC(
+                        currentDate.getUTCFullYear(),
+                        currentDate.getUTCMonth(),
+                        currentDate.getUTCDate(),
+                        startHours,
+                        startMinutes,
+                        0,
+                        0
+                    ))
 
-                    sessionStartDate.setHours(startHours, startMinutes, 0, 0)
-                    sessionEndDate.setHours(endHours, endMinutes, 0, 0)
+                    const sessionEndDate = new Date(Date.UTC(
+                        currentDate.getUTCFullYear(),
+                        currentDate.getUTCMonth(),
+                        currentDate.getUTCDate(),
+                        endHours,
+                        endMinutes,
+                        0,
+                        0
+                    ))
 
                     sessions.push({
                         class_id: classRecord.id,

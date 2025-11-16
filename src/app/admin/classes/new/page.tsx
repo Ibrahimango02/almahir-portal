@@ -306,6 +306,7 @@ export default function CreateClassPage() {
             }, {} as Record<string, { start: string; end: string }>);
 
             // Transform form data to match ClassData type with new object structure
+            // Convert times to UTC and store in HH:MM format for days_repeated
             const daysRepeatedWithTimes: {
                 monday?: { start: string; end: string }
                 tuesday?: { start: string; end: string }
@@ -319,9 +320,25 @@ export default function CreateClassPage() {
             values.daysRepeated.forEach(day => {
                 const timeSlot = values.times[day]
                 if (timeSlot?.start && timeSlot?.end) {
+                    // Convert local times to UTC and extract HH:MM format
+                    const startUtc = combineDateTimeToUtc(
+                        format(values.startDate, 'yyyy-MM-dd'),
+                        timeSlot.start + ':00',
+                        timezone
+                    )
+                    const endUtc = combineDateTimeToUtc(
+                        format(values.startDate, 'yyyy-MM-dd'),
+                        timeSlot.end + ':00',
+                        timezone
+                    )
+
+                    // Format as HH:MM in UTC
+                    const startTimeUtc = `${String(startUtc.getUTCHours()).padStart(2, '0')}:${String(startUtc.getUTCMinutes()).padStart(2, '0')}`
+                    const endTimeUtc = `${String(endUtc.getUTCHours()).padStart(2, '0')}:${String(endUtc.getUTCMinutes()).padStart(2, '0')}`
+
                     daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
-                        start: timeSlot.start,
-                        end: timeSlot.end
+                        start: startTimeUtc,
+                        end: endTimeUtc
                     }
                 }
             })

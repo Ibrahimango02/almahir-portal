@@ -118,10 +118,8 @@ export default function EditParentPage() {
 
     try {
       // Validate required fields
-      if (!newStudentData.first_name || !newStudentData.last_name || !newStudentData.gender ||
-        !newStudentData.country || !newStudentData.language || !newStudentData.birth_date ||
-        !newStudentData.grade_level) {
-        throw new Error("All fields are required")
+      if (!newStudentData.first_name || !newStudentData.last_name || !newStudentData.gender) {
+        throw new Error("First name, last name, and gender are required")
       }
 
       // Add to pending students list
@@ -325,20 +323,19 @@ export default function EditParentPage() {
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="birth_date">Birth Date *</Label>
+                            <Label htmlFor="birth_date">Birth Date</Label>
                             <Input
                               id="birth_date"
                               type="date"
                               value={newStudentData.birth_date}
                               onChange={(e) => setNewStudentData(prev => ({ ...prev, birth_date: e.target.value }))}
-                              required
                             />
                           </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="language">Language *</Label>
+                            <Label htmlFor="language">Language</Label>
                             <Select
                               value={newStudentData.language}
                               onValueChange={(value) => setNewStudentData(prev => ({ ...prev, language: value }))}
@@ -353,7 +350,7 @@ export default function EditParentPage() {
                             </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="grade_level">Grade Level *</Label>
+                            <Label htmlFor="grade_level">Grade Level</Label>
                             <Select
                               value={newStudentData.grade_level}
                               onValueChange={(value) => setNewStudentData(prev => ({ ...prev, grade_level: value }))}
@@ -380,7 +377,7 @@ export default function EditParentPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="country">Country *</Label>
+                          <Label htmlFor="country">Country</Label>
                           <Select
                             value={newStudentData.country}
                             onValueChange={(value) => setNewStudentData(prev => ({ ...prev, country: value }))}

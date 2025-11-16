@@ -12,6 +12,7 @@ import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
 import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+import { toZonedTime } from "date-fns-tz"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 import React from "react"
@@ -143,6 +144,26 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   const enrolledStudents = classData.students || []
   const daysRepeated = classData.days_repeated || {}
 
+  // Helper function to convert UTC HH:MM to local HH:MM
+  const convertUtcTimeToLocal = (utcTime: string): string => {
+    try {
+      const [hours, minutes] = utcTime.split(':').map(Number)
+      const today = new Date()
+      const utcDate = new Date(Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate(),
+        hours,
+        minutes
+      ))
+      const localDate = toZonedTime(utcDate, timezone)
+      return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`
+    } catch (error) {
+      console.error('Error converting UTC time to local:', error)
+      return utcTime
+    }
+  }
+
   return (
     <>
       <style>{scrollbarStyles}</style>
@@ -194,15 +215,20 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     </p>
                     {Object.keys(daysRepeated).length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {Object.entries(daysRepeated).map(([day, timeSlot]) => (
-                          <span
-                            key={day}
-                            className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
-                          >
-                            <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
-                            {day.charAt(0).toUpperCase() + day.slice(1)} {timeSlot?.start}-{timeSlot?.end}
-                          </span>
-                        ))}
+                        {Object.entries(daysRepeated).map(([day, timeSlot]) => {
+                          // Convert UTC times to local timezone for display
+                          const localStartTime = timeSlot?.start ? convertUtcTimeToLocal(timeSlot.start) : ''
+                          const localEndTime = timeSlot?.end ? convertUtcTimeToLocal(timeSlot.end) : ''
+                          return (
+                            <span
+                              key={day}
+                              className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
+                            >
+                              <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
+                              {day.charAt(0).toUpperCase() + day.slice(1)} {localStartTime}-{localEndTime}
+                            </span>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

@@ -26,6 +26,7 @@ import { getClassById } from "@/lib/get/get-classes"
 import { updateClass, updateClassAssignments } from "@/lib/put/put-classes"
 import { TeacherType, StudentType, ClassType } from "@/types"
 import { localToUtc, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
+import { toZonedTime } from "date-fns-tz"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
@@ -259,14 +260,35 @@ export default function EditClassPage() {
                     const lowercaseDays: string[] = []
                     const times: Record<string, { start: string; end: string }> = {}
 
+                    // Helper function to convert UTC HH:MM to local HH:MM
+                    const convertUtcTimeToLocal = (utcTime: string): string => {
+                        try {
+                            const [hours, minutes] = utcTime.split(':').map(Number)
+                            const today = new Date()
+                            const utcDate = new Date(Date.UTC(
+                                today.getUTCFullYear(),
+                                today.getUTCMonth(),
+                                today.getUTCDate(),
+                                hours,
+                                minutes
+                            ))
+                            const localDate = toZonedTime(utcDate, timezone)
+                            return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`
+                        } catch (error) {
+                            console.error('Error converting UTC time to local:', error)
+                            return utcTime
+                        }
+                    }
+
                     // Process the new object structure
+                    // Convert UTC HH:MM times back to local HH:MM for display
                     if (classDataResult.days_repeated && typeof classDataResult.days_repeated === 'object') {
                         Object.entries(classDataResult.days_repeated).forEach(([day, timeSlot]) => {
                             if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
                                 lowercaseDays.push(day)
                                 times[day] = {
-                                    start: timeSlot.start,
-                                    end: timeSlot.end
+                                    start: convertUtcTimeToLocal(timeSlot.start),
+                                    end: convertUtcTimeToLocal(timeSlot.end)
                                 }
                             }
                         })
@@ -347,6 +369,7 @@ export default function EditClassPage() {
             }, {} as Record<string, { start: string; end: string }>);
 
             // Transform form data to match new object structure
+            // Convert times to UTC and store in HH:MM format for days_repeated
             const daysRepeatedWithTimes: {
                 monday?: { start: string; end: string }
                 tuesday?: { start: string; end: string }
@@ -360,9 +383,25 @@ export default function EditClassPage() {
             values.daysRepeated.forEach(day => {
                 const timeSlot = values.times[day]
                 if (timeSlot?.start && timeSlot?.end) {
+                    // Convert local times to UTC and extract HH:MM format
+                    const startUtc = combineDateTimeToUtc(
+                        format(values.startDate, 'yyyy-MM-dd'),
+                        timeSlot.start + ':00',
+                        timezone
+                    )
+                    const endUtc = combineDateTimeToUtc(
+                        format(values.startDate, 'yyyy-MM-dd'),
+                        timeSlot.end + ':00',
+                        timezone
+                    )
+
+                    // Format as HH:MM in UTC
+                    const startTimeUtc = `${String(startUtc.getUTCHours()).padStart(2, '0')}:${String(startUtc.getUTCMinutes()).padStart(2, '0')}`
+                    const endTimeUtc = `${String(endUtc.getUTCHours()).padStart(2, '0')}:${String(endUtc.getUTCMinutes()).padStart(2, '0')}`
+
                     daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
-                        start: timeSlot.start,
-                        end: timeSlot.end
+                        start: startTimeUtc,
+                        end: endTimeUtc
                     }
                 }
             })
