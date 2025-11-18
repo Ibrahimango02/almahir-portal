@@ -92,7 +92,7 @@ export function TicketSubmissionDialog({ open, onOpenChange }: TicketSubmissionD
         <DialogHeader>
           <DialogTitle>Submit a Ticket</DialogTitle>
           <DialogDescription>
-            Please provide details about the issue or suggestion you'd like to share.
+            Please provide details about the issue or suggestion you&apos;d like to share.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
