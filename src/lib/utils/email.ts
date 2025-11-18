@@ -86,6 +86,67 @@ export async function sendInvitationEmail(
   }
 }
 
+// Send ticket email
+export async function sendTicketEmail(
+  name: string,
+  email: string,
+  subject: string,
+  message: string
+) {
+  const recipientEmail = 'issa.ibrahim1072@gmail.com'
+
+  const mailOptions = {
+    from: `"Al-Mahir Academy Portal" <${process.env.GMAIL_EMAIL}>`,
+    to: recipientEmail,
+    replyTo: email,
+    subject: `[Ticket] ${subject}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #3d8f5b; margin: 0;">Al-Mahir Academy</h1>
+          <p style="color: #666; margin: 5px 0;">Support Ticket</p>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 8px; margin-bottom: 30px;">
+          <h2 style="color: #3d8f5b; margin-top: 0;">New Support Ticket</h2>
+          
+          <div style="margin-bottom: 20px;">
+            <p style="font-size: 14px; color: #666; margin: 5px 0;"><strong>From:</strong> ${name}</p>
+            <p style="font-size: 14px; color: #666; margin: 5px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color: #3d8f5b;">${email}</a></p>
+            <p style="font-size: 14px; color: #666; margin: 5px 0;"><strong>Subject:</strong> ${subject}</p>
+          </div>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 6px; border-left: 4px solid #3d8f5b;">
+            <p style="font-size: 14px; color: #666; margin: 0 0 10px 0;"><strong>Message:</strong></p>
+            <p style="font-size: 16px; line-height: 1.6; color: #333; white-space: pre-wrap; margin: 0;">${message}</p>
+          </div>
+        </div>
+        
+        <div style="border-top: 1px solid #eee; padding-top: 20px;">
+          <p style="color: #666; font-size: 14px; margin: 0;">
+            You can reply directly to this email to respond to ${name}.
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          <p style="color: #999; font-size: 12px; margin: 0;">
+            © 2025 Al-Mahir Academy. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  }
+
+  try {
+    const info = await transporter.sendMail(mailOptions)
+    console.log('Ticket email sent successfully:', info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error('Error sending ticket email:', error)
+    throw new Error('Failed to send ticket email')
+  }
+}
+
 // Test email connection
 export async function testEmailConnection() {
   try {

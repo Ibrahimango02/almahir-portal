@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { TimezoneProvider } from "@/contexts/TimezoneContext"
+import { DevelopmentBanner } from "@/components/development-banner"
 //import { ChatClientWrapper } from "@/components/chat-client-wrapper"
 
 const inter = Inter({
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning={true}>
         <ThemeProvider>
           <TimezoneProvider>
+            <DevelopmentBanner />
             {children}
             {/* <ChatClientWrapper /> */}
             <Toaster />
