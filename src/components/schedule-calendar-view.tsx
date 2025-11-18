@@ -377,13 +377,15 @@ export function ScheduleCalendarView({
 
                                             // Calculate duration in minutes and convert to pixels (60px per hour)
                                             let durationMinutes = differenceInMinutes(endTime, startTime)
-                                            
+
                                             // Handle sessions that cross midnight
                                             if (durationMinutes < 0) {
                                                 durationMinutes += 24 * 60; // Add 24 hours in minutes
                                             }
-                                            
-                                            const heightPx = Math.max(60, Math.round((durationMinutes * 60) / 60))
+
+                                            // Height in pixels: 60px per hour, so durationMinutes directly equals height in px
+                                            // Use a minimum of 30px to ensure visibility for very short sessions
+                                            const heightPx = Math.max(30, Math.round(durationMinutes))
 
                                             // Calculate width based on group size
                                             const width = 100 / extendedClass.groupSize
@@ -444,6 +446,21 @@ export function ScheduleCalendarView({
                                                                     <span className="font-medium">Teachers:</span> {extendedClass.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
                                                                 </div>
                                                             )}
+                                                            {/* Show session status */}
+                                                            <div className="text-sm">
+                                                                <span className={cn(
+                                                                    "ml-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                                                    extendedClass.status === "complete" && "border-purple-200 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                                                    extendedClass.status === "running" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                                                    extendedClass.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                                                    extendedClass.status === "pending" && "border-indigo-200 bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+                                                                    extendedClass.status === "rescheduled" && "border-amber-200 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                                                                    extendedClass.status === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                                                                    extendedClass.status === "absence" && "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                                                                )}>
+                                                                    {extendedClass.status}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </TooltipContent>
                                                 </Tooltip>

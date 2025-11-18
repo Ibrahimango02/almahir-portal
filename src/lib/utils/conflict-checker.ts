@@ -1,7 +1,6 @@
 import { TimeSlot, WeeklySchedule } from '@/types'
 import { getSessionsByTeacherId, getSessionsByStudentId } from '@/lib/get/get-classes'
 import { getTeacherAvailability } from '@/lib/get/get-teachers'
-import { format } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 
 export interface ConflictInfo {
@@ -64,11 +63,12 @@ function normalizeDayName(day: string): string {
 }
 
 /**
- * Get the day name from a date
+ * Get the day name from a date in UTC
  */
 function getDayFromDate(date: Date): string {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    return days[date.getDay()]
+    // Use UTC methods to get the day, since session dates are stored in UTC
+    return days[date.getUTCDay()]
 }
 
 /**
@@ -107,10 +107,12 @@ export async function checkTeacherScheduleConflicts(
                     sessionDate >= startDate &&
                     sessionDate <= endDate) {
 
-                    // Convert session times to local time for comparison
-                    const sessionStartLocal = format(sessionDate, 'HH:mm')
+                    // Convert session times to local time for comparison using the specified timezone
+                    // Note: formatInTimeZone automatically handles DST (EDT vs EST for America/New_York)
+                    // The timezone conversion will correctly show EST for Nov-Dec and EDT for Mar-Nov
+                    const sessionStartLocal = formatInTimeZone(sessionDate, timezone, 'HH:mm')
                     const sessionEndDate = new Date(session.end_date)
-                    const sessionEndLocal = format(sessionEndDate, 'HH:mm')
+                    const sessionEndLocal = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
 
                     // Check for overlap
                     const newSlot: TimeSlot = { start: time.start, end: time.end }
@@ -324,10 +326,12 @@ export async function checkStudentScheduleConflicts(
                     sessionDate >= startDate &&
                     sessionDate <= endDate) {
 
-                    // Convert session times to local time for comparison
-                    const sessionStartLocal = format(sessionDate, 'HH:mm')
+                    // Convert session times to local time for comparison using the specified timezone
+                    // Note: formatInTimeZone automatically handles DST (EDT vs EST for America/New_York)
+                    // The timezone conversion will correctly show EST for Nov-Dec and EDT for Mar-Nov
+                    const sessionStartLocal = formatInTimeZone(sessionDate, timezone, 'HH:mm')
                     const sessionEndDate = new Date(session.end_date)
-                    const sessionEndLocal = format(sessionEndDate, 'HH:mm')
+                    const sessionEndLocal = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
 
                     // Check for overlap
                     const newSlot: TimeSlot = { start: time.start, end: time.end }

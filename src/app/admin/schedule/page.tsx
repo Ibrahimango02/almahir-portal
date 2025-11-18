@@ -27,7 +27,17 @@ export default function SchedulePage() {
       setIsLoading(true)
       try {
         const data = await getClasses()
-        setClassData(data)
+        // Ensure we have data before setting loading to false
+        // This ensures all sessions are fetched before rendering
+        if (data && Array.isArray(data)) {
+          setClassData(data)
+        } else {
+          console.error('Invalid data received from getClasses')
+          setClassData([])
+        }
+      } catch (error) {
+        console.error('Error fetching classes:', error)
+        setClassData([])
       } finally {
         setIsLoading(false)
       }

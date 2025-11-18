@@ -133,21 +133,51 @@ export async function createClass(classData: ClassData) {
                     const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                     const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                    // Create session datetime by combining current date with UTC time
+                    // The times in days_repeated are UTC times converted from local times.
+                    // When a local time like 8:00 PM EST is converted to UTC, it becomes 1:00 AM the next day.
+                    // So we need to check if the UTC time represents a time on the next calendar day.
+                    // 
+                    // Strategy: If the UTC hour is early (0-5 AM), it likely represents a time that
+                    // was on the "next day" in UTC terms. For EST/EDT (UTC-5/UTC-4), times after 7 PM
+                    // local will be 0:00+ UTC the next day. So we'll add a day if UTC hour < 6.
+                    // This heuristic works for most common timezones with offsets of 4-8 hours.
+                    
+                    const utcYear = currentDate.getUTCFullYear()
+                    const utcMonth = currentDate.getUTCMonth()
+                    const utcDay = currentDate.getUTCDate()
+                    
+                    // Determine if the UTC time falls on the next day
+                    // If UTC hour is early morning (0-5), it's likely the next calendar day
+                    const startDateOffset = startHours < 6 ? 1 : 0
+                    const endDateOffset = endHours < 6 ? 1 : 0
+                    
+                    // Create the start datetime in UTC
                     const sessionStartDate = new Date(Date.UTC(
-                        currentDate.getUTCFullYear(),
-                        currentDate.getUTCMonth(),
-                        currentDate.getUTCDate(),
+                        utcYear,
+                        utcMonth,
+                        utcDay + startDateOffset,
                         startHours,
                         startMinutes,
                         0,
                         0
                     ))
 
+                    // Check if end time is earlier than start time (spans midnight)
+                    const endTimeMinutes = endHours * 60 + endMinutes
+                    const startTimeMinutes = startHours * 60 + startMinutes
+                    const spansMidnight = endTimeMinutes <= startTimeMinutes
+
+                    // Calculate final end date offset
+                    // If it spans midnight, end is on the day after start
+                    // Otherwise, use the calculated endDateOffset
+                    const finalEndDateOffset = spansMidnight 
+                        ? startDateOffset + 1 
+                        : endDateOffset
+
                     const sessionEndDate = new Date(Date.UTC(
-                        currentDate.getUTCFullYear(),
-                        currentDate.getUTCMonth(),
-                        currentDate.getUTCDate(),
+                        utcYear,
+                        utcMonth,
+                        utcDay + finalEndDateOffset,
                         endHours,
                         endMinutes,
                         0,

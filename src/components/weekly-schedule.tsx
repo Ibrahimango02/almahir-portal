@@ -652,6 +652,50 @@ function CalendarScheduleView({
     }
   }
 
+  // Helper to get status icon component
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return Calendar
+      case "running":
+        return Play
+      case "pending":
+        return Clock
+      case "complete":
+        return CheckCircle
+      case "rescheduled":
+        return CalendarDays
+      case "cancelled":
+        return BookX
+      case "absence":
+        return UserX
+      default:
+        return Clock
+    }
+  }
+
+  // Helper to get status icon text colors matching StatusBadge
+  const getStatusIconColors = (status: string) => {
+    switch (status) {
+      case "scheduled":
+        return "text-blue-700 dark:text-blue-400"
+      case "running":
+        return "text-emerald-700 dark:text-emerald-400"
+      case "pending":
+        return "text-indigo-700 dark:text-indigo-400"
+      case "complete":
+        return "text-purple-700 dark:text-purple-400"
+      case "rescheduled":
+        return "text-amber-700 dark:text-amber-400"
+      case "cancelled":
+        return "text-rose-700 dark:text-rose-400"
+      case "absence":
+        return "text-orange-700 dark:text-orange-400"
+      default:
+        return "text-gray-700 dark:text-gray-400"
+    }
+  }
+
   // Prepare classes for each day with overlap calculation
   const classesByDay = useMemo(() => {
     const byDay = weekDays.map((day) => {
@@ -758,13 +802,15 @@ function CalendarScheduleView({
 
                         // Calculate duration in minutes and convert to pixels (50px per hour)
                         let durationMinutes = differenceInMinutes(endTime, startTime)
-                        
+
                         // Handle sessions that cross midnight
                         if (durationMinutes < 0) {
-                            durationMinutes += 24 * 60; // Add 24 hours in minutes
+                          durationMinutes += 24 * 60; // Add 24 hours in minutes
                         }
-                        
-                        const heightPx = Math.max(50, Math.round((durationMinutes * 50) / 60))
+
+                        // Height in pixels: 50px per hour, so (durationMinutes * 50) / 60
+                        // Use a minimum of 25px to ensure visibility for very short sessions
+                        const heightPx = Math.max(25, Math.round((durationMinutes * 50) / 60))
 
                         // Calculate width based on group size
                         const width = 100 / extendedClass.groupSize
@@ -792,7 +838,7 @@ function CalendarScheduleView({
                                 }}
                               >
                                 <div>
-                                  <p className="font-medium truncate text-[10px] leading-tight">{extendedClass.title}</p>
+                                  <p className="font-medium truncate text-[9px] leading-tight">{extendedClass.title}</p>
                                   {heightPx >= 60 && (
                                     <p className="text-[9px] text-muted-foreground truncate leading-tight">
                                       {extendedClass.subject}
@@ -804,12 +850,26 @@ function CalendarScheduleView({
                                     </p>
                                   )}
                                 </div>
-                                {/* Always show status badge regardless of height */}
+                                {/* Show status icon only for short sessions, full badge for longer ones */}
                                 <div className="flex justify-end items-center mt-auto">
-                                  <StatusBadge
-                                    status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
-                                    className="text-[8px] px-1 py-0.5"
-                                  />
+                                  {heightPx <= 50 ? (
+                                    (() => {
+                                      const IconComponent = getStatusIcon(extendedClass.status)
+                                      return (
+                                        <div className={cn(
+                                          "rounded-full p-0.5 flex items-center justify-center",
+                                          getStatusContainerStyles(extendedClass.status)
+                                        )}>
+                                          <IconComponent className={cn("h-2 w-2", getStatusIconColors(extendedClass.status))} />
+                                        </div>
+                                      )
+                                    })()
+                                  ) : (
+                                    <StatusBadge
+                                      status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
+                                      className="text-[8px] px-1 py-0.5"
+                                    />
+                                  )}
                                 </div>
                               </div>
                             </TooltipTrigger>
@@ -828,6 +888,21 @@ function CalendarScheduleView({
                                     <span className="font-medium">Teachers:</span> {extendedClass.teachers.map(t => `${t.first_name} ${t.last_name}`).join(', ')}
                                   </div>
                                 )}
+                                {/* Show session status */}
+                                <div className="text-sm">
+                                  <span className={cn(
+                                    "ml-1 px-1.5 py-0.5 rounded text-xs font-medium border",
+                                    extendedClass.status === "complete" && "border-purple-200 bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                                    extendedClass.status === "running" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
+                                    extendedClass.status === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                                    extendedClass.status === "pending" && "border-indigo-200 bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200",
+                                    extendedClass.status === "rescheduled" && "border-amber-200 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+                                    extendedClass.status === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                                    extendedClass.status === "absence" && "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+                                  )}>
+                                    {extendedClass.status}
+                                  </span>
+                                </div>
                               </div>
                             </TooltipContent>
                           </Tooltip>

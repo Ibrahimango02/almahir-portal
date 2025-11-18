@@ -23,7 +23,11 @@ export function StudentsCombobox({
 }: StudentsComboboxProps) {
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState("")
+    const [highlightedIndex, setHighlightedIndex] = useState(-1)
     const dropdownRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
+    const listRef = useRef<HTMLDivElement>(null)
+    const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
 
     const filteredStudents = useMemo(() => {
         if (!searchValue) return students
@@ -42,6 +46,13 @@ export function StudentsCombobox({
         return filteredStudents.filter(student => !selectedStudentIds.includes(student.student_id))
     }, [filteredStudents, selectedStudentIds])
 
+    // Reset highlighted index when list changes
+    useEffect(() => {
+        setHighlightedIndex(-1)
+        // Clear refs array when list changes
+        itemRefs.current = []
+    }, [availableStudents.length, searchValue])
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -51,14 +62,62 @@ export function StudentsCombobox({
             }
         }
 
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
+        if (open) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [open])
 
     const handleSelect = (studentId: string) => {
         onStudentSelect(studentId)
         setSearchValue("")
-        // Keep dropdown open to allow multiple selections
+        setHighlightedIndex(-1)
+        // Keep dropdown open and refocus input to allow multiple selections
+        setTimeout(() => {
+            inputRef.current?.focus()
+        }, 0)
+    }
+
+    // Handle keyboard navigation
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!open || availableStudents.length === 0) return
+
+        switch (e.key) {
+            case "ArrowDown":
+                e.preventDefault()
+                setHighlightedIndex((prev) => {
+                    const next = prev < availableStudents.length - 1 ? prev + 1 : 0
+                    // Scroll into view
+                    setTimeout(() => {
+                        itemRefs.current[next]?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                    }, 0)
+                    return next
+                })
+                break
+            case "ArrowUp":
+                e.preventDefault()
+                setHighlightedIndex((prev) => {
+                    const next = prev > 0 ? prev - 1 : availableStudents.length - 1
+                    // Scroll into view
+                    setTimeout(() => {
+                        itemRefs.current[next]?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+                    }, 0)
+                    return next
+                })
+                break
+            case "Enter":
+                e.preventDefault()
+                if (highlightedIndex >= 0 && highlightedIndex < availableStudents.length) {
+                    handleSelect(availableStudents[highlightedIndex].student_id)
+                }
+                break
+            case "Escape":
+                e.preventDefault()
+                setOpen(false)
+                setSearchValue("")
+                setHighlightedIndex(-1)
+                break
+        }
     }
 
     const selectedStudents = students.filter(student => selectedStudentIds.includes(student.student_id))
@@ -83,21 +142,40 @@ export function StudentsCombobox({
                     <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
 
-                {open && availableStudents.length > 0 && (
+                {open && (
                     <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-hidden">
                         <div className="p-2 border-b">
                             <div className="relative">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
                                 <Input
+                                    ref={inputRef}
                                     placeholder="Search students..."
                                     value={searchValue}
                                     onChange={(e) => setSearchValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    onBlur={(e) => {
+                                        // Don't close if clicking inside the dropdown
+                                        if (!dropdownRef.current?.contains(e.relatedTarget as Node)) {
+                                            // Only close if clicking outside the entire component
+                                            setTimeout(() => {
+                                                if (!dropdownRef.current?.contains(document.activeElement)) {
+                                                    setOpen(false)
+                                                    setSearchValue("")
+                                                    setHighlightedIndex(-1)
+                                                }
+                                            }, 200)
+                                        }
+                                    }}
                                     className="pl-8 pr-8 h-9"
                                     autoFocus
                                 />
                                 {searchValue && (
                                     <button
-                                        onClick={() => setSearchValue("")}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSearchValue("")
+                                            inputRef.current?.focus()
+                                        }}
                                         className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
                                     >
                                         <X className="h-4 w-4" />
@@ -106,18 +184,35 @@ export function StudentsCombobox({
                             </div>
                         </div>
 
-                        <div className="max-h-48 overflow-y-auto">
+                        <div ref={listRef} className="max-h-48 overflow-y-auto">
                             {availableStudents.length === 0 ? (
                                 <div className="p-4 text-center text-sm text-gray-500">
-                                    No students found
+                                    {searchValue ? "No students found" : "No available students"}
                                 </div>
                             ) : (
                                 <div>
-                                    {availableStudents.map((student) => (
+                                    {availableStudents.map((student, index) => (
                                         <button
                                             key={student.student_id}
-                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                                            onClick={() => handleSelect(student.student_id)}
+                                            type="button"
+                                            ref={(el) => {
+                                                itemRefs.current[index] = el
+                                            }}
+                                            className={`w-full px-4 py-2 text-left text-sm focus:outline-none ${
+                                                highlightedIndex === index
+                                                    ? "bg-[#3d8f5b]/10 border-l-2 border-[#3d8f5b]"
+                                                    : "hover:bg-gray-100"
+                                            }`}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                handleSelect(student.student_id)
+                                            }}
+                                            onMouseEnter={() => setHighlightedIndex(index)}
+                                            onMouseDown={(e) => {
+                                                // Prevent input blur when clicking on option
+                                                e.preventDefault()
+                                            }}
                                         >
                                             <div className="flex flex-col">
                                                 <span className="font-medium">

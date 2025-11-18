@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
-import { addDays, format } from 'date-fns'
+import { addDays } from 'date-fns'
 
 export async function updateClass(params: {
     classId: string;
@@ -86,12 +86,12 @@ export async function updateClass(params: {
             if (classError) throw classError
         }
 
-        // Handle session management if start_date, end_date, days_repeated, or times have changed
+        // Handle session management if start_date, end_date, or days_repeated have changed
+        // Always regenerate sessions if dates or days change, even if times aren't explicitly provided
         const shouldUpdateSessions = (
             start_date !== undefined ||
             end_date !== undefined ||
-            days_repeated !== undefined ||
-            times !== undefined
+            days_repeated !== undefined
         )
 
         if (shouldUpdateSessions) {
@@ -100,10 +100,53 @@ export async function updateClass(params: {
             const finalEndDate = end_date || currentClass.end_date
             const finalDaysRepeated = days_repeated || currentClass.days_repeated
 
-            // If times are not provided, we need to get existing sessions to extract time patterns
-            let finalTimes = times
-            if (!finalTimes) {
-                // Get existing sessions to extract time patterns
+            // Use days_repeated directly if available (it contains UTC times in HH:MM format)
+            // Otherwise, extract from existing sessions using UTC methods
+            let finalTimes: Record<string, { start: string; end: string }> | undefined = times
+            if (!finalTimes && finalDaysRepeated) {
+                // If days_repeated is available, we can use it directly
+                // Convert days_repeated (HH:MM format in UTC) to ISO strings for times
+                finalTimes = {}
+                Object.entries(finalDaysRepeated).forEach(([day, timeSlot]) => {
+                    if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
+                        const slot = timeSlot as { start: string; end: string }
+                        if (slot.start && slot.end && finalTimes) {
+                            // Parse HH:MM format (already in UTC)
+                            const [startHours, startMinutes] = slot.start.split(':').map(Number)
+                            const [endHours, endMinutes] = slot.end.split(':').map(Number)
+
+                            // Create reference date for ISO string (using today in UTC)
+                            const today = new Date()
+                            const startDateTime = new Date(Date.UTC(
+                                today.getUTCFullYear(),
+                                today.getUTCMonth(),
+                                today.getUTCDate(),
+                                startHours,
+                                startMinutes,
+                                0,
+                                0
+                            ))
+                            const endDateTime = new Date(Date.UTC(
+                                today.getUTCFullYear(),
+                                today.getUTCMonth(),
+                                today.getUTCDate(),
+                                endHours,
+                                endMinutes,
+                                0,
+                                0
+                            ))
+
+                            // Capitalize first letter of day name
+                            const capitalizedDayName = day.charAt(0).toUpperCase() + day.slice(1)
+                            finalTimes[capitalizedDayName] = {
+                                start: startDateTime.toISOString(),
+                                end: endDateTime.toISOString()
+                            }
+                        }
+                    }
+                })
+            } else if (!finalTimes) {
+                // Fallback: Extract time patterns from existing sessions using UTC methods
                 const { data: existingSessions, error: sessionsError } = await supabase
                     .from('class_sessions')
                     .select('start_date, end_date')
@@ -112,29 +155,46 @@ export async function updateClass(params: {
 
                 if (sessionsError) throw sessionsError
 
-                // Extract time patterns from existing sessions
+                // Extract time patterns from existing sessions using UTC
                 finalTimes = {}
                 if (existingSessions && existingSessions.length > 0) {
+                    // Day names array for UTC day lookup
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
                     for (const session of existingSessions) {
-                        const sessionDate = new Date(session.start_date)
-                        const dayName = format(sessionDate, 'EEEE')
-                        const capitalizedDayName = dayName.charAt(0).toUpperCase() + dayName.slice(1)
+                        const sessionStartDate = new Date(session.start_date)
+                        const sessionEndDate = new Date(session.end_date)
 
-                        // Extract time components
-                        const startTime = sessionDate.toTimeString().split(' ')[0]
-                        const endDate = new Date(session.end_date)
-                        const endTime = endDate.toTimeString().split(' ')[0]
+                        // Get day name from UTC date using UTC day of week
+                        const utcDay = sessionStartDate.getUTCDay()
+                        const capitalizedDayName = dayNames[utcDay]
 
-                        // Create a reference date for the time (using today's date)
+                        // Extract UTC time components (HH:MM format)
+                        const startHours = sessionStartDate.getUTCHours()
+                        const startMinutes = sessionStartDate.getUTCMinutes()
+                        const endHours = sessionEndDate.getUTCHours()
+                        const endMinutes = sessionEndDate.getUTCMinutes()
+
+                        // Create reference date for ISO string (using today in UTC)
                         const today = new Date()
-                        const startDateTime = new Date(today)
-                        const endDateTime = new Date(today)
-
-                        const [startHours, startMinutes, startSeconds] = startTime.split(':').map(Number)
-                        const [endHours, endMinutes, endSeconds] = endTime.split(':').map(Number)
-
-                        startDateTime.setHours(startHours, startMinutes, startSeconds, 0)
-                        endDateTime.setHours(endHours, endMinutes, endSeconds, 0)
+                        const startDateTime = new Date(Date.UTC(
+                            today.getUTCFullYear(),
+                            today.getUTCMonth(),
+                            today.getUTCDate(),
+                            startHours,
+                            startMinutes,
+                            0,
+                            0
+                        ))
+                        const endDateTime = new Date(Date.UTC(
+                            today.getUTCFullYear(),
+                            today.getUTCMonth(),
+                            today.getUTCDate(),
+                            endHours,
+                            endMinutes,
+                            0,
+                            0
+                        ))
 
                         finalTimes[capitalizedDayName] = {
                             start: startDateTime.toISOString(),
@@ -172,14 +232,15 @@ export async function updateClass(params: {
             }
 
             // Generate new sessions
-            if (finalStartDate && finalEndDate && finalDaysRepeated && Object.keys(finalTimes).length > 0) {
+            if (finalStartDate && finalEndDate && finalDaysRepeated && finalTimes && Object.keys(finalTimes).length > 0) {
                 const sessions = []
 
-                // Helper function to get day name with capital first letter
-                const getDayName = (date: Date) => {
-                    const dayName = format(date, 'EEEE').toLowerCase()
-                    // Convert to capital first letter (e.g., "monday" -> "Monday")
-                    return dayName.charAt(0).toUpperCase() + dayName.slice(1)
+                // Helper function to get day name with capital first letter from UTC date
+                const getDayName = (utcDate: Date) => {
+                    // Use UTC day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+                    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+                    const utcDay = utcDate.getUTCDay()
+                    return dayNames[utcDay]
                 }
 
                 // Generate sessions for each day in the date range, starting from today or the start date (whichever is later)
@@ -188,30 +249,89 @@ export async function updateClass(params: {
                 const endDateObj = new Date(finalEndDate)
 
                 // Use the later of today or the start date to avoid creating past sessions
-                let currentDate = now > startDateObj ? now : startDateObj
+                // Work with UTC dates to ensure consistency
+                const nowUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+                const startDateUtc = new Date(Date.UTC(
+                    startDateObj.getUTCFullYear(),
+                    startDateObj.getUTCMonth(),
+                    startDateObj.getUTCDate()
+                ))
+                const endDateUtc = new Date(Date.UTC(
+                    endDateObj.getUTCFullYear(),
+                    endDateObj.getUTCMonth(),
+                    endDateObj.getUTCDate()
+                ))
+
+                // Use the later of today (UTC) or the start date (UTC) to avoid creating past sessions
+                let currentDateUtc = nowUtc > startDateUtc ? nowUtc : startDateUtc
 
                 // If the start date is in the future, use that instead
-                if (startDateObj > now) {
-                    currentDate = startDateObj
+                if (startDateUtc > nowUtc) {
+                    currentDateUtc = startDateUtc
                 }
 
-                while (currentDate <= endDateObj) {
-                    const dayName = getDayName(currentDate)
+                while (currentDateUtc <= endDateUtc) {
+                    const dayName = getDayName(currentDateUtc)
                     const lowercaseDayName = dayName.toLowerCase()
 
                     // Check if this day has a schedule in days_repeated
                     const daySchedule = finalDaysRepeated[lowercaseDayName as keyof typeof finalDaysRepeated]
                     if (daySchedule) {
                         try {
-                            // Create ISO datetime strings by combining the current date with the time
+                            // Parse HH:MM format from days_repeated (times are in UTC)
                             const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                             const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                            const sessionStartDate = new Date(currentDate)
-                            const sessionEndDate = new Date(currentDate)
+                            // The times in days_repeated are UTC times converted from local times.
+                            // When a local time like 8:00 PM EST is converted to UTC, it becomes 1:00 AM the next day.
+                            // So we need to check if the UTC time represents a time on the next calendar day.
+                            // 
+                            // Strategy: If the UTC hour is early (0-5 AM), it likely represents a time that
+                            // was on the "next day" in UTC terms. For EST/EDT (UTC-5/UTC-4), times after 7 PM
+                            // local will be 0:00+ UTC the next day. So we'll add a day if UTC hour < 6.
+                            // This heuristic works for most common timezones with offsets of 4-8 hours.
+                            
+                            const utcYear = currentDateUtc.getUTCFullYear()
+                            const utcMonth = currentDateUtc.getUTCMonth()
+                            const utcDay = currentDateUtc.getUTCDate()
+                            
+                            // Determine if the UTC time falls on the next day
+                            // If UTC hour is early morning (0-5), it's likely the next calendar day
+                            const startDateOffset = startHours < 6 ? 1 : 0
+                            const endDateOffset = endHours < 6 ? 1 : 0
+                            
+                            // Create the start datetime in UTC
+                            const sessionStartDate = new Date(Date.UTC(
+                                utcYear,
+                                utcMonth,
+                                utcDay + startDateOffset,
+                                startHours,
+                                startMinutes,
+                                0,
+                                0
+                            ))
 
-                            sessionStartDate.setHours(startHours, startMinutes, 0, 0)
-                            sessionEndDate.setHours(endHours, endMinutes, 0, 0)
+                            // Check if end time is earlier than start time (spans midnight)
+                            const endTimeMinutes = endHours * 60 + endMinutes
+                            const startTimeMinutes = startHours * 60 + startMinutes
+                            const spansMidnight = endTimeMinutes <= startTimeMinutes
+
+                            // Calculate final end date offset
+                            // If it spans midnight, end is on the day after start
+                            // Otherwise, use the calculated endDateOffset
+                            const finalEndDateOffset = spansMidnight 
+                                ? startDateOffset + 1 
+                                : endDateOffset
+
+                            const sessionEndDate = new Date(Date.UTC(
+                                utcYear,
+                                utcMonth,
+                                utcDay + finalEndDateOffset,
+                                endHours,
+                                endMinutes,
+                                0,
+                                0
+                            ))
 
                             sessions.push({
                                 class_id: classId,
@@ -225,8 +345,8 @@ export async function updateClass(params: {
                         }
                     }
 
-                    // Move to next day
-                    currentDate = addDays(currentDate, 1)
+                    // Move to next day in UTC
+                    currentDateUtc = addDays(currentDateUtc, 1)
                 }
 
                 // Insert all new sessions

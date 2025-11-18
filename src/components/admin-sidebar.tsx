@@ -122,6 +122,7 @@ export function AdminSidebar() {
   const [showLogout, setShowLogout] = useState(false)
   const [profile, setProfile] = useState<ProfileType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [timezone, setTimezone] = useState<string>("")
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -136,6 +137,7 @@ export function AdminSidebar() {
     }
 
     fetchProfile()
+    setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
   }, [])
 
   // Only show the sidebar on admin pages
@@ -240,6 +242,12 @@ export function AdminSidebar() {
         </div>
         <div className="mt-auto">
           <div className="p-4 border-t border-gray-200 dark:border-gray-800/60">
+            {/* Timezone Display */}
+            <div className="mb-3 px-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Timezone: {timezone || "Loading..."}
+              </p>
+            </div>
             <div className="relative">
               <div className="flex items-center justify-between rounded-lg px-3 py-2 dark:bg-gray-800/50">
                 <div className="flex items-center gap-2.5 min-w-0 flex-1">

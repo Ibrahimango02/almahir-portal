@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format, startOfDay } from "date-fns"
-import { CalendarIcon, BookOpen, Clock, Users, Link as LinkIcon, FileText, GraduationCap, AlertTriangle } from "lucide-react"
+import { CalendarIcon, BookOpen, Clock, UserPen, Link as LinkIcon, FileText, User, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { TimePicker } from "@/components/ui/time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
@@ -33,7 +33,6 @@ import { Separator } from "@/components/ui/separator"
 import { checkMultipleTeacherConflicts, checkMultipleStudentConflicts, ConflictInfo } from "@/lib/utils/conflict-checker"
 import { TeacherConflictDisplay } from "@/components/teacher-conflict-display"
 import { StudentConflictDisplay } from "@/components/student-conflict-display"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Checkbox } from "@/components/ui/checkbox"
 import { SubjectsCombobox } from "@/components/subjects-combobox"
 import { TeachersCombobox } from "@/components/teachers-combobox"
@@ -98,6 +97,67 @@ const daysOfWeek = [
     { id: "sunday", label: "Sunday" },
 ]
 
+type TimeOption = {
+    value: string
+    label: string
+}
+
+const TIME_INCREMENT_MINUTES = 15
+
+const formatTimeLabel = (hours: number, minutes: number) => {
+    const period = hours >= 12 ? "PM" : "AM"
+    const displayHour = hours % 12 === 0 ? 12 : hours % 12
+    const minuteString = minutes.toString().padStart(2, "0")
+    return `${displayHour}:${minuteString} ${period}`
+}
+
+const TIME_OPTIONS: TimeOption[] = Array.from(
+    { length: (24 * 60) / TIME_INCREMENT_MINUTES },
+    (_, index) => {
+        const totalMinutes = index * TIME_INCREMENT_MINUTES
+        const hours = Math.floor(totalMinutes / 60)
+        const minutes = totalMinutes % 60
+        const value = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+        return {
+            value,
+            label: formatTimeLabel(hours, minutes),
+        }
+    }
+)
+
+const formatDuration = (minutes: number): string => {
+    if (minutes < 60) {
+        return `${minutes} mins`
+    } else if (minutes === 60) {
+        return "1 hr"
+    } else {
+        const hours = minutes / 60
+        // Format to 1 decimal place if not a whole number, otherwise show as integer
+        const formattedHours = hours % 1 === 0 ? hours.toString() : hours.toFixed(1)
+        return `${formattedHours} hrs`
+    }
+}
+
+const getEndTimeOptions = (startValue?: string): TimeOption[] => {
+    if (!startValue) return []
+
+    const [startHour, startMinute] = startValue.split(':').map(Number)
+    const startTotalMinutes = startHour * 60 + startMinute
+
+    return TIME_OPTIONS
+        .filter((option) => option.value > startValue)
+        .map((option) => {
+            const [endHour, endMinute] = option.value.split(':').map(Number)
+            const endTotalMinutes = endHour * 60 + endMinute
+            const durationMinutes = endTotalMinutes - startTotalMinutes
+            const durationLabel = formatDuration(durationMinutes)
+
+            return {
+                value: option.value,
+                label: `${option.label} (${durationLabel})`,
+            }
+        })
+}
 
 
 export default function EditClassPage() {
@@ -285,8 +345,10 @@ export default function EditClassPage() {
                     if (classDataResult.days_repeated && typeof classDataResult.days_repeated === 'object') {
                         Object.entries(classDataResult.days_repeated).forEach(([day, timeSlot]) => {
                             if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
-                                lowercaseDays.push(day)
-                                times[day] = {
+                                // Normalize day key to lowercase to match form expectations
+                                const dayKey = day.toLowerCase()
+                                lowercaseDays.push(dayKey)
+                                times[dayKey] = {
                                     start: convertUtcTimeToLocal(timeSlot.start),
                                     end: convertUtcTimeToLocal(timeSlot.end)
                                 }
@@ -713,46 +775,76 @@ export default function EditClassPage() {
                                                             <FormField
                                                                 control={form.control}
                                                                 name={`times.${day}.start` as keyof z.infer<typeof formSchema>}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormLabel className="text-xs font-medium text-gray-600">Start Time</FormLabel>
-                                                                        <FormControl>
-                                                                            <TimePicker
-                                                                                value={String(field.value || "")}
-                                                                                onValueChange={(value) => {
-                                                                                    field.onChange(value)
-                                                                                    // Trigger conflict check after a short delay
-                                                                                    setTimeout(checkConflicts, 300)
-                                                                                }}
-                                                                                placeholder="Select start time"
-                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                                                                            />
-                                                                        </FormControl>
-                                                                        <FormMessage />
-                                                                    </FormItem>
-                                                                )}
+                                                                render={({ field }) => {
+                                                                    const startFieldValue = field.value as string | undefined
+                                                                    return (
+                                                                        <FormItem>
+                                                                            <FormLabel className="text-xs font-medium text-gray-600">Start Time</FormLabel>
+                                                                            <FormControl>
+                                                                                <Select
+                                                                                    value={startFieldValue}
+                                                                                    onValueChange={(value: string) => {
+                                                                                        field.onChange(value)
+                                                                                        const endFieldName = `times.${day}.end` as const
+                                                                                        const currentEndValue = form.getValues(endFieldName) as string | undefined
+                                                                                        if (currentEndValue && currentEndValue <= value) {
+                                                                                            form.setValue(endFieldName, undefined as unknown as string, { shouldValidate: true })
+                                                                                        }
+                                                                                        setTimeout(checkConflicts, 300)
+                                                                                    }}
+                                                                                >
+                                                                                    <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                                                                                        <SelectValue placeholder="Select start time" />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent className="max-h-64">
+                                                                                        {TIME_OPTIONS.map((option) => (
+                                                                                            <SelectItem key={option.value} value={option.value}>
+                                                                                                {option.label}
+                                                                                            </SelectItem>
+                                                                                        ))}
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )
+                                                                }}
                                                             />
                                                             <FormField
                                                                 control={form.control}
                                                                 name={`times.${day}.end` as keyof z.infer<typeof formSchema>}
-                                                                render={({ field }) => (
-                                                                    <FormItem>
-                                                                        <FormLabel className="text-xs font-medium text-gray-600">End Time</FormLabel>
-                                                                        <FormControl>
-                                                                            <TimePicker
-                                                                                value={String(field.value || "")}
-                                                                                onValueChange={(value) => {
-                                                                                    field.onChange(value)
-                                                                                    // Trigger conflict check after a short delay
-                                                                                    setTimeout(checkConflicts, 300)
-                                                                                }}
-                                                                                placeholder="Select end time"
-                                                                                className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                                                                            />
-                                                                        </FormControl>
-                                                                        <FormMessage />
-                                                                    </FormItem>
-                                                                )}
+                                                                render={({ field }) => {
+                                                                    const startValue = form.watch(`times.${day}.start` as const) as string | undefined
+                                                                    const availableEndOptions = getEndTimeOptions(startValue)
+                                                                    const endFieldValue = field.value as string | undefined
+                                                                    return (
+                                                                        <FormItem>
+                                                                            <FormLabel className="text-xs font-medium text-gray-600">End Time</FormLabel>
+                                                                            <FormControl>
+                                                                                <Select
+                                                                                    value={endFieldValue}
+                                                                                    onValueChange={(value: string) => {
+                                                                                        field.onChange(value)
+                                                                                        setTimeout(checkConflicts, 300)
+                                                                                    }}
+                                                                                    disabled={!startValue || availableEndOptions.length === 0}
+                                                                                >
+                                                                                    <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20 disabled:opacity-80">
+                                                                                        <SelectValue placeholder={startValue ? "Select end time" : "Pick start time first"} />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent className="max-h-64">
+                                                                                        {availableEndOptions.map((option) => (
+                                                                                            <SelectItem key={option.value} value={option.value}>
+                                                                                                {option.label}
+                                                                                            </SelectItem>
+                                                                                        ))}
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            </FormControl>
+                                                                            <FormMessage />
+                                                                        </FormItem>
+                                                                    )
+                                                                }}
                                                             />
                                                         </div>
                                                     </div>
@@ -768,7 +860,7 @@ export default function EditClassPage() {
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
-                                            <Users className="w-4 h-4 text-[#3d8f5b]" />
+                                            <UserPen className="w-4 h-4 text-[#3d8f5b]" />
                                         </div>
                                         <h3 className="text-lg font-semibold text-gray-900">Assign Teachers</h3>
                                     </div>
@@ -796,23 +888,9 @@ export default function EditClassPage() {
                                                         placeholder="Search and select teachers"
                                                     />
                                                 </FormControl>
-                                                <FormDescription className="text-sm text-gray-600">Search and select one or more teachers for this class</FormDescription>
-                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
-
-                                    {/* Conflict Checking Status */}
-                                    {checkingConflicts && (
-                                        <Alert className="border-blue-200 bg-blue-50">
-                                            <div className="flex items-center gap-2">
-                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                                <AlertDescription className="text-blue-800">
-                                                    Checking teacher and student conflicts...
-                                                </AlertDescription>
-                                            </div>
-                                        </Alert>
-                                    )}
 
                                     {/* Teacher Conflicts Display */}
                                     {Object.values(teacherConflicts).some(conflict => conflict.hasConflict) && (
@@ -846,7 +924,7 @@ export default function EditClassPage() {
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-8 h-8 bg-[#3d8f5b]/10 rounded-full flex items-center justify-center">
-                                            <GraduationCap className="w-4 h-4 text-[#3d8f5b]" />
+                                            <User className="w-4 h-4 text-[#3d8f5b]" />
                                         </div>
                                         <h3 className="text-lg font-semibold text-gray-900">Enroll Students</h3>
                                     </div>
@@ -874,11 +952,17 @@ export default function EditClassPage() {
                                                         placeholder="Search and select students"
                                                     />
                                                 </FormControl>
-                                                <FormDescription className="text-sm text-gray-600">Search and select students to enroll in this class</FormDescription>
-                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
+                                    {/* Conflict Checking Status */}
+                                    {checkingConflicts && (
+                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-[#3d8f5b]"></div>
+                                            <span>Checking conflicts...</span>
+                                        </div>
+                                    )}
 
                                     {/* Student Conflicts Display */}
                                     {Object.values(studentConflicts).some(conflict => conflict.hasConflict) && (
@@ -930,10 +1014,6 @@ export default function EditClassPage() {
                                                         {...field}
                                                     />
                                                 </FormControl>
-                                                <FormDescription className="text-sm text-gray-600">
-                                                    Meeting link for online classes. If empty, the first teacher&apos;s default class link will be used.
-                                                </FormDescription>
-                                                <FormMessage />
                                             </FormItem>
                                         )}
                                     />

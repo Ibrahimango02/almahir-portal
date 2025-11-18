@@ -147,43 +147,127 @@ function mapStudentToStudentType(
 export async function getClasses(): Promise<ClassType[]> {
     const supabase = createClient()
 
-    // Get all classes
-    const { data: classes, error } = await supabase
-        .from('classes')
-        .select('*')
+    // Get all classes (with pagination to ensure we fetch all)
+    let classes: Array<Record<string, unknown>> = []
+    let classesFrom = 0
+    const classesPageSize = 1000
+    let classesHasMore = true
 
-    if (error) {
-        console.error('Error fetching classes:', error)
+    while (classesHasMore) {
+        const { data: classesPage, error } = await supabase
+            .from('classes')
+            .select('*')
+            .range(classesFrom, classesFrom + classesPageSize - 1)
+
+        if (error) {
+            console.error('Error fetching classes:', error)
+            break
+        }
+
+        if (classesPage && classesPage.length > 0) {
+            classes = [...classes, ...classesPage]
+            classesFrom += classesPageSize
+            classesHasMore = classesPage.length === classesPageSize
+        } else {
+            classesHasMore = false
+        }
+    }
+
+    if (classes.length === 0) {
         return []
     }
 
     // Extract class IDs
     const classIds = classes?.map(c => c.id) || []
 
-    // Get class-teacher relationships
-    const { data: classTeachers } = await supabase
-        .from('class_teachers')
-        .select('class_id, teacher_id')
-        .in('class_id', classIds)
+    // Get class-teacher relationships (with pagination)
+    let classTeachers: Array<{ class_id: string; teacher_id: string }> = []
+    if (classIds.length > 0) {
+        let teachersFrom = 0
+        const teachersPageSize = 1000
+        let teachersHasMore = true
 
-    // Get class-student relationships
-    const { data: classStudents } = await supabase
-        .from('class_students')
-        .select('class_id, student_id')
-        .in('class_id', classIds)
+        while (teachersHasMore) {
+            const { data: teachers, error: teachersError } = await supabase
+                .from('class_teachers')
+                .select('class_id, teacher_id')
+                .in('class_id', classIds)
+                .range(teachersFrom, teachersFrom + teachersPageSize - 1)
 
-    // Get session data for all classes (now includes start_time and end_time)
-    const { data: classSessions, error: sessionError } = await supabase
-        .from('class_sessions')
-        .select('*')
-        .in('class_id', classIds)
+            if (teachersError) {
+                console.error('Error fetching class teachers:', teachersError)
+                break
+            }
 
-    if (sessionError) {
-        console.error('Error fetching class sessions:', sessionError)
+            if (teachers && teachers.length > 0) {
+                classTeachers = [...classTeachers, ...teachers]
+                teachersFrom += teachersPageSize
+                teachersHasMore = teachers.length === teachersPageSize
+            } else {
+                teachersHasMore = false
+            }
+        }
     }
 
-    // Get reschedule requests for all sessions
-    const sessionIds = classSessions?.map(s => s.id) || []
+    // Get class-student relationships (with pagination)
+    let classStudents: Array<{ class_id: string; student_id: string }> = []
+    if (classIds.length > 0) {
+        let studentsFrom = 0
+        const studentsPageSize = 1000
+        let studentsHasMore = true
+
+        while (studentsHasMore) {
+            const { data: students, error: studentsError } = await supabase
+                .from('class_students')
+                .select('class_id, student_id')
+                .in('class_id', classIds)
+                .range(studentsFrom, studentsFrom + studentsPageSize - 1)
+
+            if (studentsError) {
+                console.error('Error fetching class students:', studentsError)
+                break
+            }
+
+            if (students && students.length > 0) {
+                classStudents = [...classStudents, ...students]
+                studentsFrom += studentsPageSize
+                studentsHasMore = students.length === studentsPageSize
+            } else {
+                studentsHasMore = false
+            }
+        }
+    }
+
+    // Get session data for all classes (now includes start_time and end_time)
+    // Use pagination to fetch all sessions, as Supabase has a default limit
+    let classSessions: Array<Record<string, unknown>> = []
+    let sessionsFrom = 0
+    const sessionsPageSize = 1000
+    let sessionsHasMore = true
+
+    while (sessionsHasMore) {
+        const { data: sessions, error: sessionError } = await supabase
+            .from('class_sessions')
+            .select('*')
+            .in('class_id', classIds)
+            .range(sessionsFrom, sessionsFrom + sessionsPageSize - 1)
+
+        if (sessionError) {
+            console.error('Error fetching class sessions:', sessionError)
+            break
+        }
+
+        if (sessions && sessions.length > 0) {
+            classSessions = [...classSessions, ...sessions]
+            sessionsFrom += sessionsPageSize
+            sessionsHasMore = sessions.length === sessionsPageSize
+        } else {
+            sessionsHasMore = false
+        }
+    }
+
+    // Get reschedule requests for all sessions (with pagination if needed)
+    const sessionIds = classSessions?.map(s => (s as { id: string }).id) || []
     const { data: rescheduleRequests } = await supabase
         .from('reschedule_requests')
         .select('*')
@@ -227,9 +311,10 @@ export async function getClasses(): Promise<ClassType[]> {
 
     // Format the data as required
     const formattedClasses = classes?.map(classItem => {
+        const c = classItem as { id: string; title: string; description: string | null; subject: string; start_date: string; end_date: string; status: string; days_repeated: unknown; class_link: string | null; created_at: string; updated_at: string | null }
         // Find teachers for this class
         const classTeacherIds = classTeachers
-            ?.filter(ct => ct.class_id === classItem.id)
+            ?.filter(ct => ct.class_id === c.id)
             .map(ct => ct.teacher_id) || []
 
         const teachers: TeacherType[] = teacherProfiles
@@ -258,7 +343,7 @@ export async function getClasses(): Promise<ClassType[]> {
 
         // Find students for this class
         const classStudentIds = classStudents
-            ?.filter(cs => cs.class_id === classItem.id)
+            ?.filter(cs => cs.class_id === c.id)
             .map(cs => cs.student_id) || []
 
         const enrolledStudents: StudentType[] = classStudentIds
@@ -271,42 +356,46 @@ export async function getClasses(): Promise<ClassType[]> {
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classItem.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === c.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || []
 
         // Parse days_repeated using the helper function
-        const daysRepeated = parseDaysRepeated(classItem.days_repeated)
+        const daysRepeated = parseDaysRepeated(c.days_repeated)
 
         return {
-            class_id: classItem.id,
-            title: classItem.title,
-            description: classItem.description || null,
-            subject: classItem.subject,
-            start_date: classItem.start_date,
-            end_date: classItem.end_date,
-            status: classItem.status,
+            class_id: c.id,
+            title: c.title,
+            description: c.description || null,
+            subject: c.subject,
+            start_date: c.start_date,
+            end_date: c.end_date,
+            status: c.status,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link || null,
+            class_link: c.class_link || null,
             teachers: teachers,
             students: enrolledStudents,
-            created_at: classItem.created_at,
-            updated_at: classItem.updated_at || null
+            created_at: c.created_at,
+            updated_at: c.updated_at || null
         }
     }) || []
 
@@ -406,9 +495,10 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
     // Format the data to match ClassType
     const formattedClasses = classes?.map(classItem => {
+        const c = classItem as { id: string; title: string; description: string | null; subject: string; start_date: string; end_date: string; status: string; days_repeated: unknown; class_link: string | null; created_at: string; updated_at: string | null }
         // Find teachers for this class
         const classTeacherIds = classTeachers
-            ?.filter(ct => ct.class_id === classItem.id)
+            ?.filter(ct => ct.class_id === c.id)
             .map(ct => ct.teacher_id) || []
 
         const teachers: TeacherType[] = teacherProfiles
@@ -437,7 +527,7 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
         // Find students for this class
         const classStudentIds = classStudents
-            ?.filter(cs => cs.class_id === classItem.id)
+            ?.filter(cs => cs.class_id === c.id)
             .map(cs => cs.student_id) || []
 
         const enrolledStudents: StudentType[] = classStudentIds
@@ -450,46 +540,47 @@ export async function getClassesToday(): Promise<ClassType[]> {
 
         // Get today's sessions for this class
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classItem.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === c.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || []
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classItem.days_repeated
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim())
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(c.days_repeated)
 
         // Return object matching ClassType
         return {
-            class_id: classItem.id,
-            title: classItem.title,
-            description: classItem.description || null,
-            subject: classItem.subject,
-            start_date: classItem.start_date,
-            end_date: classItem.end_date,
-            status: classItem.status,
+            class_id: c.id,
+            title: c.title,
+            description: c.description || null,
+            subject: c.subject,
+            start_date: c.start_date,
+            end_date: c.end_date,
+            status: c.status,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link || null,
+            class_link: c.class_link || null,
             teachers: teachers,
             students: enrolledStudents,
-            created_at: classItem.created_at,
-            updated_at: classItem.updated_at || null
+            created_at: c.created_at,
+            updated_at: c.updated_at || null
         }
     }) || []
 
@@ -724,9 +815,10 @@ export async function getActiveClasses(): Promise<ClassType[]> {
 
     // Format the classes with all related data
     const formattedClasses: ClassType[] = classes?.map(classItem => {
+        const c = classItem as { id: string; title: string; description: string | null; subject: string; start_date: string; end_date: string; status: string; days_repeated: unknown; class_link: string | null; created_at: string; updated_at: string | null }
         // Find teachers for this class
         const classTeacherIds = classTeachers
-            ?.filter(ct => ct.class_id === classItem.id)
+            ?.filter(ct => ct.class_id === c.id)
             .map(ct => ct.teacher_id) || []
 
         const teachers: TeacherType[] = teacherProfiles
@@ -755,7 +847,7 @@ export async function getActiveClasses(): Promise<ClassType[]> {
 
         // Find students for this class
         const classStudentIds = classStudents
-            ?.filter(cs => cs.class_id === classItem.id)
+            ?.filter(cs => cs.class_id === c.id)
             .map(cs => cs.student_id) || []
 
         const enrolledStudents: StudentType[] = classStudentIds
@@ -768,45 +860,46 @@ export async function getActiveClasses(): Promise<ClassType[]> {
 
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classItem.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === c.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || []
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classItem.days_repeated
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim())
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(c.days_repeated)
 
         return {
-            class_id: classItem.id,
-            title: classItem.title,
-            description: classItem.description || null,
-            subject: classItem.subject,
-            start_date: classItem.start_date,
-            end_date: classItem.end_date,
-            status: classItem.status,
+            class_id: c.id,
+            title: c.title,
+            description: c.description || null,
+            subject: c.subject,
+            start_date: c.start_date,
+            end_date: c.end_date,
+            status: c.status,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link || null,
+            class_link: c.class_link || null,
             teachers: teachers,
             students: enrolledStudents,
-            created_at: classItem.created_at,
-            updated_at: classItem.updated_at || null
+            created_at: c.created_at,
+            updated_at: c.updated_at || null
         }
     }) || []
 
@@ -893,9 +986,10 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
 
     // Format the classes with all related data
     const formattedClasses: ClassType[] = classes?.map(classItem => {
+        const c = classItem as { id: string; title: string; description: string | null; subject: string; start_date: string; end_date: string; status: string; days_repeated: unknown; class_link: string | null; created_at: string; updated_at: string | null }
         // Find teachers for this class
         const classTeacherIds = classTeachers
-            ?.filter(ct => ct.class_id === classItem.id)
+            ?.filter(ct => ct.class_id === c.id)
             .map(ct => ct.teacher_id) || []
 
         const teachers: TeacherType[] = teacherProfiles
@@ -924,7 +1018,7 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
 
         // Find students for this class
         const classStudentIds = classStudents
-            ?.filter(cs => cs.class_id === classItem.id)
+            ?.filter(cs => cs.class_id === c.id)
             .map(cs => cs.student_id) || []
 
         const enrolledStudents: StudentType[] = classStudentIds
@@ -937,45 +1031,46 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
 
         // Get sessions for this class
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classItem.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === c.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || []
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classItem.days_repeated
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim())
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(c.days_repeated)
 
         return {
-            class_id: classItem.id,
-            title: classItem.title,
-            description: classItem.description || null,
-            subject: classItem.subject,
-            start_date: classItem.start_date,
-            end_date: classItem.end_date,
-            status: classItem.status,
+            class_id: c.id,
+            title: c.title,
+            description: c.description || null,
+            subject: c.subject,
+            start_date: c.start_date,
+            end_date: c.end_date,
+            status: c.status,
             days_repeated: daysRepeated,
             sessions: sessions,
-            class_link: classItem.class_link || null,
+            class_link: c.class_link || null,
             teachers: teachers,
             students: enrolledStudents,
-            created_at: classItem.created_at,
-            updated_at: classItem.updated_at || null
+            created_at: c.created_at,
+            updated_at: c.updated_at || null
         }
     }) || []
 
@@ -1085,27 +1180,25 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         .in('session_id', sessionIds)
 
     const sessions: SessionType[] = classSessions?.map(session => {
+        const s = session as { id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
         // Find reschedule request for this session
-        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+        const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
         return {
-            session_id: session.id,
-            start_date: session.start_date,
-            end_date: session.end_date,
-            status: session.status,
+            session_id: s.id,
+            start_date: s.start_date,
+            end_date: s.end_date,
+            status: s.status,
             cancelled_by: rescheduleRequest?.requested_by || null,
             cancellation_reason: rescheduleRequest?.reason || null,
             reschedule_date: rescheduleRequest?.requested_date || null,
-            created_at: session.created_at,
-            updated_at: session.updated_at || null
+            created_at: s.created_at,
+            updated_at: s.updated_at || null
         }
     }) || [];
 
-    // Parse days_repeated to an array if it's a string
-    let daysRepeated = classData.days_repeated;
-    if (typeof daysRepeated === 'string') {
-        daysRepeated = daysRepeated.split(',').map(day => day.trim());
-    }
+    // Parse days_repeated using the helper function to ensure consistent format
+    const daysRepeated = parseDaysRepeated(classData.days_repeated);
 
     // Extract times from sessions if times field is not available
     let times: Record<string, { start: string; end: string }> | undefined = classData.times;
@@ -1287,21 +1380,25 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classData.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === classData.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || [];
 
@@ -1458,21 +1555,25 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
 
         // Find sessions for this class - now using start_date and end_date
         const sessions: SessionType[] = classSessions
-            ?.filter(session => session.class_id === classData.id)
+            ?.filter(session => {
+                const s = session as { class_id: string }
+                return s.class_id === classData.id
+            })
             .map(session => {
+                const s = session as { id: string; class_id: string; start_date: string; end_date: string; status: string; created_at: string; updated_at: string | null }
                 // Find reschedule request for this session
-                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === session.id)
+                const rescheduleRequest = rescheduleRequests?.find(rr => rr.session_id === s.id)
 
                 return {
-                    session_id: session.id,
-                    start_date: session.start_date,
-                    end_date: session.end_date,
-                    status: session.status,
+                    session_id: s.id,
+                    start_date: s.start_date,
+                    end_date: s.end_date,
+                    status: s.status,
                     cancelled_by: rescheduleRequest?.requested_by || null,
                     cancellation_reason: rescheduleRequest?.reason || null,
                     reschedule_date: rescheduleRequest?.requested_date || null,
-                    created_at: session.created_at,
-                    updated_at: session.updated_at || null
+                    created_at: s.created_at,
+                    updated_at: s.updated_at || null
                 }
             }) || [];
 
@@ -2792,11 +2893,8 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
                 }
             }) || []
 
-        // Parse days_repeated to an array if it's a string
-        let daysRepeated = classData.days_repeated
-        if (typeof daysRepeated === 'string') {
-            daysRepeated = daysRepeated.split(',').map(day => day.trim())
-        }
+        // Parse days_repeated using the helper function
+        const daysRepeated = parseDaysRepeated(classData.days_repeated)
 
         return {
             class_id: classData.id,
