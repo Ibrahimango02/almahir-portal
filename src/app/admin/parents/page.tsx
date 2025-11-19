@@ -3,27 +3,46 @@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { ParentsTable } from "@/components/parents-table"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { ParentType } from "@/types"
 import { getParents } from "@/lib/get/get-parents"
 
 export default function ParentsPage() {
   const [parents, setParents] = useState<ParentType[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredParents, setFilteredParents] = useState<ParentType[]>([])
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchParents = async () => {
-      const data = await getParents()
-      setParents(data)
-      setFilteredParents(data)
+      try {
+        setLoading(true)
+        const data = await getParents()
+        setParents(data)
+      } catch (error) {
+        console.error('Error fetching parents:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchParents()
   }, [])
 
+  // Debounce search query to avoid filtering on every keystroke
   useEffect(() => {
-    const filtered = parents.filter(parent => {
-      const searchLower = searchQuery.toLowerCase()
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Memoize filtered parents to avoid recalculating on every render
+  const filteredParents = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return parents
+
+    const searchLower = debouncedSearchQuery.toLowerCase()
+    return parents.filter(parent => {
       const fullName = `${parent.first_name ?? ''} ${parent.last_name ?? ''}`.toLowerCase()
       return (
         fullName.includes(searchLower) ||
@@ -37,8 +56,7 @@ export default function ParentsPage() {
         (parent.gender?.toLowerCase().includes(searchLower) ?? false)
       )
     })
-    setFilteredParents(filtered)
-  }, [searchQuery, parents])
+  }, [debouncedSearchQuery, parents])
 
   return (
     <div className="flex flex-col gap-6">
@@ -59,7 +77,16 @@ export default function ParentsPage() {
       </div>
 
       <div className="p-6">
-        <ParentsTable parents={filteredParents} />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading parents...</p>
+            </div>
+          </div>
+        ) : (
+          <ParentsTable parents={filteredParents} />
+        )}
       </div>
     </div>
   )

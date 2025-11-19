@@ -3,27 +3,46 @@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { TeachersTable } from "@/components/teachers-table"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { TeacherType } from "@/types"
 import { getTeachers } from "@/lib/get/get-teachers"
 
 export default function TeachersPage() {
   const [teachers, setTeachers] = useState<TeacherType[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredTeachers, setFilteredTeachers] = useState<TeacherType[]>([])
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchTeachers = async () => {
-      const data = await getTeachers()
-      setTeachers(data)
-      setFilteredTeachers(data)
+      try {
+        setLoading(true)
+        const data = await getTeachers()
+        setTeachers(data)
+      } catch (error) {
+        console.error('Error fetching teachers:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchTeachers()
   }, [])
 
+  // Debounce search query to avoid filtering on every keystroke
   useEffect(() => {
-    const filtered = teachers.filter(teacher => {
-      const searchLower = searchQuery.toLowerCase()
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Memoize filtered teachers to avoid recalculating on every render
+  const filteredTeachers = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return teachers
+
+    const searchLower = debouncedSearchQuery.toLowerCase()
+    return teachers.filter(teacher => {
       const fullName = `${teacher.first_name ?? ''} ${teacher.last_name ?? ''}`.toLowerCase()
       return (
         fullName.includes(searchLower) ||
@@ -38,8 +57,7 @@ export default function TeachersPage() {
         (teacher.specialization?.toLowerCase() ?? '').includes(searchLower)
       )
     })
-    setFilteredTeachers(filtered)
-  }, [searchQuery, teachers])
+  }, [debouncedSearchQuery, teachers])
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,7 +78,16 @@ export default function TeachersPage() {
       </div>
 
       <div className="p-6">
-        <TeachersTable teachers={filteredTeachers} />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading teachers...</p>
+            </div>
+          </div>
+        ) : (
+          <TeachersTable teachers={filteredTeachers} />
+        )}
       </div>
     </div>
   )

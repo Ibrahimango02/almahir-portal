@@ -44,6 +44,7 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                 <Table>
                     <TableHeader>
                         <TableRow className="border-b border-border/50 bg-muted/30 hover:bg-muted/30">
+                            <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">ID</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Moderator</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Location</TableHead>
@@ -51,12 +52,18 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedModerators.map((moderator) => (
+                        {paginatedModerators.map((moderator, index) => (
                             <TableRow
                                 key={moderator.id}
                                 className="hover:bg-muted/100 transition-all duration-200 border-b border-border/30 cursor-pointer"
                                 onClick={() => router.push(`/admin/moderators/${moderator.id}`)}
                             >
+                                {/* ID */}
+                                <TableCell className="py-3 px-4">
+                                    <span className="text-sm font-semibold text-muted-foreground">
+                                        {(currentPage - 1) * pageSize + index + 1}
+                                    </span>
+                                </TableCell>
                                 {/* Moderator Info */}
                                 <TableCell className="py-3 px-4">
                                     <div className="flex items-center gap-3">

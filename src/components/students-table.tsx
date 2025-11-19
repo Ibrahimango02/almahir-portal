@@ -16,7 +16,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getAllStudentParents } from "@/lib/get/get-students"
@@ -62,19 +62,35 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
     fetchUserRole()
   }, [userRole])
 
+  // Sort students alphabetically by name
+  const sortedStudents = useMemo(() => {
+    return [...students].sort((a, b) => {
+      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }, [students])
+
+  // Calculate pagination
+  const totalItems = sortedStudents.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const paginatedStudents = useMemo(() => {
+    return sortedStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [sortedStudents, currentPage, pageSize])
+
   useEffect(() => {
     const fetchRelatedData = async () => {
-      if (students.length === 0) return
+      if (paginatedStudents.length === 0) return
 
       try {
-        // Batch fetch all parents at once instead of one-by-one
-        const studentIds = students.map(s => s.student_id)
+        // Only fetch parent data for the current page of students
+        const studentIds = paginatedStudents.map(s => s.student_id)
         const parentResults = await getAllStudentParents(studentIds)
         setParentData(parentResults)
       } catch (error) {
         console.error('Failed to fetch parent data:', error)
-        // Initialize with empty arrays for all students
-        const emptyParentData = students.reduce((acc, student) => {
+        // Initialize with empty arrays for current page students
+        const emptyParentData = paginatedStudents.reduce((acc, student) => {
           acc[student.student_id] = []
           return acc
         }, {} as Record<string, ParentType[]>)
@@ -83,19 +99,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
     }
 
     fetchRelatedData()
-  }, [students])
-
-  // Sort students alphabetically by name
-  const sortedStudents = [...students].sort((a, b) => {
-    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
-    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
-    return nameA.localeCompare(nameB)
-  })
-
-  // Calculate pagination
-  const totalItems = sortedStudents.length
-  const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedStudents = sortedStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [paginatedStudents])
 
   const isAdmin = currentUserRole === 'admin'
   const isModerator = currentUserRole === 'moderator'
@@ -121,6 +125,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border/50 bg-muted/30 hover:bg-muted/30">
+              <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">ID</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Student</TableHead>
               {!isTeacher && <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>}
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Location</TableHead>
@@ -130,7 +135,7 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedStudents.map((student) => (
+            {paginatedStudents.map((student, index) => (
               <TableRow
                 key={student.student_id}
                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -147,6 +152,12 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                   router.push(getStudentDetailUrl(student.student_id))
                 }}
               >
+                {/* ID */}
+                <TableCell className="py-3 px-4">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {(currentPage - 1) * pageSize + index + 1}
+                  </span>
+                </TableCell>
                 {/* Student Info */}
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">

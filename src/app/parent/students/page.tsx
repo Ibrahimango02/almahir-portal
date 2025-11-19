@@ -3,15 +3,15 @@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { StudentsTable } from "@/components/students-table"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { StudentType } from "@/types"
 import { getParentStudents } from "@/lib/get/get-parents"
 import { createClient } from "@/utils/supabase/client"
 
 export default function StudentsPage() {
     const [students, setStudents] = useState<StudentType[]>([])
-    const [filteredStudents, setFilteredStudents] = useState<StudentType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -38,12 +38,10 @@ export default function StudentsPage() {
 
                 const data = await getParentStudents(currentUserId)
                 setStudents(data)
-                setFilteredStudents(data)
             } catch (err) {
                 console.error('Error fetching students:', err)
                 setError(err instanceof Error ? err.message : 'Failed to fetch students')
                 setStudents([])
-                setFilteredStudents([])
             } finally {
                 setLoading(false)
             }
@@ -52,9 +50,21 @@ export default function StudentsPage() {
         fetchData()
     }, [currentUserId])
 
+    // Debounce search query to avoid filtering on every keystroke
     useEffect(() => {
-        const filtered = students.filter(student => {
-            const searchLower = searchQuery.toLowerCase()
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+        }, 300) // 300ms delay
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    // Memoize filtered students to avoid recalculating on every render
+    const filteredStudents = useMemo(() => {
+        if (!debouncedSearchQuery.trim()) return students
+
+        const searchLower = debouncedSearchQuery.toLowerCase()
+        return students.filter(student => {
             const fullName = `${student.first_name} ${student.last_name}`.toLowerCase()
             return (
                 fullName.includes(searchLower) ||
@@ -69,8 +79,7 @@ export default function StudentsPage() {
                 (student.gender?.toLowerCase().includes(searchLower) ?? false)
             )
         })
-        setFilteredStudents(filtered)
-    }, [searchQuery, students])
+    }, [debouncedSearchQuery, students])
 
     if (loading) {
         return (

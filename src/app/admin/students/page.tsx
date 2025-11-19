@@ -3,27 +3,46 @@
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { StudentsTable } from "@/components/students-table"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { StudentType } from "@/types"
 import { getStudents } from "@/lib/get/get-students"
 
 export default function StudentsPage() {
   const [students, setStudents] = useState<StudentType[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [filteredStudents, setFilteredStudents] = useState<StudentType[]>([])
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchStudents = async () => {
-      const data = await getStudents()
-      setStudents(data)
-      setFilteredStudents(data)
+      try {
+        setLoading(true)
+        const data = await getStudents()
+        setStudents(data)
+      } catch (error) {
+        console.error('Error fetching students:', error)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchStudents()
   }, [])
 
+  // Debounce search query to avoid filtering on every keystroke
   useEffect(() => {
-    const filtered = students.filter(student => {
-      const searchLower = searchQuery.toLowerCase()
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 300) // 300ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Memoize filtered students to avoid recalculating on every render
+  const filteredStudents = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return students
+
+    const searchLower = debouncedSearchQuery.toLowerCase()
+    return students.filter(student => {
       const fullName = `${student.first_name} ${student.last_name}`.toLowerCase()
       return (
         fullName.includes(searchLower) ||
@@ -38,8 +57,7 @@ export default function StudentsPage() {
         (student.gender?.toLowerCase().includes(searchLower) ?? false)
       )
     })
-    setFilteredStudents(filtered)
-  }, [searchQuery, students])
+  }, [debouncedSearchQuery, students])
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,7 +78,16 @@ export default function StudentsPage() {
       </div>
 
       <div className="p-6">
-        <StudentsTable students={filteredStudents} />
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading students...</p>
+            </div>
+          </div>
+        ) : (
+          <StudentsTable students={filteredStudents} />
+        )}
       </div>
     </div>
   )

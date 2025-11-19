@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin } from "lucide-react"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getTeacherClassCount } from "@/lib/get/get-classes"
@@ -51,18 +51,29 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
   }, [userRole])
 
   // Filter out admins, only show teachers and sort alphabetically
-  const teachersOnly = teachers
-    .filter(teacher => teacher.role === 'teacher')
-    .sort((a, b) => {
-      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
-      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
-      return nameA.localeCompare(nameB)
-    })
+  const teachersOnly = useMemo(() => {
+    return teachers
+      .filter(teacher => teacher.role === 'teacher')
+      .sort((a, b) => {
+        const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+        const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+  }, [teachers])
+
+  // Calculate pagination
+  const totalItems = teachersOnly.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const paginatedTeachers = useMemo(() => {
+    return teachersOnly.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [teachersOnly, currentPage, pageSize])
 
   useEffect(() => {
     const fetchClassCounts = async () => {
+      if (paginatedTeachers.length === 0) return
+
       const counts: Record<string, number> = {}
-      for (const teacher of teachersOnly) {
+      for (const teacher of paginatedTeachers) {
         try {
           const count = await getTeacherClassCount(teacher.teacher_id)
           counts[teacher.teacher_id] = count ?? 0
@@ -74,15 +85,8 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
       setClassCount(counts)
     }
 
-    if (teachersOnly.length > 0) {
-      fetchClassCounts()
-    }
-  }, [teachersOnly])
-
-  // Calculate pagination
-  const totalItems = teachersOnly.length
-  const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedTeachers = teachersOnly.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    fetchClassCounts()
+  }, [paginatedTeachers])
 
   const isAdmin = currentUserRole === 'admin'
 
@@ -93,6 +97,7 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border/50 bg-muted/30 hover:bg-muted/30">
+              <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">ID</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Teacher</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Specialization</TableHead>
@@ -103,7 +108,7 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedTeachers.map((teacher) => (
+            {paginatedTeachers.map((teacher, index) => (
               <TableRow
                 key={teacher.teacher_id}
                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -120,6 +125,12 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                   router.push(`/admin/teachers/${teacher.teacher_id}`)
                 }}
               >
+                {/* ID */}
+                <TableCell className="py-3 px-4">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {(currentPage - 1) * pageSize + index + 1}
+                  </span>
+                </TableCell>
                 {/* Teacher Info */}
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">

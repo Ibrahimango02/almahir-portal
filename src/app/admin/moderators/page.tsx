@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { ModeratorsTable } from "@/components/moderators-table"
 import { getModerators } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"
@@ -11,14 +11,13 @@ export default function ModeratorsPage() {
     const [moderators, setModerators] = useState<ProfileType[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
-    const [filteredModerators, setFilteredModerators] = useState<ProfileType[]>([])
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
     useEffect(() => {
         const fetchModerators = async () => {
             try {
                 const data = await getModerators()
                 setModerators(data)
-                setFilteredModerators(data)
             } catch (error) {
                 console.error("Failed to fetch moderators:", error)
             } finally {
@@ -28,9 +27,21 @@ export default function ModeratorsPage() {
         fetchModerators()
     }, [])
 
+    // Debounce search query to avoid filtering on every keystroke
     useEffect(() => {
-        const filtered = moderators.filter(moderator => {
-            const searchLower = searchQuery.toLowerCase()
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+        }, 300) // 300ms delay
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    // Memoize filtered moderators to avoid recalculating on every render
+    const filteredModerators = useMemo(() => {
+        if (!debouncedSearchQuery.trim()) return moderators
+
+        const searchLower = debouncedSearchQuery.toLowerCase()
+        return moderators.filter(moderator => {
             const fullName = `${moderator.first_name} ${moderator.last_name}`.toLowerCase()
             return (
                 fullName.includes(searchLower) ||
@@ -41,8 +52,7 @@ export default function ModeratorsPage() {
                 moderator.status.toLowerCase().includes(searchLower)
             )
         })
-        setFilteredModerators(filtered)
-    }, [searchQuery, moderators])
+    }, [debouncedSearchQuery, moderators])
 
     return (
         <div className="flex flex-col gap-6">

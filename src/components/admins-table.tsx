@@ -82,6 +82,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                 <Table>
                     <TableHeader>
                         <TableRow className="border-b border-border/50 bg-muted/30 hover:bg-muted/30">
+                            <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">ID</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Admin</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Location</TableHead>
@@ -91,7 +92,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedAdmins.map((admin) => (
+                        {paginatedAdmins.map((admin, index) => (
                             <TableRow
                                 key={admin.admin_id}
                                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -108,6 +109,12 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     router.push(`/admin/admins/${admin.admin_id}`)
                                 }}
                             >
+                                {/* ID */}
+                                <TableCell className="py-3 px-4">
+                                    <span className="text-sm font-semibold text-muted-foreground">
+                                        {(currentPage - 1) * pageSize + index + 1}
+                                    </span>
+                                </TableCell>
                                 {/* Admin Info */}
                                 <TableCell className="py-3 px-4">
                                     <div className="flex items-center gap-3">

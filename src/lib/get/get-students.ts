@@ -29,19 +29,45 @@ export async function getStudents(): Promise<StudentType[]> {
         .from('students')
         .select('*')
 
-    if (studentsError || !students) return []
+    if (studentsError || !students || students.length === 0) return []
 
-    const result: StudentType[] = []
+    // Separate students by type for batch fetching
+    const independentStudents = students.filter(s => s.student_type === 'independent' && s.profile_id)
+    const dependentStudents = students.filter(s => s.student_type === 'dependent')
 
-    for (const student of students) {
-        if (student.student_type === 'independent' && student.profile_id) {
-            // Independent student - get profile from profiles table
-            const { data: profile } = await supabase
+    const independentProfileIds = independentStudents.map(s => s.profile_id).filter((id): id is string => id !== null)
+    const dependentStudentIds = dependentStudents.map(s => s.id)
+
+    // Batch fetch all profiles and child_profiles in parallel
+    const [profilesResult, childProfilesResult] = await Promise.all([
+        independentProfileIds.length > 0
+            ? supabase
                 .from('profiles')
                 .select('*')
-                .eq('id', student.profile_id)
-                .single()
+                .in('id', independentProfileIds)
+            : Promise.resolve({ data: [], error: null }),
+        dependentStudentIds.length > 0
+            ? supabase
+                .from('child_profiles')
+                .select('*')
+                .in('student_id', dependentStudentIds)
+            : Promise.resolve({ data: [], error: null })
+    ])
 
+    const profiles = profilesResult.data || []
+    const childProfiles = childProfilesResult.data || []
+
+    // Create maps for quick lookup
+    const profileMap = new Map(profiles.map(p => [p.id, p]))
+    const childProfileMap = new Map(childProfiles.map(cp => [cp.student_id, cp]))
+
+    // Build result array
+    const result: StudentType[] = []
+
+    // Process independent students
+    for (const student of independentStudents) {
+        if (student.profile_id) {
+            const profile = profileMap.get(student.profile_id)
             if (profile) {
                 result.push({
                     student_id: student.id,
@@ -65,37 +91,34 @@ export async function getStudents(): Promise<StudentType[]> {
                     age: calculateAge(student.birth_date)
                 })
             }
-        } else if (student.student_type === 'dependent') {
-            // Dependent student - get profile from child_profiles table
-            const { data: childProfile } = await supabase
-                .from('child_profiles')
-                .select('*')
-                .eq('student_id', student.id)
-                .single()
+        }
+    }
 
-            if (childProfile) {
-                result.push({
-                    student_id: student.id,
-                    student_type: student.student_type,
-                    profile_id: null, // Dependent students don't have a profile_id
-                    birth_date: student.birth_date,
-                    grade_level: student.grade_level,
-                    notes: student.notes,
-                    created_at: student.created_at,
-                    updated_at: student.updated_at,
-                    first_name: childProfile.first_name,
-                    last_name: childProfile.last_name,
-                    gender: childProfile.gender,
-                    country: childProfile.country,
-                    language: childProfile.language,
-                    email: null, // Dependent students don't have email
-                    phone: null, // Dependent students don't have phone
-                    status: childProfile.status,
-                    role: 'student',
-                    avatar_url: childProfile.avatar_url,
-                    age: calculateAge(student.birth_date)
-                })
-            }
+    // Process dependent students
+    for (const student of dependentStudents) {
+        const childProfile = childProfileMap.get(student.id)
+        if (childProfile) {
+            result.push({
+                student_id: student.id,
+                student_type: student.student_type,
+                profile_id: null, // Dependent students don't have a profile_id
+                birth_date: student.birth_date,
+                grade_level: student.grade_level,
+                notes: student.notes,
+                created_at: student.created_at,
+                updated_at: student.updated_at,
+                first_name: childProfile.first_name,
+                last_name: childProfile.last_name,
+                gender: childProfile.gender,
+                country: childProfile.country,
+                language: childProfile.language,
+                email: null, // Dependent students don't have email
+                phone: null, // Dependent students don't have phone
+                status: childProfile.status,
+                role: 'student',
+                avatar_url: childProfile.avatar_url,
+                age: calculateAge(student.birth_date)
+            })
         }
     }
 

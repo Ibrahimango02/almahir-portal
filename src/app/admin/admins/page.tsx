@@ -4,26 +4,45 @@ import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 import { getAdmins } from "@/lib/get/get-profiles"
 import { AdminsTable } from "@/components/admins-table"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { AdminType } from "@/types"
 
 export default function AdminsPage() {
     const [admins, setAdmins] = useState<AdminType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
-    const [filteredAdmins, setFilteredAdmins] = useState<AdminType[]>([])
+    const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchAdmins = async () => {
-            const data = await getAdmins()
-            setAdmins(data)
-            setFilteredAdmins(data)
+            try {
+                setLoading(true)
+                const data = await getAdmins()
+                setAdmins(data)
+            } catch (error) {
+                console.error('Error fetching admins:', error)
+            } finally {
+                setLoading(false)
+            }
         }
         fetchAdmins()
     }, [])
 
+    // Debounce search query to avoid filtering on every keystroke
     useEffect(() => {
-        const filtered = admins.filter(admin => {
-            const searchLower = searchQuery.toLowerCase()
+        const timer = setTimeout(() => {
+            setDebouncedSearchQuery(searchQuery)
+        }, 300) // 300ms delay
+
+        return () => clearTimeout(timer)
+    }, [searchQuery])
+
+    // Memoize filtered admins to avoid recalculating on every render
+    const filteredAdmins = useMemo(() => {
+        if (!debouncedSearchQuery.trim()) return admins
+
+        const searchLower = debouncedSearchQuery.toLowerCase()
+        return admins.filter(admin => {
             const fullName = `${admin.first_name} ${admin.last_name}`.toLowerCase()
             return (
                 fullName.includes(searchLower) ||
@@ -33,8 +52,7 @@ export default function AdminsPage() {
                 (admin.phone?.toLowerCase().includes(searchLower) ?? false)
             )
         })
-        setFilteredAdmins(filtered)
-    }, [searchQuery, admins])
+    }, [debouncedSearchQuery, admins])
 
     return (
         <div className="flex flex-col gap-6">
@@ -55,7 +73,16 @@ export default function AdminsPage() {
             </div>
 
             <div className="p-6">
-                <AdminsTable admins={filteredAdmins} />
+                {loading ? (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                            <p className="text-muted-foreground">Loading admins...</p>
+                        </div>
+                    </div>
+                ) : (
+                    <AdminsTable admins={filteredAdmins} />
+                )}
             </div>
         </div>
     )

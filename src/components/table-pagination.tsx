@@ -19,8 +19,12 @@ export function TablePagination({
     onPageChange,
     pageSize,
     onPageSizeChange,
+    totalItems,
 }: TablePaginationProps) {
     const pageSizeOptions = [5, 10, 20, 50, 100, 500]
+
+    // Calculate the end item of results shown
+    const endItem = Math.min(currentPage * pageSize, totalItems)
 
     return (
         <div className="flex items-center justify-end px-2">
@@ -42,6 +46,17 @@ export function TablePagination({
                             ))}
                         </SelectContent>
                     </Select>
+                </div>
+                <div className="flex items-center justify-center text-sm font-medium text-muted-foreground">
+                    {totalItems > 0 ? (
+                        <>
+                            Showing
+                            <span className="font-semibold text-foreground mx-1">{endItem}</span> of{" "}
+                            <span className="font-semibold text-foreground mx-1">{totalItems}</span> results
+                        </>
+                    ) : (
+                        "No results"
+                    )}
                 </div>
                 <div className="flex w-[100px] items-center justify-center text-sm font-medium">
                     Page {currentPage} of {totalPages}

@@ -16,7 +16,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
 import { StatusBadge } from "./status-badge"
 import { getAllParentStudents } from "@/lib/get/get-parents"
@@ -55,19 +55,35 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
     fetchUserRole()
   }, [userRole])
 
+  // Sort parents alphabetically by name
+  const sortedParents = useMemo(() => {
+    return [...parents].sort((a, b) => {
+      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }, [parents])
+
+  // Calculate pagination
+  const totalItems = sortedParents.length
+  const totalPages = Math.ceil(totalItems / pageSize)
+  const paginatedParents = useMemo(() => {
+    return sortedParents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [sortedParents, currentPage, pageSize])
+
   useEffect(() => {
     const fetchStudentData = async () => {
-      if (parents.length === 0) return
+      if (paginatedParents.length === 0) return
 
       try {
-        // Batch fetch all students at once instead of one-by-one
-        const parentIds = parents.map(p => p.parent_id)
+        // Only fetch student data for the current page of parents
+        const parentIds = paginatedParents.map(p => p.parent_id)
         const studentResults = await getAllParentStudents(parentIds)
         setStudentData(studentResults)
       } catch (error) {
         console.error('Failed to fetch student data:', error)
-        // Initialize with empty arrays for all parents
-        const emptyStudentData = parents.reduce((acc, parent) => {
+        // Initialize with empty arrays for current page parents
+        const emptyStudentData = paginatedParents.reduce((acc, parent) => {
           acc[parent.parent_id] = []
           return acc
         }, {} as Record<string, StudentType[]>)
@@ -76,19 +92,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
     }
 
     fetchStudentData()
-  }, [parents])
-
-  // Sort parents alphabetically by name
-  const sortedParents = [...parents].sort((a, b) => {
-    const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
-    const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
-    return nameA.localeCompare(nameB)
-  })
-
-  // Calculate pagination
-  const totalItems = sortedParents.length
-  const totalPages = Math.ceil(totalItems / pageSize)
-  const paginatedParents = sortedParents.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  }, [paginatedParents])
 
   const isAdmin = currentUserRole === 'admin'
 
@@ -110,6 +114,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="border-b border-border/50 bg-muted/30 hover:bg-muted/30">
+              <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">ID</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Parent</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>
               <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Location</TableHead>
@@ -119,7 +124,7 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedParents.map((parent) => (
+            {paginatedParents.map((parent, index) => (
               <TableRow
                 key={parent.parent_id}
                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -136,6 +141,12 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                   router.push(getParentDetailUrl(parent.parent_id))
                 }}
               >
+                {/* ID */}
+                <TableCell className="py-3 px-4">
+                  <span className="text-sm font-semibold text-muted-foreground">
+                    {(currentPage - 1) * pageSize + index + 1}
+                  </span>
+                </TableCell>
                 {/* Parent Info */}
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center gap-3">
