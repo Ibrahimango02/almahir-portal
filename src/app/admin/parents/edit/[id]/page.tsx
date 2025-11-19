@@ -42,8 +42,7 @@ export default function EditParentPage() {
     gender: "",
     country: "",
     language: "",
-    birth_date: "",
-    grade_level: ""
+    birth_date: ""
   })
   const [isAddingStudent, setIsAddingStudent] = useState(false)
 
@@ -55,7 +54,6 @@ export default function EditParentPage() {
     country: string
     language: string
     birth_date: string
-    grade_level: string
   }>>([])
 
   useEffect(() => {
@@ -132,8 +130,7 @@ export default function EditParentPage() {
         gender: "",
         country: "",
         language: "",
-        birth_date: "",
-        grade_level: ""
+        birth_date: ""
       })
       setShowAddStudentForm(false)
 
@@ -349,31 +346,6 @@ export default function EditParentPage() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="grade_level">Grade Level</Label>
-                            <Select
-                              value={newStudentData.grade_level}
-                              onValueChange={(value) => setNewStudentData(prev => ({ ...prev, grade_level: value }))}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select grade level" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="1">Grade 1</SelectItem>
-                                <SelectItem value="2">Grade 2</SelectItem>
-                                <SelectItem value="3">Grade 3</SelectItem>
-                                <SelectItem value="4">Grade 4</SelectItem>
-                                <SelectItem value="5">Grade 5</SelectItem>
-                                <SelectItem value="6">Grade 6</SelectItem>
-                                <SelectItem value="7">Grade 7</SelectItem>
-                                <SelectItem value="8">Grade 8</SelectItem>
-                                <SelectItem value="9">Grade 9</SelectItem>
-                                <SelectItem value="10">Grade 10</SelectItem>
-                                <SelectItem value="11">Grade 11</SelectItem>
-                                <SelectItem value="12">Grade 12</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
                         </div>
 
                         <div className="space-y-2">
@@ -407,8 +379,7 @@ export default function EditParentPage() {
                                 gender: "",
                                 country: "",
                                 language: "",
-                                birth_date: "",
-                                grade_level: ""
+                                birth_date: ""
                               })
                             }}
                           >

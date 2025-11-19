@@ -197,8 +197,7 @@ export default function TeacherResourcesPage() {
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">My Resources</h1>
-                    <p className="text-muted-foreground">Manage and organize your educational materials</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Resources</h1>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>

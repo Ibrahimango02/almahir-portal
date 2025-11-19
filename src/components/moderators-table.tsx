@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TablePagination } from "./table-pagination"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { Mail, Phone, MapPin } from "lucide-react"
+import { EmptyTableState } from "./empty-table-state"
+import { ShieldCheck } from "lucide-react"
 
 interface ModeratorsTableProps {
     moderators: ProfileType[]
@@ -52,7 +54,18 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedModerators.map((moderator, index) => (
+                        {paginatedModerators.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={5} className="h-24">
+                                    <EmptyTableState
+                                        icon={ShieldCheck}
+                                        title="No moderators found"
+                                        description="There are no moderators to display. Moderators will appear here once they are added to the system."
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedModerators.map((moderator, index) => (
                             <TableRow
                                 key={moderator.id}
                                 className="hover:bg-muted/100 transition-all duration-200 border-b border-border/30 cursor-pointer"
@@ -117,7 +130,8 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ))
+                        )}
                     </TableBody>
                 </Table>
             </div>

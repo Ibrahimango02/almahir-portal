@@ -30,6 +30,7 @@ export default function EditTeacherPage() {
     const [formData, setFormData] = useState({
         specialization: "",
         hourly_rate: "",
+        currency: "",
         notes: "",
         moderator_id: "",
         class_link: "",
@@ -52,6 +53,7 @@ export default function EditTeacherPage() {
                     setFormData({
                         specialization: teacherData.specialization || "",
                         hourly_rate: teacherData.hourly_rate?.toString() || "",
+                        currency: teacherData.currency || "USD",
                         notes: teacherData.notes || "",
                         moderator_id: teacherData.moderator_id || "none",
                         class_link: teacherData.class_link || "",
@@ -149,18 +151,48 @@ export default function EditTeacherPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="hourly_rate">Hourly Rate</Label>
-                                <Input
-                                    id="hourly_rate"
-                                    name="hourly_rate"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={formData.hourly_rate}
-                                    onChange={handleChange}
-                                    placeholder="0.00"
-                                />
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                    <Label htmlFor="hourly_rate">Hourly Rate</Label>
+                                    <Input
+                                        id="hourly_rate"
+                                        name="hourly_rate"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={formData.hourly_rate}
+                                        onChange={handleChange}
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="currency">Currency</Label>
+                                    <Select
+                                        value={formData.currency}
+                                        onValueChange={(value) => handleSelectChange("currency", value)}
+                                    >
+                                        <SelectTrigger id="currency">
+                                            <SelectValue placeholder="Select currency" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="USD">USD - US Dollar</SelectItem>
+                                            <SelectItem value="EUR">EUR - Euro</SelectItem>
+                                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                                            <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                                            <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                                            <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                                            <SelectItem value="CHF">CHF - Swiss Franc</SelectItem>
+                                            <SelectItem value="CNY">CNY - Chinese Yuan</SelectItem>
+                                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                                            <SelectItem value="SGD">SGD - Singapore Dollar</SelectItem>
+                                            <SelectItem value="AED">AED - UAE Dirham</SelectItem>
+                                            <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
+                                            <SelectItem value="EGP">EGP - Egyptian Pound</SelectItem>
+                                            <SelectItem value="TRY">TRY - Turkish Lira</SelectItem>
+                                            <SelectItem value="RUB">RUB - Russian Ruble</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             <div className="space-y-2">

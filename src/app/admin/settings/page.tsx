@@ -50,6 +50,17 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    gender?: string;
+    country?: string;
+    language?: string;
+    newPassword?: string;
+    confirmPassword?: string;
+  }>({});
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -79,19 +90,20 @@ export default function SettingsPage() {
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
+      setAvatarError(null);
 
       const file = event.target.files?.[0];
       if (!file) return;
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setPasswordError('Please upload an image file');
+        setAvatarError('Please upload an image file');
         return;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        setPasswordError('File size must be less than 5MB');
+        setAvatarError('File size must be less than 5MB');
         return;
       }
 
@@ -122,7 +134,7 @@ export default function SettingsPage() {
 
     } catch (error) {
       console.error('Error uploading avatar:', error);
-      setPasswordError('Failed to upload image. Please try again.');
+      setAvatarError('Failed to upload image. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -131,25 +143,73 @@ export default function SettingsPage() {
   const handleRemoveAvatar = async () => {
     if (!userId) return;
     try {
+      setAvatarError(null);
       await updateProfile(userId, {
         avatar_url: null
       });
       setAvatarUrl(null);
     } catch (error) {
       console.error('Error removing avatar:', error);
-      setPasswordError('Failed to remove profile picture. Please try again.');
+      setAvatarError('Failed to remove profile picture. Please try again.');
     }
+  };
+
+  const validateFields = () => {
+    const errors: typeof fieldErrors = {};
+
+    if (!firstName.trim()) {
+      errors.firstName = "First name is required";
+    } else if (firstName.trim().length < 2) {
+      errors.firstName = "First name must be at least 2 characters";
+    } else if (firstName.trim().length > 50) {
+      errors.firstName = "First name must be less than 50 characters";
+    }
+
+    if (!lastName.trim()) {
+      errors.lastName = "Last name is required";
+    } else if (lastName.trim().length < 2) {
+      errors.lastName = "Last name must be at least 2 characters";
+    } else if (lastName.trim().length > 50) {
+      errors.lastName = "Last name must be less than 50 characters";
+    }
+
+    if (phone && phone.trim()) {
+      const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+      if (!phoneRegex.test(phone.trim())) {
+        errors.phone = "Please enter a valid phone number";
+      }
+    }
+
+    if (!gender) {
+      errors.gender = "Gender is required";
+    }
+
+    if (!country) {
+      errors.country = "Country is required";
+    }
+
+    if (!language) {
+      errors.language = "Language is required";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSave = async () => {
     if (!userId) return;
+
+    if (!validateFields()) {
+      return;
+    }
+
     setSaving(true);
     try {
       await updateProfile(userId, {
-        first_name: firstName,
-        last_name: lastName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
         email,
-        phone,
+        phone: phone.trim() || null,
         gender,
         country,
         language,
@@ -158,9 +218,64 @@ export default function SettingsPage() {
       window.location.reload();
     } catch (error) {
       console.error("Failed to update profile:", error);
+      setFieldErrors({ ...fieldErrors, firstName: "Failed to update profile. Please try again." });
     } finally {
       setSaving(false);
     }
+  };
+
+  const validatePassword = () => {
+    const errors: typeof fieldErrors = {};
+
+    if (!currentPassword) {
+      setPasswordError("Current password is required");
+      return false;
+    }
+
+    if (!newPassword) {
+      errors.newPassword = "New password is required";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (newPassword.length < 8) {
+      errors.newPassword = "Password must be at least 8 characters long";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (!/(?=.*[a-z])/.test(newPassword)) {
+      errors.newPassword = "Password must contain at least one lowercase letter";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (!/(?=.*[A-Z])/.test(newPassword)) {
+      errors.newPassword = "Password must contain at least one uppercase letter";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (!/(?=.*\d)/.test(newPassword)) {
+      errors.newPassword = "Password must contain at least one number";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (!confirmPassword) {
+      errors.confirmPassword = "Please confirm your new password";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    if (newPassword !== confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+      setFieldErrors({ ...fieldErrors, ...errors });
+      return false;
+    }
+
+    setFieldErrors({ ...fieldErrors, newPassword: undefined, confirmPassword: undefined });
+    return true;
   };
 
   const handlePasswordUpdate = async () => {
@@ -168,15 +283,9 @@ export default function SettingsPage() {
 
     // Reset error state
     setPasswordError(null);
+    setFieldErrors({ ...fieldErrors, newPassword: undefined, confirmPassword: undefined });
 
-    // Validate passwords
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("All password fields are required");
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError("New passwords do not match");
+    if (!validatePassword()) {
       return;
     }
 
@@ -226,14 +335,15 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">User Settings</h1>
-        <p className="text-muted-foreground">Manage your personal account settings and preferences</p>
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
       </div>
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="w-full md:w-auto">
           <TabsTrigger value="general">General</TabsTrigger>
-          <TabsTrigger value="availability">Availability</TabsTrigger>
+          {profile?.role?.toLowerCase() !== "moderator" && (
+            <TabsTrigger value="availability">Availability</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -243,6 +353,11 @@ export default function SettingsPage() {
               <CardDescription>Update your profile picture</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {avatarError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{avatarError}</AlertDescription>
+                </Alert>
+              )}
               <div className="flex items-center gap-4">
                 <div className="relative w-24 h-24 rounded-full overflow-hidden bg-gray-100">
                   {avatarUrl ? (
@@ -306,16 +421,48 @@ export default function SettingsPage() {
                   <Input
                     id="first-name"
                     value={firstName}
-                    onChange={e => setFirstName(e.target.value)}
+                    onChange={e => {
+                      setFirstName(e.target.value);
+                      if (fieldErrors.firstName) {
+                        setFieldErrors({ ...fieldErrors, firstName: undefined });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!firstName.trim()) {
+                        setFieldErrors({ ...fieldErrors, firstName: "First name is required" });
+                      } else if (firstName.trim().length < 2) {
+                        setFieldErrors({ ...fieldErrors, firstName: "First name must be at least 2 characters" });
+                      }
+                    }}
+                    className={fieldErrors.firstName ? "border-destructive" : ""}
                   />
+                  {fieldErrors.firstName && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.firstName}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="last-name">Last Name</Label>
                   <Input
                     id="last-name"
                     value={lastName}
-                    onChange={e => setLastName(e.target.value)}
+                    onChange={e => {
+                      setLastName(e.target.value);
+                      if (fieldErrors.lastName) {
+                        setFieldErrors({ ...fieldErrors, lastName: undefined });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!lastName.trim()) {
+                        setFieldErrors({ ...fieldErrors, lastName: "Last name is required" });
+                      } else if (lastName.trim().length < 2) {
+                        setFieldErrors({ ...fieldErrors, lastName: "Last name must be at least 2 characters" });
+                      }
+                    }}
+                    className={fieldErrors.lastName ? "border-destructive" : ""}
                   />
+                  {fieldErrors.lastName && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.lastName}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-email">Email Address</Label>
@@ -324,19 +471,47 @@ export default function SettingsPage() {
                     value={email}
                     disabled
                   />
+                  <p className="text-sm text-muted-foreground">Email cannot be changed</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-phone">Phone Number</Label>
                   <Input
                     id="user-phone"
                     value={phone}
-                    onChange={e => setPhone(e.target.value)}
+                    onChange={e => {
+                      setPhone(e.target.value);
+                      if (fieldErrors.phone) {
+                        setFieldErrors({ ...fieldErrors, phone: undefined });
+                      }
+                    }}
+                    onBlur={() => {
+                      if (phone && phone.trim()) {
+                        const phoneRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
+                        if (!phoneRegex.test(phone.trim())) {
+                          setFieldErrors({ ...fieldErrors, phone: "Please enter a valid phone number" });
+                        }
+                      }
+                    }}
+                    className={fieldErrors.phone ? "border-destructive" : ""}
+                    placeholder="+1234567890"
                   />
+                  {fieldErrors.phone && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.phone}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">Optional</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-gender">Gender</Label>
-                  <Select value={gender || ""} onValueChange={setGender}>
-                    <SelectTrigger>
+                  <Select
+                    value={gender || ""}
+                    onValueChange={(value) => {
+                      setGender(value);
+                      if (fieldErrors.gender) {
+                        setFieldErrors({ ...fieldErrors, gender: undefined });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={fieldErrors.gender ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -344,15 +519,38 @@ export default function SettingsPage() {
                       <SelectItem value="Female">Female</SelectItem>
                     </SelectContent>
                   </Select>
+                  {fieldErrors.gender && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.gender}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-country">Country</Label>
-                  <CountrySelect value={country || ""} onValueChange={setCountry} />
+                  <CountrySelect
+                    value={country || ""}
+                    onValueChange={(value) => {
+                      setCountry(value);
+                      if (fieldErrors.country) {
+                        setFieldErrors({ ...fieldErrors, country: undefined });
+                      }
+                    }}
+                    className={fieldErrors.country ? "border-destructive" : ""}
+                  />
+                  {fieldErrors.country && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.country}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-language">Language</Label>
-                  <Select value={language || ""} onValueChange={setLanguage}>
-                    <SelectTrigger>
+                  <Select
+                    value={language || ""}
+                    onValueChange={(value) => {
+                      setLanguage(value);
+                      if (fieldErrors.language) {
+                        setFieldErrors({ ...fieldErrors, language: undefined });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className={fieldErrors.language ? "border-destructive" : ""}>
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>
                     <SelectContent>
@@ -360,6 +558,9 @@ export default function SettingsPage() {
                       <SelectItem value="Arabic">Arabic</SelectItem>
                     </SelectContent>
                   </Select>
+                  {fieldErrors.language && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.language}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="user-role">Role</Label>
@@ -418,9 +619,18 @@ export default function SettingsPage() {
                   id="current-password"
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={(e) => {
+                    setCurrentPassword(e.target.value);
+                    if (passwordError) {
+                      setPasswordError(null);
+                    }
+                  }}
                   disabled={updatingPassword}
+                  className={passwordError ? "border-destructive" : ""}
                 />
+                {passwordError && (
+                  <p className="text-[0.8rem] font-medium text-destructive">{passwordError}</p>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -429,9 +639,41 @@ export default function SettingsPage() {
                     id="new-password"
                     type="password"
                     value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    onChange={(e) => {
+                      setNewPassword(e.target.value);
+                      if (fieldErrors.newPassword) {
+                        setFieldErrors({ ...fieldErrors, newPassword: undefined });
+                      }
+                      if (fieldErrors.confirmPassword && confirmPassword) {
+                        if (e.target.value === confirmPassword) {
+                          setFieldErrors({ ...fieldErrors, confirmPassword: undefined });
+                        } else {
+                          setFieldErrors({ ...fieldErrors, confirmPassword: "Passwords do not match" });
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      if (newPassword) {
+                        if (newPassword.length < 8) {
+                          setFieldErrors({ ...fieldErrors, newPassword: "Password must be at least 8 characters long" });
+                        } else if (!/(?=.*[a-z])/.test(newPassword)) {
+                          setFieldErrors({ ...fieldErrors, newPassword: "Password must contain at least one lowercase letter" });
+                        } else if (!/(?=.*[A-Z])/.test(newPassword)) {
+                          setFieldErrors({ ...fieldErrors, newPassword: "Password must contain at least one uppercase letter" });
+                        } else if (!/(?=.*\d)/.test(newPassword)) {
+                          setFieldErrors({ ...fieldErrors, newPassword: "Password must contain at least one number" });
+                        }
+                      }
+                    }}
                     disabled={updatingPassword}
+                    className={fieldErrors.newPassword ? "border-destructive" : ""}
                   />
+                  {fieldErrors.newPassword && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.newPassword}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Must be at least 8 characters with uppercase, lowercase, and number
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
@@ -439,9 +681,27 @@ export default function SettingsPage() {
                     id="confirm-password"
                     type="password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (fieldErrors.confirmPassword) {
+                        if (e.target.value === newPassword) {
+                          setFieldErrors({ ...fieldErrors, confirmPassword: undefined });
+                        } else {
+                          setFieldErrors({ ...fieldErrors, confirmPassword: "Passwords do not match" });
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      if (confirmPassword && newPassword && confirmPassword !== newPassword) {
+                        setFieldErrors({ ...fieldErrors, confirmPassword: "Passwords do not match" });
+                      }
+                    }}
                     disabled={updatingPassword}
+                    className={fieldErrors.confirmPassword ? "border-destructive" : ""}
                   />
+                  {fieldErrors.confirmPassword && (
+                    <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.confirmPassword}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -460,11 +720,13 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="availability" className="space-y-6">
-          {userId && (
-            <TeacherAvailabilityEditor teacherId={userId} />
-          )}
-        </TabsContent>
+        {profile?.role?.toLowerCase() !== "moderator" && (
+          <TabsContent value="availability" className="space-y-6">
+            {userId && (
+              <TeacherAvailabilityEditor teacherId={userId} />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

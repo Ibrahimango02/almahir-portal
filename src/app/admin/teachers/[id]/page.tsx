@@ -135,7 +135,11 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">${teacher.hourly_rate || 'N/A'}</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {teacher.hourly_rate 
+                      ? `${teacher.currency || 'USD'} ${teacher.hourly_rate.toFixed(2)}`
+                      : 'N/A'}
+                  </span>
                   <span className="text-xs text-muted-foreground">Hourly Rate</span>
                 </div>
                 <div className="flex flex-col items-center justify-center">

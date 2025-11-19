@@ -265,7 +265,7 @@ export default function AssignClassPage() {
               placeholder="Search classes by title, subject, description, or schedule..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-white"
             />
           </div>
 

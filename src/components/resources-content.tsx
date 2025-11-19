@@ -110,19 +110,13 @@ export function ResourcesContent({ currentUserId }: ResourcesContentProps) {
     )
 
     // Determine the title and description based on the current view
-    const currentTitle = isParentView
-        ? "Resources"
-        : `${selectedStudent?.first_name}'s Resources`
-    const currentDescription = isParentView
-        ? "Educational materials shared by your children's teachers"
-        : `Educational materials shared by ${selectedStudent?.first_name}'s teachers`
+    const currentTitle = "Resources"
 
     return (
         <div className="flex flex-col gap-6">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">{currentTitle}</h1>
-                    <p className="text-muted-foreground">{currentDescription}</p>
                 </div>
             </div>
 
@@ -138,10 +132,7 @@ export function ResourcesContent({ currentUserId }: ResourcesContentProps) {
                         <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                         <h3 className="text-lg font-medium mb-2">No resources available</h3>
                         <p className="text-muted-foreground mb-6">
-                            {isParentView
-                                ? "Your children's teachers haven't shared any resources yet"
-                                : `${selectedStudent?.first_name}'s teachers haven't shared any resources yet`
-                            }
+                            There are no resources to display. Resources will appear here once they are shared by teachers.
                         </p>
                     </CardContent>
                 </Card>

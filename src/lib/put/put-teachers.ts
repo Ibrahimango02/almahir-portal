@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/client"
 import { WeeklySchedule } from "@/types"
 
-export async function updateTeacher(teacherId: string, data: { specialization?: string; hourly_rate?: string; status?: string; moderator_id?: string; notes?: string; class_link?: string }) {
+export async function updateTeacher(teacherId: string, data: { specialization?: string; hourly_rate?: string; currency?: string; status?: string; moderator_id?: string; notes?: string; class_link?: string }) {
     const supabase = createClient()
 
     // Start a transaction by updating both tables
@@ -10,6 +10,7 @@ export async function updateTeacher(teacherId: string, data: { specialization?: 
         .update({
             specialization: data.specialization,
             hourly_rate: parseFloat(data.hourly_rate || '0'),
+            currency: data.currency || null,
             moderator_id: data.moderator_id || null,
             notes: data.notes || null,
             class_link: data.class_link || null

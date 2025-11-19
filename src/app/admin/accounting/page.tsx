@@ -132,8 +132,8 @@ export default function AdminAccountingPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
           </div>
@@ -158,8 +158,8 @@ export default function AdminAccountingPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
           </div>
@@ -182,9 +182,8 @@ export default function AdminAccountingPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Accounting</h1>
         </div>
@@ -247,6 +246,7 @@ export default function AdminAccountingPage() {
                 placeholder="Search invoices or payments..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                className="bg-white"
               />
             </div>
 

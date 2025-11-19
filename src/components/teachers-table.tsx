@@ -25,6 +25,8 @@ import { TeacherType } from "@/types"
 import AvatarIcon from "./avatar"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
+import { EmptyTableState } from "./empty-table-state"
+import { UserPen } from "lucide-react"
 
 interface TeachersTableProps {
   teachers: TeacherType[]
@@ -108,7 +110,18 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedTeachers.map((teacher, index) => (
+            {paginatedTeachers.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="h-24">
+                  <EmptyTableState
+                    icon={UserPen}
+                    title="No teachers found"
+                    description="There are no teachers to display. Teachers will appear here once they are added to the system."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedTeachers.map((teacher, index) => (
               <TableRow
                 key={teacher.teacher_id}
                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -240,7 +253,8 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
       </div>

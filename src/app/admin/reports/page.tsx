@@ -95,13 +95,10 @@ export default function AdminReportsPage() {
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 space-y-6">
-                <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Session Reports</h1>
-                        <p className="text-muted-foreground">
-                            View complete session history and analytics
-                        </p>
                     </div>
                 </div>
                 <div className="h-96 bg-muted animate-pulse rounded-lg" />
@@ -111,13 +108,10 @@ export default function AdminReportsPage() {
 
     if (error) {
         return (
-            <div className="container mx-auto p-6">
-                <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight">Session Reports</h1>
-                        <p className="text-muted-foreground">
-                            View complete session history and analytics
-                        </p>
                     </div>
                 </div>
                 <Card className="mt-6">
@@ -138,14 +132,10 @@ export default function AdminReportsPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Session Reports</h1>
-                    <p className="text-muted-foreground">
-                        View complete session history and analytics
-                    </p>
                 </div>
             </div>
 
@@ -169,6 +159,7 @@ export default function AdminReportsPage() {
                                 placeholder="Search sessions..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
+                                className="bg-white"
                             />
                         </div>
 
@@ -180,6 +171,7 @@ export default function AdminReportsPage() {
                                 placeholder="Filter by teacher..."
                                 value={teacherFilter}
                                 onChange={e => setTeacherFilter(e.target.value)}
+                                className="bg-white"
                             />
                         </div>
 
@@ -191,6 +183,7 @@ export default function AdminReportsPage() {
                                 placeholder="Filter by student..."
                                 value={studentFilter}
                                 onChange={e => setStudentFilter(e.target.value)}
+                                className="bg-white"
                             />
                         </div>
 
@@ -202,6 +195,7 @@ export default function AdminReportsPage() {
                                 placeholder="Filter by class..."
                                 value={classFilter}
                                 onChange={e => setClassFilter(e.target.value)}
+                                className="bg-white"
                             />
                         </div>
 

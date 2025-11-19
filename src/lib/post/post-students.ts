@@ -12,7 +12,6 @@ type CreateDependentStudentData = {
     country: string
     language: string
     birth_date?: string
-    grade_level: string
     parent_profile_id: string
 }
 

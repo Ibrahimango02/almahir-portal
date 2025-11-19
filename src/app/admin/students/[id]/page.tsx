@@ -139,14 +139,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           <CardContent className="pt-6">
             <div className="space-y-6">
               {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="grid grid-cols-1 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-2xl font-bold text-primary">{student.age}</span>
                   <span className="text-xs text-muted-foreground">Age</span>
-                </div>
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold text-primary">{student.grade_level || 'N/A'}</span>
-                  <span className="text-xs text-muted-foreground">Grade Level</span>
                 </div>
               </div>
 

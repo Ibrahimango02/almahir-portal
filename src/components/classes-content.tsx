@@ -94,7 +94,7 @@ export function ClassesContent({ currentUserId }: ClassesContentProps) {
                         <Input
                             type="search"
                             placeholder="Search classes..."
-                            className="w-full pl-8"
+                            className="w-full pl-8 bg-white"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />

@@ -21,6 +21,8 @@ import { getProfile } from "@/lib/get/get-profiles"
 import { updateStudentInvoice } from "@/lib/put/put-student-invoices"
 import { InvoicePaymentStatusBadge } from "./invoice-payment-status-badge"
 import { formatMonthRange } from "@/lib/utils/format-month-range"
+import { EmptyTableState } from "./empty-table-state"
+import { FileText } from "lucide-react"
 
 interface StudentInvoicesTableProps {
     invoices: StudentInvoiceType[]
@@ -193,7 +195,18 @@ export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoic
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedInvoices.map((invoice, idx) => (
+                            {paginatedInvoices.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={currentUserRole === 'admin' ? 8 : 7} className="h-24">
+                                        <EmptyTableState
+                                            icon={FileText}
+                                            title="No invoices found"
+                                            description="There are no invoices to display. Invoices will appear here once they are created."
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                paginatedInvoices.map((invoice, idx) => (
                                 <TableRow
                                     key={invoice.invoice_id || idx}
                                     className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
@@ -313,7 +326,8 @@ export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoic
                                         </TableCell>
                                     )}
                                 </TableRow>
-                            ))}
+                            ))
+                            )}
                         </TableBody>
                     </Table>
                 </div>

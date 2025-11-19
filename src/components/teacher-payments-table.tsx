@@ -20,6 +20,8 @@ import { TeacherPaymentType } from "@/types"
 import { getProfile } from "@/lib/get/get-profiles"
 import { InvoicePaymentStatusBadge } from "./invoice-payment-status-badge"
 import { updateTeacherPayment, UpdateTeacherPaymentData } from "@/lib/put/put-teacher-payments"
+import { EmptyTableState } from "./empty-table-state"
+import { DollarSign } from "lucide-react"
 
 // TeacherPaymentType now includes teacher and session data from the server
 
@@ -182,7 +184,18 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {paginatedPayments.map((payment, idx) => (
+                            {paginatedPayments.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={currentUserRole === 'admin' ? 8 : 7} className="h-24">
+                                        <EmptyTableState
+                                            icon={DollarSign}
+                                            title="No payments found"
+                                            description="There are no payments to display. Payments will appear here once they are created."
+                                        />
+                                    </TableCell>
+                                </TableRow>
+                            ) : (
+                                paginatedPayments.map((payment, idx) => (
                                 <TableRow
                                     key={payment.payment_id || idx}
                                     className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
@@ -295,8 +308,7 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
                                     )}
                                 </TableRow>
                             ))
-
-                            }
+                            )}
                         </TableBody>
                     </Table>
                 </div>

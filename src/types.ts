@@ -65,7 +65,6 @@ export type StudentType = {
     student_type: 'independent' | 'dependent'
     profile_id: string | null
     birth_date: string | null
-    grade_level: string | null
     notes: string | null
     created_at: string
     updated_at: string | null
@@ -112,6 +111,7 @@ export type TeacherType = {
     avatar_url: string | null
     specialization: string | null
     hourly_rate: number | null
+    currency: string | null
     notes: string | null
     is_admin: boolean
     moderator_id: string | null

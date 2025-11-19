@@ -180,7 +180,6 @@ export default function ResourcesPage() {
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Resources</h1>
-                    <p className="text-muted-foreground">Manage and organize educational materials</p>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>

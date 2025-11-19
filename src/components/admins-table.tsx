@@ -30,6 +30,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useRouter } from "next/navigation"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getTeacherClassCount } from "@/lib/get/get-classes"
+import { EmptyTableState } from "./empty-table-state"
+import { Shield } from "lucide-react"
 
 interface AdminsTableProps {
     admins: AdminType[]
@@ -92,7 +94,18 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {paginatedAdmins.map((admin, index) => (
+                        {paginatedAdmins.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={7} className="h-24">
+                                    <EmptyTableState
+                                        icon={Shield}
+                                        title="No admins found"
+                                        description="There are no admins to display. Admins will appear here once they are added to the system."
+                                    />
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            paginatedAdmins.map((admin, index) => (
                             <TableRow
                                 key={admin.admin_id}
                                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -206,7 +219,8 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     </DropdownMenu>
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        ))
+                        )}
                     </TableBody>
                 </Table>
             </div>

@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 
-export async function updateStudent(studentId: string, data: { grade_level?: string; notes?: string; status: string }) {
+export async function updateStudent(studentId: string, data: { notes?: string; status: string }) {
     const supabase = createClient()
 
     // First, check if this is a dependent or independent student
@@ -18,7 +18,6 @@ export async function updateStudent(studentId: string, data: { grade_level?: str
     const { error: studentError } = await supabase
         .from('students')
         .update({
-            grade_level: data.grade_level,
             notes: data.notes,
             updated_at: new Date().toISOString()
         })

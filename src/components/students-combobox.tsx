@@ -33,11 +33,10 @@ export function StudentsCombobox({
         if (!searchValue) return students
         return students.filter(student => {
             const fullName = `${student.first_name} ${student.last_name}`.toLowerCase()
-            const gradeLevel = student.grade_level?.toLowerCase() || ""
             const gender = student.gender?.toLowerCase() || ""
             const age = student.age?.toString() || ""
             const searchLower = searchValue.toLowerCase()
-            return fullName.includes(searchLower) || gradeLevel.includes(searchLower) || gender.includes(searchLower) || age.includes(searchLower)
+            return fullName.includes(searchLower) || gender.includes(searchLower) || age.includes(searchLower)
         })
     }, [students, searchValue])
 

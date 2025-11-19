@@ -5,25 +5,25 @@ import { ChevronDown, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { countries } from "@/lib/utils/countries"
+import { cn } from "@/lib/utils"
 
 interface CountrySelectProps {
     value?: string
     onValueChange: (value: string) => void
     placeholder?: string
+    className?: string
 }
 
-export function CountrySelect({ value, onValueChange, placeholder = "Select country..." }: CountrySelectProps) {
+export function CountrySelect({ value, onValueChange, placeholder = "Select country...", className }: CountrySelectProps) {
     const [open, setOpen] = useState(false)
     const [searchValue, setSearchValue] = useState("")
     const dropdownRef = useRef<HTMLDivElement>(null)
 
     const filteredCountries = useMemo(() => {
-        if (!searchValue) return countries.slice(0, 20) // Show first 20 countries by default
-        return countries
-            .filter(country =>
-                country.toLowerCase().includes(searchValue.toLowerCase())
-            )
-            .slice(0, 20) // Limit results to prevent lag
+        if (!searchValue) return countries // Show all countries when not searching
+        return countries.filter(country =>
+            country.toLowerCase().includes(searchValue.toLowerCase())
+        ) // Show all matching countries when searching
     }, [searchValue])
 
     // Close dropdown when clicking outside
@@ -51,7 +51,7 @@ export function CountrySelect({ value, onValueChange, placeholder = "Select coun
                 variant="outline"
                 role="combobox"
                 aria-expanded={open}
-                className="w-full justify-between"
+                className={cn("w-full justify-between", className)}
                 onClick={() => setOpen(!open)}
             >
                 {value || placeholder}

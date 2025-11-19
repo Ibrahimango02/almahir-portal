@@ -25,6 +25,8 @@ import AvatarIcon from "./avatar"
 
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
+import { EmptyTableState } from "./empty-table-state"
+import { Users } from "lucide-react"
 
 interface ParentsTableProps {
   parents: ParentType[]
@@ -124,7 +126,18 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedParents.map((parent, index) => (
+            {paginatedParents.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={isAdmin ? 7 : 6} className="h-24">
+                  <EmptyTableState
+                    icon={Users}
+                    title="No parents found"
+                    description="There are no parents to display. Parents will appear here once they are added to the system."
+                  />
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedParents.map((parent, index) => (
               <TableRow
                 key={parent.parent_id}
                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
@@ -248,7 +261,8 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                   </TableCell>
                 )}
               </TableRow>
-            ))}
+            ))
+            )}
           </TableBody>
         </Table>
       </div>

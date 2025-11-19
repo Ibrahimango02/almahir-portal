@@ -74,7 +74,6 @@ export async function getStudents(): Promise<StudentType[]> {
                     student_type: student.student_type,
                     profile_id: student.profile_id,
                     birth_date: student.birth_date,
-                    grade_level: student.grade_level,
                     notes: student.notes,
                     created_at: student.created_at,
                     updated_at: student.updated_at,
@@ -103,7 +102,6 @@ export async function getStudents(): Promise<StudentType[]> {
                 student_type: student.student_type,
                 profile_id: null, // Dependent students don't have a profile_id
                 birth_date: student.birth_date,
-                grade_level: student.grade_level,
                 notes: student.notes,
                 created_at: student.created_at,
                 updated_at: student.updated_at,
@@ -153,7 +151,6 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
                 student_type: student.student_type,
                 profile_id: student.profile_id,
                 birth_date: student.birth_date,
-                grade_level: student.grade_level,
                 notes: student.notes,
                 created_at: student.created_at,
                 updated_at: student.updated_at,
@@ -184,7 +181,6 @@ export async function getStudentById(id: string): Promise<StudentType | null> {
                 student_type: student.student_type,
                 profile_id: null, // Dependent students don't have a profile_id
                 birth_date: student.birth_date,
-                grade_level: student.grade_level,
                 notes: student.notes,
                 created_at: student.created_at,
                 updated_at: student.updated_at,
@@ -400,7 +396,7 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
 
     // Map the profiles to TeacherType
     const teachers: TeacherType[] = teacherProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => {
-        const teacher = teachersData?.find((t: { profile_id: string; specialization: string | null; hourly_rate: number | null; notes: string | null }) => t.profile_id === profile.id)
+        const teacher = teachersData?.find((t: { profile_id: string; specialization: string | null; hourly_rate: number | null; currency: string | null; notes: string | null }) => t.profile_id === profile.id)
         return {
             teacher_id: profile.id,
             first_name: profile.first_name,
@@ -415,6 +411,7 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
             avatar_url: profile.avatar_url,
             specialization: teacher?.specialization || null,
             hourly_rate: teacher?.hourly_rate || null,
+            currency: teacher?.currency || null,
             notes: teacher?.notes || null,
             created_at: profile.created_at,
             updated_at: profile.updated_at || null,

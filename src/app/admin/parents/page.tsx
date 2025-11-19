@@ -68,7 +68,7 @@ export default function ParentsPage() {
             <Input
               type="search"
               placeholder="Search parents..."
-              className="w-full pl-8"
+              className="w-full pl-8 bg-white"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

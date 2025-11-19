@@ -64,7 +64,7 @@ export default function AdminsPage() {
                         <Input
                             type="search"
                             placeholder="Search admins..."
-                            className="w-full pl-8"
+                            className="w-full pl-8 bg-white"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
