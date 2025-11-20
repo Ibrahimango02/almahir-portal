@@ -404,13 +404,10 @@ export async function getClasses(): Promise<ClassType[]> {
 export async function getClassesToday(): Promise<ClassType[]> {
     const supabase = createClient()
 
-    // Get today's date range in ISO format
+    // Get today's date range in UTC to ensure consistency across timezones
     const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
 
     // Get all classes
     const { data: classes, error } = await supabase
@@ -591,58 +588,29 @@ export async function getClassesToday(): Promise<ClassType[]> {
 export async function getSessionsToday(): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in UTC (database stores dates in UTC)
-    // Since sessions are created from local times and converted to UTC,
-    // a session scheduled for "today" in a timezone ahead of UTC might be stored
-    // as "tomorrow" in UTC. Similarly, a session from yesterday in a timezone
-    // behind UTC might be stored as "today" in UTC.
-    // We query for a 48-hour window to catch all sessions that could be "today"
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const date = now.getUTCDate();
-    
-    // Start: Yesterday 00:00:00 UTC (to catch sessions from timezones behind UTC)
-    const startOfRange = new Date(Date.UTC(year, month, date - 1, 0, 0, 0, 0));
-    
-    // End: Tomorrow 23:59:59.999 UTC (to catch sessions from timezones ahead of UTC)
-    const endOfRange = new Date(Date.UTC(year, month, date + 1, 23, 59, 59, 999));
+    // Get today's date range in UTC to ensure consistency across timezones
+    const today = new Date();
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
 
-    // 1. Get all sessions in the expanded range
+    // 1. Get all sessions for today
     const { data: sessions } = await supabase
         .from('class_sessions')
         .select('*')
-        .gte('start_date', startOfRange.toISOString())
-        .lte('start_date', endOfRange.toISOString());
+        .gte('start_date', startOfDay.toISOString())
+        .lte('start_date', endOfDay.toISOString());
 
     if (!sessions || sessions.length === 0) return [];
 
-    // Filter sessions to only include those that fall within "today" in the server's local timezone
-    // This ensures sessions scheduled for "today" locally are included, even if they're stored
-    // as a different UTC date
-    const todayLocal = new Date();
-    const startOfTodayLocal = new Date(todayLocal);
-    startOfTodayLocal.setHours(0, 0, 0, 0);
-    const endOfTodayLocal = new Date(todayLocal);
-    endOfTodayLocal.setHours(23, 59, 59, 999);
-
-    const sessionsForToday = sessions.filter(session => {
-        const sessionStart = new Date(session.start_date);
-        // Check if session start falls within today in local timezone
-        return sessionStart >= startOfTodayLocal && sessionStart <= endOfTodayLocal;
-    });
-
-    if (sessionsForToday.length === 0) return [];
-
     // 2. Get reschedule requests for today's sessions
-    const sessionIds = sessionsForToday.map(s => s.id);
+    const sessionIds = sessions.map(s => s.id);
     const { data: rescheduleRequests } = await supabase
         .from('reschedule_requests')
         .select('*')
         .in('session_id', sessionIds);
 
     // 3. Get all class IDs for these sessions
-    const sessionClassIds = [...new Set(sessionsForToday.map(s => s.class_id))];
+    const sessionClassIds = [...new Set(sessions.map(s => s.class_id))];
 
     // 4. Get class details for these sessions
     const { data: classes } = await supabase
@@ -694,7 +662,7 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
         .in('student_id', studentIds);
 
     // 8. Build the result
-    const result: ClassSessionType[] = sessionsForToday.map(session => {
+    const result: ClassSessionType[] = sessions.map(session => {
         const classData = classes?.find(c => c.id === session.class_id);
 
         // Find reschedule request for this session
@@ -2045,13 +2013,10 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
 export async function getTeacherSessionsToday(teacherId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in ISO format (local time)
+    // Get today's date range in UTC to ensure consistency across timezones
     const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
 
     // 1. Get class IDs for this teacher
     const { data: teacherClasses } = await supabase
@@ -2202,13 +2167,10 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
 export async function getStudentSessionsToday(studentId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in ISO format (local time)
+    // Get today's date range in UTC to ensure consistency across timezones
     const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
 
     // 1. Get class IDs for this student
     const { data: studentClasses } = await supabase
@@ -2539,18 +2501,26 @@ export async function getStudentClassCount(studentId: string) {
 export async function getWeeklySessionsCount() {
     const supabase = createClient()
 
-    // Get current date
+    // Get current date in UTC
     const now = new Date()
 
-    // Get start of current week (Monday)
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
-    startOfWeek.setHours(0, 0, 0, 0)
+    // Get start of current week (Monday) in UTC
+    const dayOfWeek = now.getUTCDay()
+    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+    const startOfWeek = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate() + daysToMonday,
+        0, 0, 0, 0
+    ))
 
-    // Get end of current week (Sunday)
-    const endOfWeek = new Date(startOfWeek)
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
-    endOfWeek.setHours(23, 59, 59, 999)
+    // Get end of current week (Sunday) in UTC
+    const endOfWeek = new Date(Date.UTC(
+        startOfWeek.getUTCFullYear(),
+        startOfWeek.getUTCMonth(),
+        startOfWeek.getUTCDate() + 6,
+        23, 59, 59, 999
+    ))
 
     // Query class sessions within the current week
     const { count, error } = await supabase
@@ -2570,13 +2540,10 @@ export async function getWeeklySessionsCount() {
 export async function getSessionsCountByStatus(status: string) {
     const supabase = createClient()
 
-    // Get today's date range in ISO format
+    // Get today's date range in UTC to ensure consistency across timezones
     const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
 
     const { count, error } = await supabase
         .from('class_sessions')
@@ -2633,12 +2600,10 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
     const classIds = [...new Set(classStudents.map(cs => cs.class_id))]
 
     // 3. Get today's sessions for these classes
+    // Use UTC to ensure consistency across timezones
     const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
+    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
 
     const { data: sessions } = await supabase
         .from('class_sessions')
