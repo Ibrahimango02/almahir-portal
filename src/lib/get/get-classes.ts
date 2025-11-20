@@ -404,10 +404,13 @@ export async function getClasses(): Promise<ClassType[]> {
 export async function getClassesToday(): Promise<ClassType[]> {
     const supabase = createClient()
 
-    // Get today's date range in UTC to ensure consistency across timezones
+    // Get today's date range in ISO format
     const today = new Date()
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const endOfDay = new Date(today)
+    endOfDay.setHours(23, 59, 59, 999)
 
     // Get all classes
     const { data: classes, error } = await supabase
@@ -588,10 +591,13 @@ export async function getClassesToday(): Promise<ClassType[]> {
 export async function getSessionsToday(): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in UTC to ensure consistency across timezones
+    // Get today's date range in ISO format (local time)
     const today = new Date();
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // 1. Get all sessions for today
     const { data: sessions } = await supabase
@@ -2013,10 +2019,13 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
 export async function getTeacherSessionsToday(teacherId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in UTC to ensure consistency across timezones
+    // Get today's date range in ISO format (local time)
     const today = new Date();
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // 1. Get class IDs for this teacher
     const { data: teacherClasses } = await supabase
@@ -2167,10 +2176,13 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
 export async function getStudentSessionsToday(studentId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in UTC to ensure consistency across timezones
+    // Get today's date range in ISO format (local time)
     const today = new Date();
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999));
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
 
     // 1. Get class IDs for this student
     const { data: studentClasses } = await supabase
@@ -2501,26 +2513,18 @@ export async function getStudentClassCount(studentId: string) {
 export async function getWeeklySessionsCount() {
     const supabase = createClient()
 
-    // Get current date in UTC
+    // Get current date
     const now = new Date()
 
-    // Get start of current week (Monday) in UTC
-    const dayOfWeek = now.getUTCDay()
-    const daysToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-    const startOfWeek = new Date(Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate() + daysToMonday,
-        0, 0, 0, 0
-    ))
+    // Get start of current week (Monday)
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
+    startOfWeek.setHours(0, 0, 0, 0)
 
-    // Get end of current week (Sunday) in UTC
-    const endOfWeek = new Date(Date.UTC(
-        startOfWeek.getUTCFullYear(),
-        startOfWeek.getUTCMonth(),
-        startOfWeek.getUTCDate() + 6,
-        23, 59, 59, 999
-    ))
+    // Get end of current week (Sunday)
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    endOfWeek.setHours(23, 59, 59, 999)
 
     // Query class sessions within the current week
     const { count, error } = await supabase
@@ -2540,10 +2544,13 @@ export async function getWeeklySessionsCount() {
 export async function getSessionsCountByStatus(status: string) {
     const supabase = createClient()
 
-    // Get today's date range in UTC to ensure consistency across timezones
+    // Get today's date range in ISO format
     const today = new Date()
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const endOfDay = new Date(today)
+    endOfDay.setHours(23, 59, 59, 999)
 
     const { count, error } = await supabase
         .from('class_sessions')
@@ -2600,10 +2607,12 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
     const classIds = [...new Set(classStudents.map(cs => cs.class_id))]
 
     // 3. Get today's sessions for these classes
-    // Use UTC to ensure consistency across timezones
     const today = new Date()
-    const startOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0))
-    const endOfDay = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59, 999))
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
+
+    const endOfDay = new Date(today)
+    endOfDay.setHours(23, 59, 59, 999)
 
     const { data: sessions } = await supabase
         .from('class_sessions')
