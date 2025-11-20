@@ -22,10 +22,12 @@ export function UpcomingClasses({ sessions, isLoading, userType }: UpcomingClass
     const router = useRouter()
     const { timezone: userTimezone } = useTimezone()
     const [isClient, setIsClient] = useState(false)
+    const [mounted, setMounted] = useState(false)
 
     // Ensure we're on the client side before doing timezone conversions
     useEffect(() => {
         setIsClient(true)
+        setMounted(true)
     }, [])
 
     // Process sessions for display
@@ -71,12 +73,16 @@ export function UpcomingClasses({ sessions, isLoading, userType }: UpcomingClass
     }).filter(Boolean);
 
     // Filter for upcoming sessions (exclude sessions that have ended or have specific statuses)
+    // Only filter by isPast after mounting to avoid hydration mismatches
     const upcomingSessions = todaySessions.filter(session => {
         if (!session) return false;
 
-        // Exclude sessions with end time in the past (compare UTC dates directly)
-        if (isPast(session.endDateTime)) {
-            return false;
+        // Only check isPast after component has mounted to avoid hydration mismatch
+        if (mounted) {
+            // Exclude sessions with end time in the past (compare UTC dates directly)
+            if (isPast(session.endDateTime)) {
+                return false;
+            }
         }
 
         // Exclude sessions with status: complete, absence, or cancelled
@@ -145,7 +151,7 @@ export function UpcomingClasses({ sessions, isLoading, userType }: UpcomingClass
                                     </div>
                                     <p className="text-sm text-muted-foreground mb-2">{session.subject}</p>
                                     <div className="flex items-center gap-3 text-xs">
-                                        <span className="flex items-center gap-1 text-muted-foreground">
+                                        <span className="flex items-center gap-1 text-muted-foreground" suppressHydrationWarning>
                                             <Clock className="h-3 w-3" />
                                             {displayStartTime} - {displayEndTime}
                                         </span>

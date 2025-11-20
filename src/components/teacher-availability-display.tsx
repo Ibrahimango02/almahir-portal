@@ -67,7 +67,7 @@ export function TeacherAvailabilityDisplay({ schedule }: TeacherAvailabilityDisp
                                 return (
                                     <div key={index} className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-md">
                                         <Clock className="h-3 w-3 text-primary" />
-                                        <span className="text-xs font-medium">
+                                        <span className="text-xs font-medium" suppressHydrationWarning>
                                             {displayStartTime} - {displayEndTime}
                                         </span>
                                     </div>
