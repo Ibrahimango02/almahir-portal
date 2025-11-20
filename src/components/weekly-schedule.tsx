@@ -217,7 +217,7 @@ export function WeeklySchedule({
   }
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0}>
       <div className="space-y-4">
         <div className="flex justify-between items-center w-full">
           {/* Tabs on the left */}
@@ -636,63 +636,19 @@ function CalendarScheduleView({
   const getStatusContainerStyles = (status: string) => {
     switch (status) {
       case "scheduled":
-        return "border-blue-200 bg-blue-50/80 dark:border-blue-800/60 dark:bg-blue-950/50"
+        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
       case "running":
-        return "border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/60 dark:bg-emerald-950/50"
+        return "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
       case "pending":
-        return "border-indigo-200 bg-indigo-50/80 dark:border-indigo-800/60 dark:bg-indigo-950/50"
+        return "border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950"
       case "complete":
-        return "border-purple-200 bg-purple-50/80 dark:border-purple-800/60 dark:bg-purple-950/50"
+        return "border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950"
       case "cancelled":
-        return "border-rose-200 bg-rose-50/80 dark:border-rose-800/60 dark:bg-rose-950/50"
+        return "border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950"
       case "absence":
-        return "border-orange-200 bg-orange-50/80 dark:border-orange-800/60 dark:bg-orange-950/50"
+        return "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
       default:
-        return "border-gray-200 bg-gray-50/80 dark:border-gray-800/60 dark:bg-gray-950/50"
-    }
-  }
-
-  // Helper to get status icon component
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return Calendar
-      case "running":
-        return Play
-      case "pending":
-        return Clock
-      case "complete":
-        return CheckCircle
-      case "rescheduled":
-        return CalendarDays
-      case "cancelled":
-        return BookX
-      case "absence":
-        return UserX
-      default:
-        return Clock
-    }
-  }
-
-  // Helper to get status icon text colors matching StatusBadge
-  const getStatusIconColors = (status: string) => {
-    switch (status) {
-      case "scheduled":
-        return "text-blue-700 dark:text-blue-400"
-      case "running":
-        return "text-emerald-700 dark:text-emerald-400"
-      case "pending":
-        return "text-indigo-700 dark:text-indigo-400"
-      case "complete":
-        return "text-purple-700 dark:text-purple-400"
-      case "rescheduled":
-        return "text-amber-700 dark:text-amber-400"
-      case "cancelled":
-        return "text-rose-700 dark:text-rose-400"
-      case "absence":
-        return "text-orange-700 dark:text-orange-400"
-      default:
-        return "text-gray-700 dark:text-gray-400"
+        return "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"
     }
   }
 
@@ -708,8 +664,26 @@ function CalendarScheduleView({
       // Group overlapping classes
       const groups = groupOverlappingClasses(classesForDay)
 
+      // Sort each group by height (taller first) so taller sessions appear on the left
+      const sortedGroups = groups.map((group) => {
+        return [...group].sort((a, b) => {
+          const startA = parseClassDateTime(a, "start_date")
+          const endA = parseClassDateTime(a, "end_date")
+          const startB = parseClassDateTime(b, "start_date")
+          const endB = parseClassDateTime(b, "end_date")
+
+          if (!startA || !endA || !startB || !endB) return 0
+
+          const durationA = differenceInMinutes(endA, startA)
+          const durationB = differenceInMinutes(endB, startB)
+
+          // Sort by duration descending (taller first)
+          return durationB - durationA
+        })
+      })
+
       // Flatten groups but preserve group information
-      return groups.flatMap((group, groupIndex) =>
+      return sortedGroups.flatMap((group, groupIndex) =>
         group.map((cls, classIndex) => ({
           ...cls,
           groupIndex,
@@ -812,17 +786,24 @@ function CalendarScheduleView({
                         // Use a minimum of 25px to ensure visibility for very short sessions
                         const heightPx = Math.max(25, Math.round((durationMinutes * 50) / 60))
 
-                        // Calculate width based on group size
-                        const width = 100 / extendedClass.groupSize
-                        // Calculate left offset based on index within group
-                        const left = extendedClass.classIndex * width
+                        // Google Calendar style: overlapping sessions with 30% overlap
+                        // Calculate width so all overlapping sessions fit within the column with 30% overlap
+                        // Formula: W * (0.3 * (N-1) + 1) <= 100, where N is groupSize
+                        // Solving for W: W <= 100 / (0.3 * (N-1) + 1)
+                        const overlapPercentage = 0.3 // 30% overlap
+                        const groupSize = extendedClass.groupSize
+                        const calculatedWidth = 100 / (overlapPercentage * (groupSize - 1) + 1)
+                        // Ensure minimum usable width
+                        const width = Math.max(calculatedWidth, 20)
+                        // Each session is offset by 30% of the width
+                        const left = extendedClass.classIndex * width * overlapPercentage
 
                         return (
                           <Tooltip key={`${extendedClass.class_id}-${extendedClass.session_id}`}>
                             <TooltipTrigger asChild>
                               <div
                                 className={cn(
-                                  "absolute rounded-md border p-0.5 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-20 hover:shadow-md",
+                                  "absolute rounded-md border p-0.5 flex flex-col justify-between overflow-hidden cursor-pointer transition-all hover:z-50 hover:shadow-lg",
                                   getStatusContainerStyles(extendedClass.status),
                                 )}
                                 style={{
@@ -830,7 +811,7 @@ function CalendarScheduleView({
                                   top: `${(startTime.getMinutes() / 60) * 50}px`,
                                   left: `${left}%`,
                                   width: `${width}%`,
-                                  zIndex: 10,
+                                  zIndex: 10 + extendedClass.classIndex,
                                 }}
                                 onClick={() => {
                                   if (!currentUserRole) return
@@ -850,27 +831,16 @@ function CalendarScheduleView({
                                     </p>
                                   )}
                                 </div>
-                                {/* Show status icon only for short sessions, full badge for longer ones */}
-                                <div className="flex justify-end items-center mt-auto">
-                                  {heightPx <= 50 ? (
-                                    (() => {
-                                      const IconComponent = getStatusIcon(extendedClass.status)
-                                      return (
-                                        <div className={cn(
-                                          "rounded-full p-0.5 flex items-center justify-center",
-                                          getStatusContainerStyles(extendedClass.status)
-                                        )}>
-                                          <IconComponent className={cn("h-2 w-2", getStatusIconColors(extendedClass.status))} />
-                                        </div>
-                                      )
-                                    })()
-                                  ) : (
+                                {/* Show status badge only if session is tall enough */}
+                                {heightPx >= 10 && (
+                                  <div className="flex justify-end items-center mt-auto">
                                     <StatusBadge
                                       status={convertStatusToPrefixedFormat(extendedClass.status, 'session')}
                                       className="text-[8px] px-1 py-0.5"
+                                      iconOnly={true}
                                     />
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                               </div>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="max-w-xs">

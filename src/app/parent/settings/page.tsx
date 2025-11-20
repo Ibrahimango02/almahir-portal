@@ -494,7 +494,6 @@ export default function SettingsPage() {
                                     {fieldErrors.phone && (
                                         <p className="text-[0.8rem] font-medium text-destructive">{fieldErrors.phone}</p>
                                     )}
-                                    <p className="text-sm text-muted-foreground">Optional</p>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="user-gender">Gender</Label>

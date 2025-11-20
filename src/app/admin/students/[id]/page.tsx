@@ -22,6 +22,7 @@ import { getInvoicesByStudentId } from "@/lib/get/get-invoices"
 import { createClient } from "@/utils/supabase/server"
 import { checkIfAdmin } from "@/lib/get/get-profiles"
 import { formatMonthRange } from "@/lib/utils/format-month-range"
+import { ClassTimeDisplay } from "@/components/class-time-display"
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Get current user ID
@@ -310,7 +311,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                             if (timeSlot) {
                               const dayName = day.charAt(0).toUpperCase() + day.slice(1)
 
-                              // Calculate duration
+                              // Calculate duration from UTC times (duration is timezone-independent)
                               const startTime = new Date(`2000-01-01T${timeSlot.start}:00`)
                               const endTime = new Date(`2000-01-01T${timeSlot.end}:00`)
                               const durationMs = endTime.getTime() - startTime.getTime()
@@ -328,7 +329,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
                               return (
                                 <div key={day} className="text-xs">
-                                  {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
+                                  {dayName}: <span className="text-muted-foreground">
+                                    <ClassTimeDisplay utcTime={timeSlot.start} /> - <ClassTimeDisplay utcTime={timeSlot.end} /> {durationText}
+                                  </span>
                                 </div>
                               )
                             }

@@ -36,9 +36,10 @@ type StatusType =
 interface StatusBadgeProps {
   status: StatusType
   className?: string
+  iconOnly?: boolean
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className, iconOnly = false }: StatusBadgeProps) {
 
   // Define status-specific styles matching StatusType
   const statusStyles: Record<StatusType, string> = {
@@ -96,45 +97,45 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
     switch (status) {
       // User status icons
       case "user-active":
-        return <CheckCircle className="h-3.5 w-3.5 mr-1" />
+        return <CheckCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "user-inactive":
-        return <XCircle className="h-3.5 w-3.5 mr-1" />
+        return <XCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "user-pending":
-        return <Clock className="h-3.5 w-3.5 mr-1" />
+        return <Clock className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "user-suspended":
-        return <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+        return <AlertTriangle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "user-archived":
-        return <Archive className="h-3.5 w-3.5 mr-1" />
+        return <Archive className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
 
       // Class status icons
       case "class-active":
-        return <CheckCircle className="h-3.5 w-3.5 mr-1" />
+        return <CheckCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "class-archived":
-        return <Archive className="h-3.5 w-3.5 mr-1" />
+        return <Archive className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
 
       // Session status icons
       case "session-scheduled":
-        return <Calendar className="h-3.5 w-3.5 mr-1" />
+        return <Calendar className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-running":
-        return <Play className="h-3.5 w-3.5 mr-1" />
+        return <Play className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-pending":
-        return <Clock className="h-3.5 w-3.5 mr-1" />
+        return <Clock className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-complete":
-        return <CheckCircle className="h-3.5 w-3.5 mr-1" />
+        return <CheckCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-cancelled":
-        return <BookX className="h-3.5 w-3.5 mr-1" />
+        return <BookX className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-absence":
-        return <UserX className="h-3.5 w-3.5 mr-1" />
+        return <UserX className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
 
       // Invoice status icons
       case "invoice-paid":
-        return <CheckCircle className="h-3.5 w-3.5 mr-1" />
+        return <CheckCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "invoice-pending":
-        return <Clock className="h-3.5 w-3.5 mr-1" />
+        return <Clock className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "invoice-overdue":
-        return <AlertCircle className="h-3.5 w-3.5 mr-1" />
+        return <AlertCircle className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "invoice-cancelled":
-        return <Archive className="h-3.5 w-3.5 mr-1" />
+        return <Archive className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       default:
         return null
     }
@@ -154,12 +155,13 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       className={cn(
         "font-medium border px-1.5 py-1 capitalize flex items-center justify-center",
         statusStyle,
+        iconOnly && "px-1",
         className,
       )}
       variant="outline"
     >
       <StatusIcon />
-      {getDisplayText(status)}
+      {!iconOnly && getDisplayText(status)}
     </Badge>
   )
 }
