@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Edit, Contact, DollarSign, User } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, DollarSign, User, FileText } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -110,6 +110,24 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
               </div>
 
               <Separator />
+
+              {/* Notes Section */}
+              {parent.notes && (
+                <>
+                  <div>
+                    <h3 className="text-base font-semibold flex items-center mb-3">
+                      <FileText className="h-4 w-4 mr-2 text-primary" />
+                      Notes
+                    </h3>
+                    <div className="pl-6">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {parent.notes}
+                      </p>
+                    </div>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
               {/* Students Section */}
               <div>

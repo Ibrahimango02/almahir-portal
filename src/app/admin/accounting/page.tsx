@@ -301,51 +301,47 @@ export default function AdminAccountingPage() {
         </TabsList>
 
         <TabsContent value="invoices" className="space-y-4">
-          <Card className="border-0 shadow-none">
-            <CardContent>
-              {filteredInvoices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No invoices found</p>
-                  <p className="text-sm">
-                    {search || startDate || endDate
-                      ? "Try adjusting your filters"
-                      : "Student invoices will appear here once created"
-                    }
-                  </p>
-                </div>
-              ) : (
-                <StudentInvoicesTable
-                  invoices={filteredInvoices}
-                  onStatusUpdate={handleInvoicesUpdate}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <div>
+            {filteredInvoices.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No invoices found</p>
+                <p className="text-sm">
+                  {search || startDate || endDate
+                    ? "Try adjusting your filters"
+                    : "Student invoices will appear here once created"
+                  }
+                </p>
+              </div>
+            ) : (
+              <StudentInvoicesTable
+                invoices={filteredInvoices}
+                onStatusUpdate={handleInvoicesUpdate}
+              />
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="payments" className="space-y-4">
-          <Card className="border-0 shadow-none">
-            <CardContent>
-              {filteredTeacherPayments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No teacher payments found</p>
-                  <p className="text-sm">
-                    {search || startDate || endDate
-                      ? "Try adjusting your filters"
-                      : "Teacher payments will appear here once created"
-                    }
-                  </p>
-                </div>
-              ) : (
-                <TeacherPaymentsTable
-                  payments={filteredTeacherPayments}
-                  onStatusUpdate={handlePaymentsUpdate}
-                />
-              )}
-            </CardContent>
-          </Card>
+          <div>
+            {filteredTeacherPayments.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No teacher payments found</p>
+                <p className="text-sm">
+                  {search || startDate || endDate
+                    ? "Try adjusting your filters"
+                    : "Teacher payments will appear here once created"
+                  }
+                </p>
+              </div>
+            ) : (
+              <TeacherPaymentsTable
+                payments={filteredTeacherPayments}
+                onStatusUpdate={handlePaymentsUpdate}
+              />
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

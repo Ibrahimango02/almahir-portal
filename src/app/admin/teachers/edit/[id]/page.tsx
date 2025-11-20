@@ -147,7 +147,7 @@ export default function EditTeacherPage() {
                                     name="specialization"
                                     value={formData.specialization}
                                     onChange={handleChange}
-                                    placeholder="e.g., Mathematics, Physics, English"
+                                    placeholder="e.g., Arabic, Quran, Islamic Studies, etc."
                                 />
                             </div>
 
@@ -204,7 +204,7 @@ export default function EditTeacherPage() {
                                     <SelectTrigger id="moderator_id">
                                         <SelectValue placeholder="Select moderator" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-h-[300px] overflow-y-auto">
                                         <SelectItem value="none">No moderator assigned</SelectItem>
                                         {moderators.map((moderator) => (
                                             <SelectItem key={moderator.admin_id} value={moderator.admin_id}>

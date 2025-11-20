@@ -56,6 +56,7 @@ export type ParentType = {
     status: string
     role: string
     avatar_url: string | null
+    notes: string | null
     created_at: string
     updated_at: string | null
 }
@@ -406,6 +407,7 @@ export type TeacherPaymentType = {
         teacher_id: string;
         first_name: string;
         last_name: string;
+        currency: string | null;
     };
     session: {
         class_title: string;

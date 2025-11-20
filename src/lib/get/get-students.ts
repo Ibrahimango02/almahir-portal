@@ -233,6 +233,13 @@ export async function getStudentParents(id: string): Promise<ParentType[]> {
 
         if (!parentProfile) return []
 
+        // Get notes from parents table
+        const { data: parentData } = await supabase
+            .from('parents')
+            .select('notes')
+            .eq('profile_id', childProfile.parent_profile_id)
+            .single()
+
         // Return single parent
         return [{
             parent_id: parentProfile.id,
@@ -246,6 +253,7 @@ export async function getStudentParents(id: string): Promise<ParentType[]> {
             status: parentProfile.status,
             role: parentProfile.role,
             avatar_url: parentProfile.avatar_url,
+            notes: parentData?.notes || null,
             created_at: parentProfile.created_at,
             updated_at: parentProfile.updated_at || null
         }]
@@ -324,6 +332,18 @@ export async function getAllStudentParents(studentIds: string[]): Promise<Record
         }, {} as Record<string, ParentType[]>)
     }
 
+    // Get parent notes from parents table
+    const { data: parentsData } = await supabase
+        .from('parents')
+        .select('profile_id, notes')
+        .in('profile_id', parentProfileIds)
+
+    // Create a map of profile_id -> notes for quick lookup
+    const notesMap = new Map<string, string | null>()
+    parentsData?.forEach(parent => {
+        notesMap.set(parent.profile_id, parent.notes || null)
+    })
+
     // Create a map of parent_profile_id -> ParentType
     const parentMap = new Map<string, ParentType>()
     parentProfiles.forEach(profile => {
@@ -339,6 +359,7 @@ export async function getAllStudentParents(studentIds: string[]): Promise<Record
             status: profile.status,
             role: profile.role,
             avatar_url: profile.avatar_url,
+            notes: notesMap.get(profile.id) || null,
             created_at: profile.created_at,
             updated_at: profile.updated_at || null
         })

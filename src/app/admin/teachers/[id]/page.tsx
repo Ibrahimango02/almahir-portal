@@ -20,6 +20,7 @@ import { getTeacherPaymentsByTeacherId } from "@/lib/get/get-teacher-payments"
 import { format, parseISO } from "date-fns"
 import { createClient } from "@/utils/supabase/server"
 import { checkIfAdmin, getModeratorById } from "@/lib/get/get-profiles"
+import { ClassTimeDisplay } from "@/components/class-time-display"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Get current user ID
@@ -136,8 +137,8 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div className="flex flex-col items-center justify-center">
                   <span className="text-2xl font-bold text-primary">
-                    {teacher.hourly_rate 
-                      ? `${teacher.currency || 'USD'} ${teacher.hourly_rate.toFixed(2)}`
+                    {teacher.hourly_rate
+                      ? `${teacher.currency || ''} ${teacher.hourly_rate.toFixed(2)}`
                       : 'N/A'}
                   </span>
                   <span className="text-xs text-muted-foreground">Hourly Rate</span>
@@ -269,7 +270,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           {teacherClasses.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
               {teacherClasses.map((classInfo) => (
                 <div key={classInfo.class_id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
@@ -304,7 +305,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                             if (timeSlot) {
                               const dayName = day.charAt(0).toUpperCase() + day.slice(1)
 
-                              // Calculate duration
+                              // Calculate duration from UTC times (duration is timezone-independent)
                               const startTime = new Date(`2000-01-01T${timeSlot.start}:00`)
                               const endTime = new Date(`2000-01-01T${timeSlot.end}:00`)
                               const durationMs = endTime.getTime() - startTime.getTime()
@@ -322,7 +323,9 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
                               return (
                                 <div key={day} className="text-xs">
-                                  {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
+                                  {dayName}: <span className="text-muted-foreground">
+                                    <ClassTimeDisplay utcTime={timeSlot.start} /> - <ClassTimeDisplay utcTime={timeSlot.end} /> {durationText}
+                                  </span>
                                 </div>
                               )
                             }
@@ -374,7 +377,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           {sessionsWithHistory.length > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -506,7 +509,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
           </CardHeader>
           <CardContent>
             {teacherPayments && teacherPayments.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">

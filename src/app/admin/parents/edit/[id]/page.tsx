@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,7 @@ export default function EditParentPage() {
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     status: "",
+    notes: "",
     students: [] as StudentType[],
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -74,6 +76,7 @@ export default function EditParentPage() {
 
           setFormData({
             status: parentData.status || "",
+            notes: parentData.notes || "",
             students: associatedStudents,
           })
         }
@@ -184,9 +187,10 @@ export default function EditParentPage() {
         setPendingStudents([])
       }
 
-      // Always update the parent's status first
+      // Always update the parent's status and notes first
       await updateParents(parent.parent_id, {
         status: formData.status,
+        notes: formData.notes || null,
         student_id: [...formData.students.map(student => student.student_id), ...newlyCreatedStudentIds]
       })
 
@@ -236,6 +240,19 @@ export default function EditParentPage() {
                     <SelectItem value="archived">Archived</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Add any additional notes about the parent..."
+                />
               </div>
 
               <div className="space-y-4">

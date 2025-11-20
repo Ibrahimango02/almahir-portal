@@ -15,6 +15,7 @@ import { createClient } from "@/utils/supabase/server"
 import React from "react"
 import AvatarIcon from "@/components/avatar"
 import { Button } from "@/components/ui/button"
+import { ClassTimeDisplay } from "@/components/class-time-display"
 
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -249,7 +250,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                     {Object.entries(classInfo.days_repeated).map(([day, timeSlot]) => {
                                                         if (timeSlot) {
                                                             const dayName = day.charAt(0).toUpperCase() + day.slice(1)
-                                                            // Calculate duration
+                                                            // Calculate duration from UTC times (duration is timezone-independent)
                                                             const startTime = new Date(`2000-01-01T${timeSlot.start}:00`)
                                                             const endTime = new Date(`2000-01-01T${timeSlot.end}:00`)
                                                             const durationMs = endTime.getTime() - startTime.getTime()
@@ -265,7 +266,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                             }
                                                             return (
                                                                 <div key={day} className="text-xs">
-                                                                    {dayName}: <span className="text-muted-foreground">{timeSlot.start} - {timeSlot.end} {durationText}</span>
+                                                                    {dayName}: <span className="text-muted-foreground">
+                                                                        <ClassTimeDisplay utcTime={timeSlot.start} /> - <ClassTimeDisplay utcTime={timeSlot.end} /> {durationText}
+                                                                    </span>
                                                                 </div>
                                                             )
                                                         }
@@ -317,7 +320,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </CardHeader>
                 <CardContent>
                     {sharedSessionHistory.length > 0 ? (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-200">

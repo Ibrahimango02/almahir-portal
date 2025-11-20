@@ -276,7 +276,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           {studentClasses.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
               {studentClasses.map((classInfo) => (
                 <div key={classInfo.class_id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                   <div className="flex-1">
@@ -383,7 +383,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         </CardHeader>
         <CardContent>
           {sessionsWithHistory.length > 0 ? (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-96 overflow-y-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -608,7 +608,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           </CardHeader>
           <CardContent>
             {invoices && invoices.length > 0 ? (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">

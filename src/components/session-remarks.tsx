@@ -322,20 +322,16 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                         <CardHeader className="pb-4">
                             <CardTitle className="flex items-center gap-3 text-lg">
                                 <div>
-                                    Session Summary
+                                    Session Summary <span className="text-red-500">*</span>
                                     {existingRemarks && (
                                         <span className="block text-sm font-normal text-muted-foreground">Already saved</span>
                                     )}
                                 </div>
                             </CardTitle>
-                            <CardDescription className="text-base">
-                                Provide a comprehensive summary of what was covered in this session. This is required and can be edited even after the session ends.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div>
-                                    <Label htmlFor="session-remarks" className="text-sm font-medium">Session Summary *</Label>
                                     <Textarea
                                         id="session-remarks"
                                         placeholder="Describe what was covered in this session, key topics discussed, and any important points..."
@@ -355,9 +351,6 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                             <CardTitle className="flex items-center gap-3 text-lg">
                                 Individual Student Notes
                             </CardTitle>
-                            <CardDescription className="text-base">
-                                Add detailed notes for each student about their performance and participation in this session. These can be edited even after the session ends.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
@@ -387,7 +380,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                     <Label htmlFor={`notes-${student.student_id}`} className="text-xs font-medium">Notes</Label>
                                                     <Textarea
                                                         id={`notes-${student.student_id}`}
-                                                        placeholder="Add notes about this student's performance, participation, or any concerns..."
+                                                        placeholder={`Notes for ${student.first_name} ${student.last_name}...`}
                                                         value={studentNote?.notes || ""}
                                                         onChange={(e) => updateStudentNote(student.student_id, 'notes', e.target.value)}
                                                         className="min-h-[70px] resize-none break-words text-xs"

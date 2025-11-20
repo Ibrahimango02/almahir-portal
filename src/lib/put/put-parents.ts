@@ -3,7 +3,8 @@ import { getParentStudents } from "@/lib/get/get-parents"
 
 export async function updateParents(parentId: string, data: {
     status: string;
-    student_id: string[]
+    student_id: string[];
+    notes?: string | null;
 }) {
     const supabase = createClient()
 
@@ -24,6 +25,45 @@ export async function updateParents(parentId: string, data: {
 
         if (profileError) {
             throw new Error(`Failed to update profile: ${profileError.message}`)
+        }
+
+        // Update notes in the parents table
+        if (data.notes !== undefined) {
+            // First, check if a parent record exists
+            const { data: existingParent } = await supabase
+                .from('parents')
+                .select('profile_id')
+                .eq('profile_id', parentId)
+                .single()
+
+            if (existingParent) {
+                // Update existing parent record
+                const { error: parentError } = await supabase
+                    .from('parents')
+                    .update({
+                        notes: data.notes || null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('profile_id', parentId)
+
+                if (parentError) {
+                    throw new Error(`Failed to update parent notes: ${parentError.message}`)
+                }
+            } else {
+                // Create parent record if it doesn't exist
+                const { error: parentError } = await supabase
+                    .from('parents')
+                    .insert({
+                        profile_id: parentId,
+                        notes: data.notes || null,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+
+                if (parentError) {
+                    throw new Error(`Failed to create parent record: ${parentError.message}`)
+                }
+            }
         }
 
         // Handle student associations

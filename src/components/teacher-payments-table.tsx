@@ -196,118 +196,118 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
                                 </TableRow>
                             ) : (
                                 paginatedPayments.map((payment, idx) => (
-                                <TableRow
-                                    key={payment.payment_id || idx}
-                                    className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
-                                >
-                                    {/* Teacher Name */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {payment.teacher ? `${payment.teacher.first_name} ${payment.teacher.last_name}` : 'N/A'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Class Title */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {payment.session?.class_title || 'N/A'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Session Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {payment.session ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : 'N/A'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Hours */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {payment.hours} h
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Amount */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="font-semibold text-sm text-green-600">
-                                                {payment.amount.toFixed(2)} CAD
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Paid Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span>
-                                                {payment.paid_date ? format(parseISO(payment.paid_date), "MMM dd, yyyy") : "-"}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    {/* Status */}
-                                    <TableCell className="py-2 px-3 text-center">
-                                        <div className="max-w-[100px] mx-auto">
-                                            <InvoicePaymentStatusBadge status={payment.status} />
-                                        </div>
-                                    </TableCell>
-                                    {currentUserRole === 'admin' && (
-                                        <TableCell data-no-navigation className="py-2 px-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                                    >
-                                                        <MoreHorizontal className="h-3.5 w-3.5" />
-                                                        <span className="sr-only">Open menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                        <Link href={getActionUrl('edit', payment.payment_id)} className="flex items-center">
-                                                            <Edit className="mr-2 h-3.5 w-3.5" />
-                                                            Edit Payment
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
-                                                    <DropdownMenuItem
-                                                        data-status-update
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleStatusUpdate(payment.payment_id, 'paid')
-                                                        }}
-                                                        disabled={updatingStatus === payment.payment_id || payment.status === 'paid'}
-                                                        className="cursor-pointer text-xs"
-                                                    >
-                                                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                                                        Mark as Paid
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        data-status-update
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleStatusUpdate(payment.payment_id, 'cancelled')
-                                                        }}
-                                                        disabled={updatingStatus === payment.payment_id || payment.status === 'cancelled'}
-                                                        className="cursor-pointer text-xs"
-                                                    >
-                                                        <XCircle className="mr-2 h-3.5 w-3.5" />
-                                                        Cancel Payment
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                    <TableRow
+                                        key={payment.payment_id || idx}
+                                        className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
+                                    >
+                                        {/* Teacher Name */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {payment.teacher ? `${payment.teacher.first_name} ${payment.teacher.last_name}` : 'N/A'}
+                                                </span>
+                                            </div>
                                         </TableCell>
-                                    )}
-                                </TableRow>
-                            ))
+                                        {/* Class Title */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {payment.session?.class_title || 'N/A'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        {/* Session Date */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {payment.session ? format(parseISO(payment.session.start_date), "MMM dd, yyyy") : 'N/A'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        {/* Hours */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {payment.hours} h
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        {/* Amount */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-sm text-green-600">
+                                                    {payment.amount.toFixed(2)} {payment.teacher.currency || ''}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        {/* Paid Date */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span>
+                                                    {payment.paid_date ? format(parseISO(payment.paid_date), "MMM dd, yyyy") : "-"}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        {/* Status */}
+                                        <TableCell className="py-2 px-3 text-center">
+                                            <div className="max-w-[100px] mx-auto">
+                                                <InvoicePaymentStatusBadge status={payment.status} />
+                                            </div>
+                                        </TableCell>
+                                        {currentUserRole === 'admin' && (
+                                            <TableCell data-no-navigation className="py-2 px-3">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                                        >
+                                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">Open menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                                                            <Link href={getActionUrl('edit', payment.payment_id)} className="flex items-center">
+                                                                <Edit className="mr-2 h-3.5 w-3.5" />
+                                                                Edit Payment
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
+                                                        <DropdownMenuItem
+                                                            data-status-update
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleStatusUpdate(payment.payment_id, 'paid')
+                                                            }}
+                                                            disabled={updatingStatus === payment.payment_id || payment.status === 'paid'}
+                                                            className="cursor-pointer text-xs"
+                                                        >
+                                                            <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                                            Mark as Paid
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            data-status-update
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleStatusUpdate(payment.payment_id, 'cancelled')
+                                                            }}
+                                                            disabled={updatingStatus === payment.payment_id || payment.status === 'cancelled'}
+                                                            className="cursor-pointer text-xs"
+                                                        >
+                                                            <XCircle className="mr-2 h-3.5 w-3.5" />
+                                                            Cancel Payment
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))
                             )}
                         </TableBody>
                     </Table>

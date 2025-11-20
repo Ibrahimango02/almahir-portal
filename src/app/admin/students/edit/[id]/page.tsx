@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save } from "lucide-react"
@@ -28,6 +29,7 @@ export default function EditStudentPage() {
   const [formData, setFormData] = useState({
     status: "",
     notes: "",
+    birth_date: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -40,6 +42,7 @@ export default function EditStudentPage() {
           setFormData({
             status: student.status,
             notes: student.notes || "",
+            birth_date: student.birth_date ? new Date(student.birth_date).toISOString().split('T')[0] : "",
           })
         }
       } catch (error) {
@@ -78,7 +81,10 @@ export default function EditStudentPage() {
     setIsSubmitting(true)
 
     try {
-      await updateStudent(student.student_id, formData)
+      await updateStudent(student.student_id, {
+        ...formData,
+        birth_date: formData.birth_date || null,
+      })
 
       toast({
         title: "Student information updated",
@@ -114,20 +120,33 @@ export default function EditStudentPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value)}>
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="birth_date">Birth Date</Label>
+                <Input
+                  id="birth_date"
+                  name="birth_date"
+                  type="date"
+                  value={formData.birth_date}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value)}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">

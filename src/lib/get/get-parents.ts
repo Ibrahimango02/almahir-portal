@@ -12,6 +12,17 @@ export async function getParents(): Promise<ParentType[]> {
 
     if (!profile) return []
 
+    // Get all parent notes from parents table
+    const { data: parentsData } = await supabase
+        .from('parents')
+        .select('profile_id, notes')
+
+    // Create a map of profile_id -> notes for quick lookup
+    const notesMap = new Map<string, string | null>()
+    parentsData?.forEach(parent => {
+        notesMap.set(parent.profile_id, parent.notes || null)
+    })
+
     const combinedParents = profile?.map(parentProfile => {
         return {
             parent_id: parentProfile.id,
@@ -25,6 +36,7 @@ export async function getParents(): Promise<ParentType[]> {
             status: parentProfile.status,
             role: parentProfile.role,
             avatar_url: parentProfile.avatar_url,
+            notes: notesMap.get(parentProfile.id) || null,
             created_at: parentProfile.created_at,
             updated_at: parentProfile.updated_at || null
         }
@@ -48,6 +60,13 @@ export async function getParentById(id: string): Promise<ParentType | null> {
         return null
     }
 
+    // Get notes from parents table
+    const { data: parentData } = await supabase
+        .from('parents')
+        .select('notes')
+        .eq('profile_id', id)
+        .single()
+
     // Return the parent with their students
     return {
         parent_id: profile.id,
@@ -61,6 +80,7 @@ export async function getParentById(id: string): Promise<ParentType | null> {
         status: profile.status,
         role: profile.role,
         avatar_url: profile.avatar_url,
+        notes: parentData?.notes || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }
@@ -251,6 +271,18 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
 
     if (!parentProfiles) return []
 
+    // Get parent notes from parents table
+    const { data: parentsData } = await supabase
+        .from('parents')
+        .select('profile_id, notes')
+        .in('profile_id', parentIds)
+
+    // Create a map of profile_id -> notes for quick lookup
+    const notesMap = new Map<string, string | null>()
+    parentsData?.forEach(parent => {
+        notesMap.set(parent.profile_id, parent.notes || null)
+    })
+
     // Map the profiles to ParentType
     const parents: ParentType[] = parentProfiles.map((profile: { id: string; first_name: string; last_name: string; gender: string; country: string; language: string; email: string | null; phone: string | null; status: string; role: string; avatar_url: string | null; created_at: string; updated_at: string | null }) => ({
         parent_id: profile.id,
@@ -264,6 +296,7 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
         status: profile.status,
         role: profile.role,
         avatar_url: profile.avatar_url,
+        notes: notesMap.get(profile.id) || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }))

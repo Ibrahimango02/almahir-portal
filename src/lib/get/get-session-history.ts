@@ -290,89 +290,149 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
     const supabase = createClient()
 
     try {
-        // Get all sessions with their class details
-        const { data: sessions, error: sessionsError } = await supabase
-            .from('class_sessions')
-            .select(`
-                id,
-                class_id,
-                start_date,
-                end_date,
-                status,
-                classes (
-                    title,
-                    subject
-                )
-            `)
-            .order('start_date', { ascending: false })
-
-        if (sessionsError) throw sessionsError
-        if (!sessions || sessions.length === 0) return []
-
-        const sessionIds = sessions.map(s => s.id)
-
-        // Get session history for all sessions
-        const { data: sessionHistory } = await supabase
+        // Step 1: Start with session_history - get all history records
+        const { data: sessionHistory, error: historyError } = await supabase
             .from('session_history')
             .select('*')
-            .in('session_id', sessionIds)
+            .order('created_at', { ascending: false })
 
-        // Only keep sessions that exist in session_history
-        const sessionHistoryIds = new Set((sessionHistory || []).map(h => h.session_id))
-        const filteredSessions = sessions.filter(s => sessionHistoryIds.has(s.id))
-        const filteredSessionIds = filteredSessions.map(s => s.id)
-        const filteredClassIds = [...new Set(filteredSessions.map(s => s.class_id))]
+        if (historyError) {
+            console.error('Error fetching session history:', historyError)
+            throw historyError
+        }
 
-        // Get session remarks for filtered sessions
+        if (!sessionHistory || sessionHistory.length === 0) {
+            return []
+        }
+
+        // Step 2: Get unique session IDs from history
+        const sessionIds = [...new Set(sessionHistory.map(h => h.session_id))]
+
+        // Step 3: Get the corresponding class_sessions records
+        const { data: sessions, error: sessionsError } = await supabase
+            .from('class_sessions')
+            .select('id, class_id, start_date, end_date, status')
+            .in('id', sessionIds)
+
+        if (sessionsError) {
+            console.error('Error fetching sessions:', sessionsError)
+            throw sessionsError
+        }
+
+        if (!sessions || sessions.length === 0) {
+            return []
+        }
+
+        // Step 4: Get unique class IDs
+        const classIds = [...new Set(sessions.map(s => s.class_id))]
+
+        // Step 5: Get class details
+        const { data: classes, error: classesError } = await supabase
+            .from('classes')
+            .select('id, title, subject')
+            .in('id', classIds)
+
+        if (classesError) {
+            console.error('Error fetching classes:', classesError)
+            throw classesError
+        }
+
+        // Step 6: Get session remarks
         const { data: sessionRemarks } = await supabase
             .from('session_remarks')
             .select('*')
-            .in('session_id', filteredSessionIds)
+            .in('session_id', sessionIds)
 
-        // Get all teachers for these classes
+        // Step 7: Get class teachers
         const { data: classTeachers } = await supabase
             .from('class_teachers')
             .select('class_id, teacher_id')
-            .in('class_id', filteredClassIds)
+            .in('class_id', classIds)
 
+        // Step 8: Get teacher profiles
         const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
-        const { data: teacherProfiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', teacherIds)
+        const { data: teacherProfiles } = teacherIds.length > 0
+            ? await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', teacherIds)
+            : { data: [] }
 
-        // Get all students for these classes
+        // Step 9: Get class students
         const { data: classStudents } = await supabase
             .from('class_students')
             .select('class_id, student_id')
-            .in('class_id', filteredClassIds)
+            .in('class_id', classIds)
 
+        // Step 10: Get student data from students table
         const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
-        const { data: studentProfiles } = await supabase
-            .from('profiles')
-            .select('*')
-            .in('id', studentIds)
+        const { data: studentData } = studentIds.length > 0
+            ? await supabase
+                .from('students')
+                .select('id, profile_id, student_type')
+                .in('id', studentIds)
+            : { data: [] }
 
-        // Get teacher attendance for filtered sessions
+        // Step 11: Get profiles for independent students
+        const independentStudentProfileIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
+        const { data: independentStudentProfiles } = independentStudentProfileIds.length > 0
+            ? await supabase
+                .from('profiles')
+                .select('*')
+                .in('id', independentStudentProfileIds)
+            : { data: [] }
+
+        // Step 12: Get child profiles for dependent students
+        const dependentStudentIds = studentData?.filter(s => s.student_type === 'dependent').map(s => s.id) || []
+        const { data: childProfiles } = dependentStudentIds.length > 0
+            ? await supabase
+                .from('child_profiles')
+                .select('student_id, first_name, last_name')
+                .in('student_id', dependentStudentIds)
+            : { data: [] }
+
+        // Step 13: Get teacher attendance
         const { data: teacherAttendance } = await supabase
             .from('teacher_attendance')
             .select('*')
-            .in('session_id', filteredSessionIds)
+            .in('session_id', sessionIds)
 
-        // Create mappings for efficient lookup
-        const sessionHistoryMap = new Map(
-            sessionHistory?.map(h => [h.session_id, h]) || []
+        // Step 14: Create lookup maps
+        const sessionMap = new Map(
+            sessions.map(s => [s.id, s])
+        )
+
+        const classMap = new Map(
+            (classes || []).map(c => [c.id, c])
         )
 
         const sessionRemarksMap = new Map(
-            sessionRemarks?.map(r => [r.session_id, r]) || []
+            (sessionRemarks || []).map(r => [r.session_id, r])
         )
 
         const teacherAttendanceMap = new Map(
-            teacherAttendance?.map(a => [a.session_id, a.attendance_status]) || []
+            (teacherAttendance || []).map(a => [a.session_id, a.attendance_status])
         )
 
-        // Create class to teacher mapping
+        // Step 15: Create student name map (student_id -> name)
+        const studentNameMap = new Map<string, string>()
+
+        // Map independent students (from profiles)
+        studentData?.forEach(student => {
+            if (student.student_type === 'independent' && student.profile_id) {
+                const profile = independentStudentProfiles?.find(p => p.id === student.profile_id)
+                if (profile) {
+                    studentNameMap.set(student.id, `${profile.first_name} ${profile.last_name}`)
+                }
+            }
+        })
+
+        // Map dependent students (from child_profiles)
+        childProfiles?.forEach(child => {
+            studentNameMap.set(child.student_id, `${child.first_name} ${child.last_name}`)
+        })
+
+        // Step 16: Create class to teacher mapping
         const classTeacherMap = new Map()
         classTeachers?.forEach(ct => {
             if (!classTeacherMap.has(ct.class_id)) {
@@ -381,7 +441,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             classTeacherMap.get(ct.class_id).push(ct.teacher_id)
         })
 
-        // Create class to students mapping
+        // Step 17: Create class to students mapping
         const classStudentMap = new Map()
         classStudents?.forEach(cs => {
             if (!classStudentMap.has(cs.class_id)) {
@@ -390,14 +450,19 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             classStudentMap.get(cs.class_id).push(cs.student_id)
         })
 
-        // Combine the data
-        const result = filteredSessions.map(session => {
-            const classData = Array.isArray(session.classes) ? session.classes[0] : session.classes
-            const history = sessionHistoryMap.get(session.id)
+        // Step 18: Combine the data - iterate over session_history records
+        const result = sessionHistory.map(history => {
+            const session = sessionMap.get(history.session_id)
+            if (!session) {
+                // Skip if session doesn't exist
+                return null
+            }
+
+            const classData = classMap.get(session.class_id)
             const remarks = sessionRemarksMap.get(session.id)
             const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
 
-            // Get teacher names for this class (as array)
+            // Get teacher names for this class
             const classTeacherIds = classTeacherMap.get(session.class_id) || []
             const teacherNames = classTeacherIds
                 .map((teacherId: string) => {
@@ -405,12 +470,11 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
                 })
 
-            // Get student names for this class (as array)
+            // Get student names for this class
             const classStudentIds = classStudentMap.get(session.class_id) || []
             const studentNames = classStudentIds
                 .map((studentId: string) => {
-                    const student = studentProfiles?.find(s => s.id === studentId)
-                    return student ? `${student.first_name} ${student.last_name}` : 'Unknown Student'
+                    return studentNameMap.get(studentId) || 'Unknown Student'
                 })
 
             return {
@@ -420,18 +484,18 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
                 subject: classData?.subject || 'Unknown Subject',
                 start_date: session.start_date,
                 end_date: session.end_date,
-                actual_start_time: history?.actual_start_time || null,
-                actual_end_time: history?.actual_end_time || null,
+                actual_start_time: history.actual_start_time || null,
+                actual_end_time: history.actual_end_time || null,
                 status: session.status,
                 teacher_names: teacherNames,
                 student_names: studentNames,
                 attendance_status: teacherAttendanceStatus,
-                notes: history?.notes || null,
+                notes: history.notes || null,
                 session_summary: remarks?.session_summary || null
             }
-        })
+        }).filter((item): item is NonNullable<typeof item> => item !== null)
 
-        // Filter to only past sessions or those with specific statuses, then sort by date (newest first)
+        // Step 19: Filter to only past sessions or those with specific statuses, then sort by date (newest first)
         const now = new Date()
         return result
             .filter(session => {

@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecentClasses } from "@/components/recent-classes";
 import { UpcomingClasses } from "@/components/upcoming-classes";
@@ -45,11 +45,8 @@ export function DashboardContent({ profile, sessionsData }: DashboardContentProp
     // Determine which data to show and what title to display
     const currentSessions = isParentView ? sessionsData : studentSessions;
     const currentTitle = isParentView
-        ? "Your Children's Classes Overview"
+        ? "Classes Overview"
         : `${selectedStudent?.first_name}'s Classes Overview`;
-    const currentDescription = isParentView
-        ? "View upcoming and recent classes for your children"
-        : `View upcoming and recent classes for ${selectedStudent?.first_name}`;
     const welcomeName = isParentView
         ? `${profile?.first_name} ${profile?.last_name}`
         : `${selectedStudent?.first_name} ${selectedStudent?.last_name}`;
@@ -86,7 +83,6 @@ export function DashboardContent({ profile, sessionsData }: DashboardContentProp
                 <Card className="col-span-7">
                     <CardHeader>
                         <CardTitle>{currentTitle}</CardTitle>
-                        <CardDescription>{currentDescription}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="upcoming" className="space-y-4">

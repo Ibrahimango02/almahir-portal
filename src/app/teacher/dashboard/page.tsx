@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RecentClasses } from "@/components/recent-classes"
 import { UpcomingClasses } from "@/components/upcoming-classes"
@@ -47,7 +47,6 @@ export default async function TeacherDashboard() {
                 <Card className="col-span-7">
                     <CardHeader>
                         <CardTitle>Classes Overview</CardTitle>
-                        <CardDescription>View and manage your upcoming and recent classes</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Tabs defaultValue="upcoming" className="space-y-4">

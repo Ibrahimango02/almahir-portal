@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { getAllSessionHistoryForReports } from "@/lib/get/get-session-history"
 import { format, parseISO } from "date-fns"
-import { X, BookOpen, Search } from "lucide-react"
-import Link from "next/link"
+import { X, History, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 type SessionReportType = {
     session_id: string;
@@ -26,7 +26,8 @@ type SessionReportType = {
     session_summary: string | null;
 };
 
-export default function AdminReportsPage() {
+export default function ReportsPage() {
+    const router = useRouter()
     const [sessions, setSessions] = useState<SessionReportType[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
@@ -222,7 +223,7 @@ export default function AdminReportsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <BookOpen className="h-5 w-5" />
+                        <History className="h-5 w-5" />
                         Session History
                         <span className="text-sm text-muted-foreground">
                             ({filteredSessions.length} sessions)
@@ -232,7 +233,7 @@ export default function AdminReportsPage() {
                 <CardContent>
                     {filteredSessions.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
                             <p>No sessions found</p>
                             <p className="text-sm">
                                 {search || teacherFilter || studentFilter || classFilter
@@ -259,18 +260,14 @@ export default function AdminReportsPage() {
                                     {filteredSessions.map((session) => (
                                         <tr
                                             key={session.session_id}
+                                            onClick={() => router.push(`/admin/classes/${session.class_id}/${session.session_id}`)}
                                             className="hover:bg-gray-50 transition-colors duration-150 cursor-pointer"
                                         >
                                             <td className="px-4 py-2 whitespace-nowrap">
-                                                <Link
-                                                    href={`/admin/classes/${session.class_id}/${session.session_id}`}
-                                                    className="block"
-                                                >
-                                                    <div className="text-sm font-medium text-gray-900 hover:text-primary transition-colors">
-                                                        {session.title}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500">{session.subject}</div>
-                                                </Link>
+                                                <div className="text-sm font-medium text-gray-900 hover:text-primary transition-colors">
+                                                    {session.title}
+                                                </div>
+                                                <div className="text-xs text-gray-500">{session.subject}</div>
                                             </td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                 {session.teacher_names.join(', ')}
