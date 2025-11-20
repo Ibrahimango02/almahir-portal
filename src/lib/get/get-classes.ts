@@ -404,13 +404,18 @@ export async function getClasses(): Promise<ClassType[]> {
 export async function getClassesToday(): Promise<ClassType[]> {
     const supabase = createClient()
 
-    // Get today's date range in ISO format
-    const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date()
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth()
+    const date = now.getUTCDate()
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0))
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999))
 
     // Get all classes
     const { data: classes, error } = await supabase
@@ -591,13 +596,18 @@ export async function getClassesToday(): Promise<ClassType[]> {
 export async function getSessionsToday(): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in ISO format (local time)
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
 
     // 1. Get all sessions for today
     const { data: sessions } = await supabase
@@ -2019,13 +2029,18 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
 export async function getTeacherSessionsToday(teacherId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in ISO format (local time)
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
 
     // 1. Get class IDs for this teacher
     const { data: teacherClasses } = await supabase
@@ -2176,13 +2191,18 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
 export async function getStudentSessionsToday(studentId: string): Promise<ClassSessionType[]> {
     const supabase = createClient();
 
-    // Get today's date range in ISO format (local time)
-    const today = new Date();
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0));
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999));
 
     // 1. Get class IDs for this student
     const { data: studentClasses } = await supabase
@@ -2513,18 +2533,21 @@ export async function getStudentClassCount(studentId: string) {
 export async function getWeeklySessionsCount() {
     const supabase = createClient()
 
-    // Get current date
+    // Get current date in UTC
     const now = new Date()
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth()
+    const date = now.getUTCDate()
+    const dayOfWeek = now.getUTCDay() // 0 = Sunday, 1 = Monday, etc.
 
-    // Get start of current week (Monday)
-    const startOfWeek = new Date(now)
-    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1))
-    startOfWeek.setHours(0, 0, 0, 0)
+    // Get start of current week (Monday) in UTC
+    // Calculate days to subtract to get to Monday (if Sunday, subtract 6; otherwise subtract dayOfWeek - 1)
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+    const mondayDate = new Date(Date.UTC(year, month, date - daysToMonday, 0, 0, 0, 0))
+    const startOfWeek = mondayDate
 
-    // Get end of current week (Sunday)
-    const endOfWeek = new Date(startOfWeek)
-    endOfWeek.setDate(startOfWeek.getDate() + 6)
-    endOfWeek.setHours(23, 59, 59, 999)
+    // Get end of current week (Sunday) in UTC
+    const endOfWeek = new Date(Date.UTC(year, month, date - daysToMonday + 6, 23, 59, 59, 999))
 
     // Query class sessions within the current week
     const { count, error } = await supabase
@@ -2544,13 +2567,18 @@ export async function getWeeklySessionsCount() {
 export async function getSessionsCountByStatus(status: string) {
     const supabase = createClient()
 
-    // Get today's date range in ISO format
-    const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date()
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth()
+    const date = now.getUTCDate()
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0))
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999))
 
     const { count, error } = await supabase
         .from('class_sessions')
@@ -2607,12 +2635,18 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
     const classIds = [...new Set(classStudents.map(cs => cs.class_id))]
 
     // 3. Get today's sessions for these classes
-    const today = new Date()
-    const startOfDay = new Date(today)
-    startOfDay.setHours(0, 0, 0, 0)
-
-    const endOfDay = new Date(today)
-    endOfDay.setHours(23, 59, 59, 999)
+    // Get today's date range in UTC (database stores dates in UTC)
+    // Use UTC methods to ensure consistent behavior across all server environments
+    const now = new Date()
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth()
+    const date = now.getUTCDate()
+    
+    // Start of today in UTC
+    const startOfDay = new Date(Date.UTC(year, month, date, 0, 0, 0, 0))
+    
+    // End of today in UTC
+    const endOfDay = new Date(Date.UTC(year, month, date, 23, 59, 59, 999))
 
     const { data: sessions } = await supabase
         .from('class_sessions')
