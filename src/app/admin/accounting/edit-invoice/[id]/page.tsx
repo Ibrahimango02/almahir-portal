@@ -150,7 +150,7 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
                         <div>
                             <p className="text-sm text-muted-foreground">Amount</p>
                             <p className="font-medium text-green-600">
-                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} {invoice.subscription?.currency || 'CAD'}
                             </p>
                         </div>
                         <div>

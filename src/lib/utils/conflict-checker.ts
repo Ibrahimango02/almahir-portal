@@ -2,6 +2,7 @@ import { TimeSlot, WeeklySchedule } from '@/types'
 import { getSessionsByTeacherId, getSessionsByStudentId } from '@/lib/get/get-classes'
 import { getTeacherAvailability } from '@/lib/get/get-teachers'
 import { formatInTimeZone } from 'date-fns-tz'
+import { createClient } from '@/utils/supabase/client'
 
 export interface ConflictInfo {
     hasConflict: boolean
@@ -88,6 +89,19 @@ export async function checkTeacherScheduleConflicts(
         // Get teacher's existing sessions
         const existingSessions = await getSessionsByTeacherId(teacherId)
 
+        // Get unique class IDs from sessions to fetch class data
+        const classIds = [...new Set(existingSessions.map(s => s.class_id))]
+        const supabase = createClient()
+        const { data: classes } = await supabase
+            .from('classes')
+            .select('id, days_repeated')
+            .in('id', classIds)
+
+        // Create a map of class_id to days_repeated for quick lookup
+        const classDaysRepeatedMap = new Map(
+            classes?.map(c => [c.id, c.days_repeated]) || []
+        )
+
         // Check each day of the new class
         for (const [day, time] of Object.entries(classTimes)) {
             const normalizedDay = normalizeDayName(day)
@@ -107,23 +121,42 @@ export async function checkTeacherScheduleConflicts(
                     sessionDate >= startDate &&
                     sessionDate <= endDate) {
 
-                    // Convert session times to local time for comparison using the specified timezone
-                    // Note: formatInTimeZone automatically handles DST (EDT vs EST for America/New_York)
-                    // The timezone conversion will correctly show EST for Nov-Dec and EDT for Mar-Nov
-                    const sessionStartLocal = formatInTimeZone(sessionDate, timezone, 'HH:mm')
-                    const sessionEndDate = new Date(session.end_date)
-                    const sessionEndLocal = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                    // Get the class's days_repeated to find the recurring time for this day
+                    const daysRepeated = classDaysRepeatedMap.get(session.class_id)
+                    let existingStartTime: string
+                    let existingEndTime: string
+
+                    if (daysRepeated && typeof daysRepeated === 'object') {
+                        // Get the time slot for this day from days_repeated
+                        const dayTimeSlot = (daysRepeated as Record<string, { start: string; end: string }>)[normalizedDay]
+
+                        if (dayTimeSlot && dayTimeSlot.start && dayTimeSlot.end) {
+                            // Use the class's recurring time (stored in UTC) and convert to target timezone
+                            existingStartTime = convertUtcTimeToLocalForComparison(dayTimeSlot.start, timezone)
+                            existingEndTime = convertUtcTimeToLocalForComparison(dayTimeSlot.end, timezone)
+                        } else {
+                            // Fallback to session timestamp if days_repeated doesn't have this day
+                            existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')
+                            const sessionEndDate = new Date(session.end_date)
+                            existingEndTime = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                        }
+                    } else {
+                        // Fallback to session timestamp if days_repeated is not available
+                        existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')
+                        const sessionEndDate = new Date(session.end_date)
+                        existingEndTime = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                    }
 
                     // Check for overlap
                     const newSlot: TimeSlot = { start: time.start, end: time.end }
-                    const existingSlot: TimeSlot = { start: sessionStartLocal, end: sessionEndLocal }
+                    const existingSlot: TimeSlot = { start: existingStartTime, end: existingEndTime }
 
                     if (doTimeSlotsOverlap(newSlot, existingSlot)) {
                         conflicts.push({
                             type: 'schedule',
                             day: day.charAt(0).toUpperCase() + day.slice(1),
                             message: `Conflicts with existing class "${session.title}"`,
-                            existingTime: `${sessionStartLocal} - ${sessionEndLocal}`,
+                            existingTime: `${existingStartTime} - ${existingEndTime}`,
                             newTime: `${time.start} - ${time.end}`
                         })
                     }
@@ -307,6 +340,19 @@ export async function checkStudentScheduleConflicts(
         // Get student's existing sessions
         const existingSessions = await getSessionsByStudentId(studentId)
 
+        // Get unique class IDs from sessions to fetch class data
+        const classIds = [...new Set(existingSessions.map(s => s.class_id))]
+        const supabase = createClient()
+        const { data: classes } = await supabase
+            .from('classes')
+            .select('id, days_repeated')
+            .in('id', classIds)
+
+        // Create a map of class_id to days_repeated for quick lookup
+        const classDaysRepeatedMap = new Map(
+            classes?.map(c => [c.id, c.days_repeated]) || []
+        )
+
         // Check each day of the new class
         for (const [day, time] of Object.entries(classTimes)) {
             const normalizedDay = normalizeDayName(day)
@@ -326,23 +372,42 @@ export async function checkStudentScheduleConflicts(
                     sessionDate >= startDate &&
                     sessionDate <= endDate) {
 
-                    // Convert session times to local time for comparison using the specified timezone
-                    // Note: formatInTimeZone automatically handles DST (EDT vs EST for America/New_York)
-                    // The timezone conversion will correctly show EST for Nov-Dec and EDT for Mar-Nov
-                    const sessionStartLocal = formatInTimeZone(sessionDate, timezone, 'HH:mm')
-                    const sessionEndDate = new Date(session.end_date)
-                    const sessionEndLocal = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                    // Get the class's days_repeated to find the recurring time for this day
+                    const daysRepeated = classDaysRepeatedMap.get(session.class_id)
+                    let existingStartTime: string
+                    let existingEndTime: string
+
+                    if (daysRepeated && typeof daysRepeated === 'object') {
+                        // Get the time slot for this day from days_repeated
+                        const dayTimeSlot = (daysRepeated as Record<string, { start: string; end: string }>)[normalizedDay]
+
+                        if (dayTimeSlot && dayTimeSlot.start && dayTimeSlot.end) {
+                            // Use the class's recurring time (stored in UTC) and convert to target timezone
+                            existingStartTime = convertUtcTimeToLocalForComparison(dayTimeSlot.start, timezone)
+                            existingEndTime = convertUtcTimeToLocalForComparison(dayTimeSlot.end, timezone)
+                        } else {
+                            // Fallback to session timestamp if days_repeated doesn't have this day
+                            existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')
+                            const sessionEndDate = new Date(session.end_date)
+                            existingEndTime = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                        }
+                    } else {
+                        // Fallback to session timestamp if days_repeated is not available
+                        existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')
+                        const sessionEndDate = new Date(session.end_date)
+                        existingEndTime = formatInTimeZone(sessionEndDate, timezone, 'HH:mm')
+                    }
 
                     // Check for overlap
                     const newSlot: TimeSlot = { start: time.start, end: time.end }
-                    const existingSlot: TimeSlot = { start: sessionStartLocal, end: sessionEndLocal }
+                    const existingSlot: TimeSlot = { start: existingStartTime, end: existingEndTime }
 
                     if (doTimeSlotsOverlap(newSlot, existingSlot)) {
                         conflicts.push({
                             type: 'schedule',
                             day: day.charAt(0).toUpperCase() + day.slice(1),
                             message: `Conflicts with existing class "${session.title}"`,
-                            existingTime: `${sessionStartLocal} - ${sessionEndLocal}`,
+                            existingTime: `${existingStartTime} - ${existingEndTime}`,
                             newTime: `${time.start} - ${time.end}`
                         })
                     }

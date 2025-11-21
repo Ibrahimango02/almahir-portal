@@ -110,7 +110,7 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
             .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
-            .select('id, name, total_amount')
+            .select('id, name, total_amount, currency')
             .in('id', subscriptionIds)
     ]);
 
@@ -217,6 +217,7 @@ export async function getInvoices(): Promise<StudentInvoiceType[]> {
                 id: subscription.id,
                 name: subscription.name,
                 total_amount: subscription.total_amount,
+                currency: subscription.currency,
             } : undefined,
             parent,
         };
@@ -344,7 +345,7 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
     // Get subscription data
     const { data: subscription } = await supabase
         .from('subscriptions')
-        .select('id, name, total_amount')
+        .select('id, name, total_amount, currency')
         .eq('id', studentSubscription.subscription_id)
         .single();
 
@@ -367,6 +368,7 @@ export async function getInvoiceById(id: string): Promise<StudentInvoiceType | n
             id: subscription.id,
             name: subscription.name,
             total_amount: subscription.total_amount,
+            currency: subscription.currency,
         } : undefined,
         parent,
     };
@@ -496,7 +498,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
             .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
-            .select('id, name, total_amount')
+            .select('id, name, total_amount, currency')
             .in('id', subscriptionIds)
     ]);
 
@@ -604,6 +606,7 @@ export async function getInvoicesByStudentId(studentId: string): Promise<Student
                 id: subscription.id,
                 name: subscription.name,
                 total_amount: subscription.total_amount,
+                currency: subscription.currency,
             } : undefined,
             parent,
         };
@@ -713,7 +716,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
             .in('student_id', dependentStudentIds) : Promise.resolve({ data: [] }),
         supabase
             .from('subscriptions')
-            .select('id, name, total_amount')
+            .select('id, name, total_amount, currency')
             .in('id', subscriptionIds)
     ]);
 
@@ -821,6 +824,7 @@ export async function getInvoicesByParentId(parentId: string): Promise<StudentIn
                 id: subscription.id,
                 name: subscription.name,
                 total_amount: subscription.total_amount,
+                currency: subscription.currency,
             } : undefined,
             parent,
         };

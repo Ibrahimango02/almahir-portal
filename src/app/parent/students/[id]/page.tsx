@@ -557,7 +557,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                         <span className="text-sm font-medium">Subscription Fee</span>
                                     </div>
                                     <p className="text-xl font-bold text-primary">
-                                        {studentSubscription.subscription?.total_amount} CAD
+                                        {studentSubscription.subscription?.total_amount} {studentSubscription.subscription?.currency || 'CAD'}
                                     </p>
                                     <p className="text-xs text-muted-foreground">every {studentSubscription.subscription?.rate} months</p>
                                 </div>
@@ -622,7 +622,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                                 {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
                                             </td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm">
-                                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
+                                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} {invoice.subscription?.currency || 'CAD'}
                                             </td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.due_date ? format(parseISO(invoice.due_date), "MMM dd, yyyy") : "-"}</td>
                                             <td className="px-4 py-2 whitespace-nowrap text-sm">{invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}</td>

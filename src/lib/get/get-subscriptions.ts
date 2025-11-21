@@ -31,7 +31,8 @@ export async function getSubscriptionInfoByStudentId(studentId: string): Promise
                 hours_per_month,
                 rate,
                 hourly_rate,
-                total_amount
+                total_amount,
+                currency
             )
         `)
         .eq('student_id', studentId)
@@ -66,7 +67,8 @@ export async function getAllStudentSubscriptions(studentId: string): Promise<Stu
                 hours_per_month,
                 rate,
                 hourly_rate,
-                total_amount
+                total_amount,
+                currency
             )
         `)
         .eq('student_id', studentId)
@@ -74,7 +76,7 @@ export async function getAllStudentSubscriptions(studentId: string): Promise<Stu
 
     if (error) {
         console.error('Error fetching student subscriptions:', error);
-        return [];  
+        return [];
     }
 
     return data || [];

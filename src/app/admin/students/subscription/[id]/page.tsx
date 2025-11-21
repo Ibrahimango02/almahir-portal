@@ -144,7 +144,7 @@ export default function StudentSubscriptionPage({ params }: { params: Promise<{ 
                                 </div>
                                 <div>
                                     <span className="text-muted-foreground">Total Amount:</span>
-                                    <span className="ml-2 font-medium">{studentSubscription.subscription?.total_amount} CAD</span>
+                                    <span className="ml-2 font-medium">{studentSubscription.subscription?.total_amount} {studentSubscription.subscription?.currency || 'CAD'}</span>
                                 </div>
                                 <div>
                                     <span className="text-muted-foreground">Hours/Month:</span>

@@ -27,7 +27,7 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
     const [endDate, setEndDate] = useState<string>(currentSubscription?.next_payment_date?.split('T')[0] || '')
     const [loading, setLoading] = useState(false)
     const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionType | null>(null)
-    const [periodType, setPeriodType] = useState<'4-weeks' | 'month'>('month')
+    const [periodType, setPeriodType] = useState<'4-weeks' | 'month'>('4-weeks')
     const router = useRouter();
 
     useEffect(() => {
@@ -154,7 +154,7 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                                     .sort((a, b) => a.name.localeCompare(b.name))
                                     .map((subscription) => (
                                         <SelectItem key={subscription.id} value={subscription.id}>
-                                            {subscription.name} - ${subscription.total_amount} CAD
+                                            {subscription.name} - {subscription.hours_per_month} hours - ${subscription.total_amount} {subscription.currency || 'CAD'}
                                         </SelectItem>
                                     ))}
                             </SelectContent>
@@ -166,19 +166,19 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                         <div className="flex gap-2">
                             <Button
                                 type="button"
-                                style={{ backgroundColor: periodType === 'month' ? '#3d8f5b' : undefined, color: periodType === 'month' ? 'white' : undefined, borderColor: '#3d8f5b' }}
-                                variant={periodType === 'month' ? 'default' : 'outline'}
-                                onClick={() => setPeriodType('month')}
-                            >
-                                Month
-                            </Button>
-                            <Button
-                                type="button"
                                 style={{ backgroundColor: periodType === '4-weeks' ? '#3d8f5b' : undefined, color: periodType === '4-weeks' ? 'white' : undefined, borderColor: '#3d8f5b' }}
                                 variant={periodType === '4-weeks' ? 'default' : 'outline'}
                                 onClick={() => setPeriodType('4-weeks')}
                             >
                                 4 Weeks
+                            </Button>
+                            <Button
+                                type="button"
+                                style={{ backgroundColor: periodType === 'month' ? '#3d8f5b' : undefined, color: periodType === 'month' ? 'white' : undefined, borderColor: '#3d8f5b' }}
+                                variant={periodType === 'month' ? 'default' : 'outline'}
+                                onClick={() => setPeriodType('month')}
+                            >
+                                Month
                             </Button>
                         </div>
                     </div>

@@ -207,126 +207,126 @@ export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoic
                                 </TableRow>
                             ) : (
                                 paginatedInvoices.map((invoice, idx) => (
-                                <TableRow
-                                    key={invoice.invoice_id || idx}
-                                    className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
-                                >
+                                    <TableRow
+                                        key={invoice.invoice_id || idx}
+                                        className={`hover:bg-muted/30 transition-all duration-150 cursor-pointer ${idx % 2 === 0 ? 'bg-background' : 'bg-muted/10'}`}
+                                    >
 
 
-                                    {/* Student Info */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {invoice.student ? `${invoice.student.first_name} ${invoice.student.last_name}` : 'Loading...'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Parents */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Months */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-sm">
-                                                {formatMonthRange(invoice.months)}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Amount */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="font-semibold text-sm text-green-600">
-                                                {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} CAD
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Due Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span>
-                                                {format(parseISO(invoice.due_date), "MMM dd, yyyy")}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Paid Date */}
-                                    <TableCell className="py-2 px-3">
-                                        <div className="flex items-center gap-1.5">
-                                            <span>
-                                                {invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-
-                                    {/* Status */}
-                                    <TableCell className="py-2 px-3 text-center">
-                                        <div className="max-w-[100px] mx-auto">
-                                            <InvoicePaymentStatusBadge status={invoice.status} />
-                                        </div>
-                                    </TableCell>
-                                    {currentUserRole === 'admin' && (
-                                        <TableCell data-no-navigation className="py-2 px-3">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
-                                                    >
-                                                        <MoreHorizontal className="h-3.5 w-3.5" />
-                                                        <span className="sr-only">Open menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem asChild className="cursor-pointer text-xs">
-                                                        <Link href={getActionUrl('edit', invoice.invoice_id)} className="flex items-center">
-                                                            <Edit className="mr-2 h-3.5 w-3.5" />
-                                                            Edit Invoice
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
-                                                    <DropdownMenuItem
-                                                        data-status-update
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleStatusUpdate(invoice.invoice_id, 'paid')
-                                                        }}
-                                                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
-                                                        className="cursor-pointer text-xs"
-                                                    >
-                                                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                                                        Mark as Paid
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        data-status-update
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                            handleStatusUpdate(invoice.invoice_id, 'cancelled')
-                                                        }}
-                                                        disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
-                                                        className="cursor-pointer text-xs"
-                                                    >
-                                                        <XCircle className="mr-2 h-3.5 w-3.5" />
-                                                        Cancel Invoice
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        {/* Student Info */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {invoice.student ? `${invoice.student.first_name} ${invoice.student.last_name}` : 'Loading...'}
+                                                </span>
+                                            </div>
                                         </TableCell>
-                                    )}
-                                </TableRow>
-                            ))
+
+                                        {/* Parents */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {invoice.parent ? `${invoice.parent.first_name} ${invoice.parent.last_name}` : 'N/A'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Months */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">
+                                                    {formatMonthRange(invoice.months)}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Amount */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="font-semibold text-sm text-green-600">
+                                                    {invoice.subscription?.total_amount?.toFixed(2) || '0.00'} {invoice.subscription?.currency || 'CAD'}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Due Date */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span>
+                                                    {format(parseISO(invoice.due_date), "MMM dd, yyyy")}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Paid Date */}
+                                        <TableCell className="py-2 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                                <span>
+                                                    {invoice.paid_date ? format(parseISO(invoice.paid_date), "MMM dd, yyyy") : "-"}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+
+                                        {/* Status */}
+                                        <TableCell className="py-2 px-3 text-center">
+                                            <div className="max-w-[100px] mx-auto">
+                                                <InvoicePaymentStatusBadge status={invoice.status} />
+                                            </div>
+                                        </TableCell>
+                                        {currentUserRole === 'admin' && (
+                                            <TableCell data-no-navigation className="py-2 px-3">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary"
+                                                        >
+                                                            <MoreHorizontal className="h-3.5 w-3.5" />
+                                                            <span className="sr-only">Open menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem asChild className="cursor-pointer text-xs">
+                                                            <Link href={getActionUrl('edit', invoice.invoice_id)} className="flex items-center">
+                                                                <Edit className="mr-2 h-3.5 w-3.5" />
+                                                                Edit Invoice
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuLabel className="font-semibold text-xs">Update Status</DropdownMenuLabel>
+                                                        <DropdownMenuItem
+                                                            data-status-update
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleStatusUpdate(invoice.invoice_id, 'paid')
+                                                            }}
+                                                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'paid'}
+                                                            className="cursor-pointer text-xs"
+                                                        >
+                                                            <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                                                            Mark as Paid
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            data-status-update
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleStatusUpdate(invoice.invoice_id, 'cancelled')
+                                                            }}
+                                                            disabled={updatingStatus === invoice.invoice_id || invoice.status === 'cancelled'}
+                                                            className="cursor-pointer text-xs"
+                                                        >
+                                                            <XCircle className="mr-2 h-3.5 w-3.5" />
+                                                            Cancel Invoice
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        )}
+                                    </TableRow>
+                                ))
                             )}
                         </TableBody>
                     </Table>

@@ -302,6 +302,7 @@ export type SubscriptionType = {
     rate: number
     hourly_rate: number
     total_amount: number | null
+    currency: string | null
     created_at: string
     updated_at: string | null
 }
@@ -387,6 +388,7 @@ export type StudentInvoiceType = {
         id: string;
         name: string;
         total_amount: number;
+        currency: string | null;
     };
     parent?: {
         parent_id: string;
