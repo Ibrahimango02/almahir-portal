@@ -135,7 +135,7 @@ export function AdminSidebar() {
         title: "Link Copied",
         description: "Registration page link copied to clipboard",
       })
-    } catch (error) {
+    } catch {
       toast({
         title: "Failed to Copy",
         description: "Could not copy link to clipboard",

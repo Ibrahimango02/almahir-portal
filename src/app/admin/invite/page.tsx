@@ -109,7 +109,7 @@ export default function InviteUserPage() {
     }
 
     return (
-        <div className="flex flex-col gap-6 min-h-screen py-12 px-4 bg-background">
+        <div className="flex flex-col gap-6 min-h-screen py-12 px-4">
             <h1 className="text-4xl font-bold tracking-tight text-center mb-8">Invite User</h1>
 
             <Card className="max-w-4xl mx-auto w-full shadow-lg">
