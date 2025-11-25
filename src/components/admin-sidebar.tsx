@@ -21,7 +21,8 @@ import {
   Plus,
   ScrollText,
   Bookmark,
-  UserSearch
+  UserSearch,
+  Link as LinkIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ import { logout } from "@/lib/auth/auth-actions"
 import { getProfile } from "@/lib/get/get-profiles"
 import { ProfileType } from "@/types"
 import { NotificationBell } from "@/components/notification-bell"
+import { useToast } from "@/hooks/use-toast"
 
 const routes = [
   {
@@ -123,6 +125,24 @@ export function AdminSidebar() {
   const [profile, setProfile] = useState<ProfileType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [timezone, setTimezone] = useState<string>("")
+  const { toast } = useToast()
+
+  const copyRegistrationLink = async () => {
+    try {
+      const registrationUrl = `${window.location.origin}/register`
+      await navigator.clipboard.writeText(registrationUrl)
+      toast({
+        title: "Link Copied",
+        description: "Registration page link copied to clipboard",
+      })
+    } catch (error) {
+      toast({
+        title: "Failed to Copy",
+        description: "Could not copy link to clipboard",
+        variant: "destructive",
+      })
+    }
+  }
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -207,21 +227,33 @@ export function AdminSidebar() {
               {route.label}
             </Link>
           ))}
-          {/* Users subheading with Invite User button */}
+          {/* Users subheading with Invite User and Copy Registration Link buttons */}
           <div className="mt-4 mb-1 px-3 flex items-center justify-between">
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</span>
-            <Button
-              asChild
-              variant="ghost"
-              size="icon"
-              className="ml-2 h-6 w-6 p-0"
-              style={{ lineHeight: 0 }}
-              title="Invite User"
-            >
-              <Link href="/admin/invite">
-                <Plus className="h-4 w-4" />
-              </Link>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0"
+                style={{ lineHeight: 0 }}
+                title="Copy Registration Link"
+                onClick={copyRegistrationLink}
+              >
+                <LinkIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0"
+                style={{ lineHeight: 0 }}
+                title="Invite User"
+              >
+                <Link href="/admin/invite">
+                  <Plus className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
           {userRoutes.map((route) => (
             <Link
