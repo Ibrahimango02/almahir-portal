@@ -6,7 +6,6 @@ export async function createStudentSessionNotes(params: {
     student_id: string
     notes?: string
     performance_rating?: number
-    participation_level?: number
 }): Promise<{ success: boolean; data?: StudentSessionNotesType; error?: { message: string } }> {
     const supabase = await createClient()
 
@@ -35,8 +34,7 @@ export async function createStudentSessionNotes(params: {
                 session_id: params.session_id,
                 student_id: params.student_id,
                 notes: params.notes || null,
-                performance_rating: params.performance_rating || null,
-                participation_level: params.participation_level || null
+                performance_rating: params.performance_rating || null
             })
             .select()
             .single()
@@ -63,7 +61,6 @@ export async function updateStudentSessionNotes(params: {
     student_id: string
     notes?: string
     performance_rating?: number
-    participation_level?: number
 }): Promise<{ success: boolean; data?: StudentSessionNotesType; error?: { message: string } }> {
     const supabase = await createClient()
 
@@ -79,7 +76,6 @@ export async function updateStudentSessionNotes(params: {
             .update({
                 notes: params.notes || null,
                 performance_rating: params.performance_rating || null,
-                participation_level: params.participation_level || null,
                 updated_at: new Date().toISOString()
             })
             .eq('session_id', params.session_id)
@@ -109,7 +105,6 @@ export async function upsertStudentSessionNotes(params: {
     student_id: string
     notes?: string
     performance_rating?: number
-    participation_level?: number
 }): Promise<{ success: boolean; data?: StudentSessionNotesType; error?: { message: string } }> {
     const supabase = await createClient()
 
@@ -127,7 +122,6 @@ export async function upsertStudentSessionNotes(params: {
                 student_id: params.student_id,
                 notes: params.notes || null,
                 performance_rating: params.performance_rating || null,
-                participation_level: params.participation_level || null,
                 updated_at: new Date().toISOString()
             }, {
                 onConflict: 'session_id,student_id'

@@ -328,7 +328,6 @@ export type StudentSessionNotesType = {
     student_id: string
     notes: string | null
     performance_rating: number | null
-    participation_level: number | null
     created_at: string
     updated_at: string
 }

@@ -32,7 +32,6 @@ interface StudentNote {
     student_id: string
     notes: string
     performance_rating: number | null
-    participation_level: number | null
 }
 
 
@@ -55,8 +54,7 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
                 const initialNotes: StudentNote[] = students.map(student => ({
                     student_id: student.student_id,
                     notes: "",
-                    performance_rating: null,
-                    participation_level: null
+                    performance_rating: null
                 }))
                 setStudentNotes(initialNotes)
 
@@ -74,28 +72,10 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
                     const updatedNotes = initialNotes.map(note => {
                         const existingNote = notes.find((n: StudentSessionNotesType) => n.student_id === note.student_id)
                         if (existingNote) {
-                            // Convert string participation_level to number if needed
-                            let participationLevel: number | null = null
-                            if (existingNote.participation_level) {
-                                if (typeof existingNote.participation_level === 'string') {
-                                    // Handle legacy string values
-                                    switch (existingNote.participation_level) {
-                                        case 'excellent': participationLevel = 5; break
-                                        case 'good': participationLevel = 4; break
-                                        case 'bad': participationLevel = 2; break
-                                        case 'absent': participationLevel = 1; break
-                                        default: participationLevel = null
-                                    }
-                                } else {
-                                    participationLevel = existingNote.participation_level
-                                }
-                            }
-
                             return {
                                 ...note,
                                 notes: existingNote.notes || "",
-                                performance_rating: existingNote.performance_rating,
-                                participation_level: participationLevel
+                                performance_rating: existingNote.performance_rating
                             }
                         }
                         return note
@@ -157,8 +137,7 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
                     session_id: sessionId,
                     student_id: note.student_id,
                     notes: note.notes,
-                    performance_rating: note.performance_rating || undefined,
-                    participation_level: note.participation_level || undefined
+                    performance_rating: note.performance_rating || undefined
                 })
 
                 if (result.success) {
@@ -231,7 +210,7 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
 
             {/* Student Notes Section */}
             <div className="space-y-4">
-                <Label className="text-sm font-medium">Individual Student Notes</Label>
+                <Label className="text-sm font-medium">Student Notes</Label>
                 <div className="space-y-4 max-h-[400px] overflow-y-auto">
                     {students.map((student) => {
                         const studentNote = studentNotes.find(note => note.student_id === student.student_id)
@@ -266,44 +245,23 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
                                         />
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <div className="space-y-2">
-                                            <Label htmlFor={`performance-${student.student_id}`} className="text-xs font-medium">Performance Rating</Label>
-                                            <Select
-                                                value={studentNote?.performance_rating?.toString() || ""}
-                                                onValueChange={(value) => updateStudentNote(student.student_id, 'performance_rating', value ? parseInt(value) : null)}
-                                            >
-                                                <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue placeholder="Select rating" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1">1 - Poor</SelectItem>
-                                                    <SelectItem value="2">2 - Below Average</SelectItem>
-                                                    <SelectItem value="3">3 - Average</SelectItem>
-                                                    <SelectItem value="4">4 - Good</SelectItem>
-                                                    <SelectItem value="5">5 - Excellent</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor={`participation-${student.student_id}`} className="text-xs font-medium">Participation Level</Label>
-                                            <Select
-                                                value={studentNote?.participation_level?.toString() || ""}
-                                                onValueChange={(value) => updateStudentNote(student.student_id, 'participation_level', value ? parseInt(value) : null)}
-                                            >
-                                                <SelectTrigger className="h-8 text-xs">
-                                                    <SelectValue placeholder="Select level" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="1">1 - Poor</SelectItem>
-                                                    <SelectItem value="2">2 - Below Average</SelectItem>
-                                                    <SelectItem value="3">3 - Average</SelectItem>
-                                                    <SelectItem value="4">4 - Good</SelectItem>
-                                                    <SelectItem value="5">5 - Excellent</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor={`performance-${student.student_id}`} className="text-xs font-medium">Performance Rating</Label>
+                                        <Select
+                                            value={studentNote?.performance_rating?.toString() || ""}
+                                            onValueChange={(value) => updateStudentNote(student.student_id, 'performance_rating', value ? parseInt(value) : null)}
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue placeholder="Select rating" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="1">1 - Poor</SelectItem>
+                                                <SelectItem value="2">2 - Below Average</SelectItem>
+                                                <SelectItem value="3">3 - Average</SelectItem>
+                                                <SelectItem value="4">4 - Good</SelectItem>
+                                                <SelectItem value="5">5 - Excellent</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </div>
@@ -327,6 +285,7 @@ export function SessionRemarksForm({ sessionId, students, onClose }: SessionRema
                     onClick={handleSave}
                     disabled={saving || !sessionRemarks.trim()}
                     className="min-w-[140px] px-6"
+                    variant="green"
                 >
                     {saving ? (
                         <>

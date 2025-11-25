@@ -789,9 +789,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       <Dialog open={showSessionRemarksDialog} onOpenChange={setShowSessionRemarksDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Session Remarks & Student Notes</DialogTitle>
+            <DialogTitle>Session Remarks</DialogTitle>
             <DialogDescription>
-              The session has been ended. Please provide a summary of the session and individual student notes.
+              The session has ended. Please provide a summary of the session and individual student notes.
             </DialogDescription>
           </DialogHeader>
 

@@ -34,7 +34,6 @@ interface StudentNote {
     student_id: string
     notes: string
     performance_rating: number | null
-    participation_level: number | null
 }
 
 export function SessionRemarks({ sessionId, sessionStatus, students, userRole }: SessionRemarksProps) {
@@ -59,8 +58,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                 const initialNotes: StudentNote[] = students.map(student => ({
                     student_id: student.student_id,
                     notes: "",
-                    performance_rating: null,
-                    participation_level: null
+                    performance_rating: null
                 }))
                 setStudentNotes(initialNotes)
 
@@ -80,29 +78,10 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                     const updatedNotes = initialNotes.map(note => {
                         const existingNote = notes.find((n: StudentSessionNotesType) => n.student_id === note.student_id)
                         if (existingNote) {
-                            // Convert string participation_level to number if needed
-                            let participationLevel: number | null = null
-                            if (existingNote.participation_level) {
-                                if (typeof existingNote.participation_level === 'string') {
-                                    // Handle legacy string values
-                                    switch (existingNote.participation_level) {
-                                        case 'excellent': participationLevel = 5; break
-                                        case 'good': participationLevel = 4; break
-                                        case 'average': participationLevel = 3; break
-                                        case 'poor': participationLevel = 2; break
-                                        case 'absent': participationLevel = 1; break
-                                        default: participationLevel = null
-                                    }
-                                } else {
-                                    participationLevel = existingNote.participation_level
-                                }
-                            }
-
                             return {
                                 ...note,
                                 notes: existingNote.notes || "",
-                                performance_rating: existingNote.performance_rating,
-                                participation_level: participationLevel
+                                performance_rating: existingNote.performance_rating
                             }
                         }
                         return note
@@ -164,8 +143,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                     session_id: sessionId,
                     student_id: note.student_id,
                     notes: note.notes,
-                    performance_rating: note.performance_rating || undefined,
-                    participation_level: note.participation_level || undefined
+                    performance_rating: note.performance_rating || undefined
                 })
 
                 if (result.success) {
@@ -224,23 +202,6 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
         )
     }
 
-    const getParticipationBadge = (level: number | null) => {
-        if (!level) return null
-
-        return (
-            <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                        key={star}
-                        className={`h-3.5 w-3.5 ${star <= level
-                            ? 'fill-amber-400 text-amber-400'
-                            : 'text-gray-200'
-                            }`}
-                    />
-                ))}
-            </div>
-        )
-    }
 
     if (loading) {
         return (
@@ -318,16 +279,16 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                 // Edit Mode
                 <div className="space-y-8">
                     {/* Session Remarks Section */}
-                    <Card className="border-0 shadow-sm">
+                    <div>
                         <CardHeader className="pb-4">
                             <CardTitle className="flex items-center gap-3 text-lg">
                                 <div>
                                     Session Summary <span className="text-red-500">*</span>
-                                    {existingRemarks && (
-                                        <span className="block text-sm font-normal text-muted-foreground">Already saved</span>
-                                    )}
                                 </div>
                             </CardTitle>
+                            <CardDescription className="text-base">
+                                Overview of what was covered in this session
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -343,14 +304,17 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                 </div>
                             </div>
                         </CardContent>
-                    </Card>
+                    </div>
 
                     {/* Student Notes Section */}
-                    <Card className="border-0 shadow-sm">
+                    <div>
                         <CardHeader className="pb-4">
                             <CardTitle className="flex items-center gap-3 text-lg">
-                                Individual Student Notes
+                                Student Notes
                             </CardTitle>
+                            <CardDescription className="text-base">
+                                Individual student performance and participation notes
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-6">
@@ -387,44 +351,23 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                                     />
                                                 </div>
 
-                                                <div className="space-y-3">
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor={`performance-${student.student_id}`} className="text-xs font-medium">Performance Rating</Label>
-                                                        <Select
-                                                            value={studentNote?.performance_rating?.toString() || ""}
-                                                            onValueChange={(value) => updateStudentNote(student.student_id, 'performance_rating', value ? parseInt(value) : null)}
-                                                        >
-                                                            <SelectTrigger className="h-8 text-xs">
-                                                                <SelectValue placeholder="Select rating" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="1">1 - Poor</SelectItem>
-                                                                <SelectItem value="2">2 - Below Average</SelectItem>
-                                                                <SelectItem value="3">3 - Average</SelectItem>
-                                                                <SelectItem value="4">4 - Good</SelectItem>
-                                                                <SelectItem value="5">5 - Excellent</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label htmlFor={`participation-${student.student_id}`} className="text-xs font-medium">Participation Level</Label>
-                                                        <Select
-                                                            value={studentNote?.participation_level?.toString() || ""}
-                                                            onValueChange={(value) => updateStudentNote(student.student_id, 'participation_level', value ? parseInt(value) : null)}
-                                                        >
-                                                            <SelectTrigger className="h-8 text-xs">
-                                                                <SelectValue placeholder="Select level" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="1">1 - Poor</SelectItem>
-                                                                <SelectItem value="2">2 - Below Average</SelectItem>
-                                                                <SelectItem value="3">3 - Average</SelectItem>
-                                                                <SelectItem value="4">4 - Good</SelectItem>
-                                                                <SelectItem value="5">5 - Excellent</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
+                                                <div className="space-y-2">
+                                                    <Label htmlFor={`performance-${student.student_id}`} className="text-xs font-medium">Performance Rating</Label>
+                                                    <Select
+                                                        value={studentNote?.performance_rating?.toString() || ""}
+                                                        onValueChange={(value) => updateStudentNote(student.student_id, 'performance_rating', value ? parseInt(value) : null)}
+                                                    >
+                                                        <SelectTrigger className="h-8 text-xs">
+                                                            <SelectValue placeholder="Select rating" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="1">1 - Poor</SelectItem>
+                                                            <SelectItem value="2">2 - Below Average</SelectItem>
+                                                            <SelectItem value="3">3 - Average</SelectItem>
+                                                            <SelectItem value="4">4 - Good</SelectItem>
+                                                            <SelectItem value="5">5 - Excellent</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                             </div>
                                         </div>
@@ -432,7 +375,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                 })}
                             </div>
                         </CardContent>
-                    </Card>
+                    </div>
 
                     {/* Save Button */}
                     <div className="flex justify-end gap-3 pt-4 border-t">
@@ -469,7 +412,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                 <div className="space-y-8">
                     {/* Session Remarks */}
                     {existingRemarks ? (
-                        <Card className="border-0 shadow-sm">
+                        <div>
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
                                     Session Summary
@@ -485,9 +428,9 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                     </div>
                                 </div>
                             </CardContent>
-                        </Card>
+                        </div>
                     ) : (
-                        <Card className="border-0 shadow-sm">
+                        <div>
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
                                     Session Summary
@@ -501,12 +444,12 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                     <p className="text-base text-muted-foreground italic">No session notes</p>
                                 </div>
                             </CardContent>
-                        </Card>
+                        </div>
                     )}
 
                     {/* Student Notes */}
                     {existingNotes.length > 0 ? (
-                        <Card className="border-0 shadow-sm">
+                        <div>
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
                                     Student Notes
@@ -523,40 +466,31 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
 
                                         return (
                                             <div key={note.id} className="border border-border/50 rounded-xl p-3 space-y-3 bg-card/50">
-                                                <div className="flex items-start gap-2">
-                                                    <Avatar className="h-9 w-9 ring-2 ring-border/20 flex-shrink-0">
-                                                        {student.avatar_url && (
-                                                            <AvatarImage src={student.avatar_url} alt={student.first_name} />
-                                                        )}
-                                                        <AvatarFallback className="text-sm font-medium">
-                                                            {student.first_name.charAt(0)}{student.last_name.charAt(0)}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h4 className="font-semibold text-sm mb-1">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                        <Avatar className="h-9 w-9 ring-2 ring-border/20 flex-shrink-0">
+                                                            {student.avatar_url && (
+                                                                <AvatarImage src={student.avatar_url} alt={student.first_name} />
+                                                            )}
+                                                            <AvatarFallback className="text-sm font-medium">
+                                                                {student.first_name.charAt(0)}{student.last_name.charAt(0)}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <h4 className="font-semibold text-sm">
                                                             {student.first_name} {student.last_name}
                                                         </h4>
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            {note.performance_rating && (
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-xs font-medium text-muted-foreground">Performance:</span>
-                                                                    {getPerformanceRatingDisplay(note.performance_rating)}
-                                                                </div>
-                                                            )}
-                                                            {note.participation_level && (
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-xs font-medium text-muted-foreground">Participation:</span>
-                                                                    {getParticipationBadge(note.participation_level)}
-                                                                </div>
-                                                            )}
-                                                        </div>
                                                     </div>
+                                                    {note.performance_rating && (
+                                                        <div className="flex items-center gap-1 flex-shrink-0">
+                                                            {getPerformanceRatingDisplay(note.performance_rating)}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {note.notes && (
                                                     <div className="pl-12">
                                                         <div className="p-2 bg-muted/30 rounded-lg border-l-3 border-primary/20">
-                                                            <p className="text-xs text-muted-foreground whitespace-pre-wrap leading-relaxed break-words overflow-x-auto">
+                                                            <p className="whitespace-pre-wrap leading-relaxed break-words overflow-x-auto">
                                                                 {note.notes}
                                                             </p>
                                                         </div>
@@ -567,9 +501,9 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                     })}
                                 </div>
                             </CardContent>
-                        </Card>
+                        </div>
                     ) : (
-                        <Card className="border-0 shadow-sm">
+                        <div>
                             <CardHeader className="pb-4">
                                 <CardTitle className="flex items-center gap-3 text-lg">
                                     Student Notes
@@ -583,7 +517,7 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
                                     <p className="text-base text-muted-foreground italic">No student notes available</p>
                                 </div>
                             </CardContent>
-                        </Card>
+                        </div>
                     )}
                 </div>
             )}

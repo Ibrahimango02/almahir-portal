@@ -124,7 +124,6 @@ export async function upsertStudentSessionNotesAction(params: {
     student_id: string
     notes?: string
     performance_rating?: number
-    participation_level?: number
 }): Promise<{ success: boolean; data?: StudentSessionNotesType; error?: { message: string } }> {
     const supabase = await createClient()
 
@@ -142,7 +141,6 @@ export async function upsertStudentSessionNotesAction(params: {
                 student_id: params.student_id,
                 notes: params.notes || null,
                 performance_rating: params.performance_rating || null,
-                participation_level: params.participation_level || null,
                 updated_at: new Date().toISOString()
             }, {
                 onConflict: 'session_id,student_id'
