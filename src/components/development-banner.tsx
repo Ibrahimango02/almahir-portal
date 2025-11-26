@@ -1,12 +1,19 @@
 "use client"
 
 import { useState } from "react"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { AlertCircle } from "lucide-react"
 import { TicketSubmissionDialog } from "@/components/ticket-submission-dialog"
 
 export function DevelopmentBanner() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const pathname = usePathname()
+
+  // Hide banner on registration page
+  if (pathname === "/" || pathname === "/register" || pathname === "/signup") {
+    return <TicketSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
+  }
 
   return (
     <>

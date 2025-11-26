@@ -88,7 +88,7 @@ export default function RegisterPage() {
                             className="object-contain"
                         />
                     </div>
-                    <h1 className="text-3xl font-bold text-[#1a4d2e] mb-2">Almahahir Quran Academy</h1>
+                    <h1 className="text-3xl font-bold text-[#1a4d2e] mb-2">Al-Mahir Quran Academy</h1>
                     <p className="text-xl text-[#3d8f5b]">أكاديمية الماهر بالقرآن</p>
                 </div>
             </div>
