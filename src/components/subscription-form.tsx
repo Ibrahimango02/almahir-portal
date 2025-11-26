@@ -149,7 +149,7 @@ export function SubscriptionForm({ studentId, currentSubscription, onSuccess }: 
                             <SelectTrigger>
                                 <SelectValue placeholder="Select a subscription plan" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="max-h-[300px] overflow-y-auto">
                                 {[...subscriptions]
                                     .sort((a, b) => a.name.localeCompare(b.name))
                                     .map((subscription) => (
