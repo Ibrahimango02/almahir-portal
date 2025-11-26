@@ -108,6 +108,7 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                             paginatedAdmins.map((admin, index) => (
                             <TableRow
                                 key={admin.admin_id}
+                                style={index % 2 !== 0 ? { backgroundColor: 'rgba(220, 252, 231, 0.27)' } : { backgroundColor: 'transparent' }}
                                 className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
                                 onClick={(e) => {
                                     // Prevent navigation if clicking on actions, the admin ID link, or other interactive elements

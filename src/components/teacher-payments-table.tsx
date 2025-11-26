@@ -40,7 +40,7 @@ type SortConfig = {
 export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymentsTableProps) {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [pageSize, setPageSize] = useState(100)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'session', direction: 'none' })
     const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)

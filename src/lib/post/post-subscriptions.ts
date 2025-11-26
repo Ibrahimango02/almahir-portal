@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/client'
 import { StudentSubscriptionType } from '@/types'
+import { createStudentInvoiceFromSubscription } from './post-student-invoices'
 
 export async function createStudentSubscription(
     studentId: string,
@@ -42,37 +43,22 @@ export async function createStudentSubscription(
     // Calculate month range for the invoice
     // Parse dates more reliably by splitting and using UTC to avoid timezone issues
     const [startYear, startMonthStr] = startDate.split('-').map(Number)
-    const [endYear, endMonthStr] = endDate.split('-').map(Number)
+    const [, endMonthStr] = endDate.split('-').map(Number)
     const startMonth = startMonthStr
     const endMonth = endMonthStr
 
-    // Check if both dates are in the same month and year
-    const isSameMonth = startMonth === endMonth && startYear === endYear
-
-    // If years are different, include year information in the range
-    let monthRange: string
-    if (isSameMonth) {
-        monthRange = `${startMonth}`
-    } else if (startYear !== endYear) {
-        // Different years - include year info
-        monthRange = `${startMonth}/${startYear}-${endMonth}/${endYear}`
-    } else {
-        // Same year, different months
-        monthRange = `${startMonth}-${endMonth}`
-    }
+    // Always use range format: ${startMonth}/${startYear}-${endMonth}/${startYear}
+    const monthRange = `${startMonth}/${startYear}-${endMonth}/${startYear}`
 
     // Create the initial invoice for this subscription
-    const { error: invoiceError } = await supabase
-        .from('student_invoices')
-        .insert({
-            student_subscription: data.id,
-            months: monthRange,
-            issue_date: new Date().toISOString().split('T')[0], // Today's date
-            due_date: endDate,
-            status: 'pending'
-        })
-
-    if (invoiceError) {
+    try {
+        await createStudentInvoiceFromSubscription(
+            data.id,
+            monthRange,
+            new Date().toISOString().split('T')[0], // Today's date
+            endDate
+        )
+    } catch (invoiceError) {
         console.error('Error creating student invoice:', invoiceError)
         // Don't throw error here as the subscription was created successfully
         // The invoice can be created manually later if needed
@@ -131,37 +117,22 @@ export async function updateStudentSubscription(
     const endDate = updates.next_payment_date || currentData.next_payment_date
     // Parse dates more reliably by splitting and using UTC to avoid timezone issues
     const [startYear, startMonthStr] = startDate.split('-').map(Number)
-    const [endYear, endMonthStr] = endDate.split('-').map(Number)
+    const [, endMonthStr] = endDate.split('-').map(Number)
     const startMonth = startMonthStr
     const endMonth = endMonthStr
 
-    // Check if both dates are in the same month and year
-    const isSameMonth = startMonth === endMonth && startYear === endYear
-
-    // If years are different, include year information in the range
-    let monthRange: string
-    if (isSameMonth) {
-        monthRange = `${startMonth}`
-    } else if (startYear !== endYear) {
-        // Different years - include year info
-        monthRange = `${startMonth}/${startYear}-${endMonth}/${endYear}`
-    } else {
-        // Same year, different months
-        monthRange = `${startMonth}-${endMonth}`
-    }
+    // Always use range format: ${startMonth}/${startYear}-${endMonth}/${startYear}
+    const monthRange = `${startMonth}/${startYear}-${endMonth}/${startYear}`
 
     // Create a new invoice with the updated data
-    const { error: invoiceError } = await supabase
-        .from('student_invoices')
-        .insert({
-            student_subscription: id,
-            months: monthRange,
-            issue_date: new Date().toISOString().split('T')[0], // Today's date
-            due_date: endDate,
-            status: 'pending'
-        })
-
-    if (invoiceError) {
+    try {
+        await createStudentInvoiceFromSubscription(
+            id,
+            monthRange,
+            new Date().toISOString().split('T')[0], // Today's date
+            endDate
+        )
+    } catch (invoiceError) {
         console.error('Error creating new student invoice:', invoiceError)
         // Don't throw error here as the subscription was updated successfully
         // The invoice can be created manually later if needed

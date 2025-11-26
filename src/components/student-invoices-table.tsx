@@ -39,7 +39,7 @@ type SortConfig = {
 export function StudentInvoicesTable({ invoices, onStatusUpdate }: StudentInvoicesTableProps) {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
-    const [pageSize, setPageSize] = useState(10)
+    const [pageSize, setPageSize] = useState(100)
     const [updatingStatus, setUpdatingStatus] = useState<string | null>(null)
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'due_date', direction: 'none' })
     const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)

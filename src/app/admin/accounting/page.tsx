@@ -12,6 +12,7 @@ import { StudentInvoiceType, TeacherPaymentType } from "@/types"
 import { DollarSign, HandCoins, Calendar, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns"
 
 export default function AdminAccountingPage() {
@@ -22,6 +23,7 @@ export default function AdminAccountingPage() {
   const [search, setSearch] = useState("")
   const [startDate, setStartDate] = useState<Date | undefined>()
   const [endDate, setEndDate] = useState<Date | undefined>()
+  const [statusFilter, setStatusFilter] = useState<string>("all")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,6 +70,7 @@ export default function AdminAccountingPage() {
     setSearch("")
     setStartDate(undefined)
     setEndDate(undefined)
+    setStatusFilter("all")
   }
 
   // Calculate summary statistics
@@ -76,7 +79,7 @@ export default function AdminAccountingPage() {
   const pendingInvoices = invoices.filter(invoice => invoice.status === 'pending').length
   const pendingPayments = teacherPayments.filter(payment => payment.status === 'pending').length
 
-  // Filtered data based on search and date range
+  // Filtered data based on search, date range, and status
   const filteredInvoices = invoices.filter(inv => {
     const studentName = inv.student ? `${inv.student.first_name} ${inv.student.last_name}`.toLowerCase() : ""
     const parentName = inv.parent ? `${inv.parent.first_name} ${inv.parent.last_name}`.toLowerCase() : ""
@@ -91,6 +94,9 @@ export default function AdminAccountingPage() {
       months.includes(search.toLowerCase())
     )
 
+    // Status filter
+    const matchesStatus = statusFilter === "all" || inv.status === statusFilter
+
     // Date range filter
     let matchesDateRange = true
     if (startDate || endDate) {
@@ -102,7 +108,7 @@ export default function AdminAccountingPage() {
       matchesDateRange = isWithinInterval(invoiceDate, interval)
     }
 
-    return matchesSearch && matchesDateRange
+    return matchesSearch && matchesStatus && matchesDateRange
   })
 
   const filteredTeacherPayments = teacherPayments.filter(pay => {
@@ -116,6 +122,9 @@ export default function AdminAccountingPage() {
       pay.session.class_title.toLowerCase().includes(search.toLowerCase())
     )
 
+    // Status filter
+    const matchesStatus = statusFilter === "all" || pay.status === statusFilter
+
     // Date range filter
     let matchesDateRange = true
     if (startDate || endDate) {
@@ -127,7 +136,7 @@ export default function AdminAccountingPage() {
       matchesDateRange = isWithinInterval(paymentDate, interval)
     }
 
-    return matchesSearch && matchesDateRange
+    return matchesSearch && matchesStatus && matchesDateRange
   })
 
   if (loading) {
@@ -237,7 +246,7 @@ export default function AdminAccountingPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Search Bar */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Search</label>
@@ -269,10 +278,27 @@ export default function AdminAccountingPage() {
                 placeholder="Select end date"
               />
             </div>
+
+            {/* Status Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Clear Filters Button */}
-          {(search || startDate || endDate) && (
+          {(search || startDate || endDate || statusFilter !== "all") && (
             <div className="flex justify-end">
               <Button
                 variant="outline"
@@ -307,7 +333,7 @@ export default function AdminAccountingPage() {
                 <DollarSign className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No invoices found</p>
                 <p className="text-sm">
-                  {search || startDate || endDate
+                  {search || startDate || endDate || statusFilter !== "all"
                     ? "Try adjusting your filters"
                     : "Student invoices will appear here once created"
                   }
@@ -329,7 +355,7 @@ export default function AdminAccountingPage() {
                 <HandCoins className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No teacher payments found</p>
                 <p className="text-sm">
-                  {search || startDate || endDate
+                  {search || startDate || endDate || statusFilter !== "all"
                     ? "Try adjusting your filters"
                     : "Teacher payments will appear here once created"
                   }

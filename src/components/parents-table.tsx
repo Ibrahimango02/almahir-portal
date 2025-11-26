@@ -138,130 +138,131 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
               </TableRow>
             ) : (
               paginatedParents.map((parent, index) => (
-              <TableRow
-                key={parent.parent_id}
-                className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
-                onClick={(e) => {
-                  // Prevent navigation if clicking on actions, the parent ID link, or other interactive elements
-                  if (
-                    e.target instanceof HTMLElement &&
-                    (e.target.closest("button") ||
-                      e.target.closest("a") ||
-                      e.target.closest("[data-no-navigation]"))
-                  ) {
-                    return
-                  }
-                  router.push(getParentDetailUrl(parent.parent_id))
-                }}
-              >
-                {/* ID */}
-                <TableCell className="py-3 px-4">
-                  <span className="text-sm font-semibold text-muted-foreground">
-                    {(currentPage - 1) * pageSize + index + 1}
-                  </span>
-                </TableCell>
-                {/* Parent Info */}
-                <TableCell className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    {parent.avatar_url ? (
-                      <AvatarIcon url={parent.avatar_url} size="medium" />
-                    ) : (
-                      <Avatar className="h-9 w-9 border border-border/50 shadow-sm">
-                        <AvatarFallback className="bg-primary/5 text-primary text-sm font-semibold">
-                          {parent.first_name[0]}
-                          {parent.last_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <div className="space-y-0.5">
-                      <p className="font-semibold text-sm text-foreground">
-                        {parent.first_name} {parent.last_name}
-                      </p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {parent.gender || ''}
-                      </p>
-                    </div>
-                  </div>
-                </TableCell>
-
-                {/* Contact Info */}
-                <TableCell className="py-3 px-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      <span className="text-foreground/80">{parent.email || 'None'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                      <span className="text-foreground/80">{parent.phone || 'None'}</span>
-                    </div>
-                  </div>
-                </TableCell>
-
-                {/* Location */}
-                <TableCell className="py-3 px-4">
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm text-foreground/80">{parent.country || 'None'}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground ml-5">{parent.language || 'None'}</p>
-                  </div>
-                </TableCell>
-
-                {/* Students */}
-                <TableCell className="py-3 px-4">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-foreground/80">
-                      {studentData[parent.parent_id]?.length > 0
-                        ? studentData[parent.parent_id].map(student =>
-                          `${student.first_name} ${student.last_name}`
-                        ).join(', ')
-                        : 'None'
-                      }
+                <TableRow
+                  key={parent.parent_id}
+                  style={index % 2 !== 0 ? { backgroundColor: 'rgba(220, 252, 231, 0.27)' } : { backgroundColor: 'transparent' }}
+                  className="hover:bg-muted/100 transition-all duration-200 cursor-pointer border-b border-border/30"
+                  onClick={(e) => {
+                    // Prevent navigation if clicking on actions, the parent ID link, or other interactive elements
+                    if (
+                      e.target instanceof HTMLElement &&
+                      (e.target.closest("button") ||
+                        e.target.closest("a") ||
+                        e.target.closest("[data-no-navigation]"))
+                    ) {
+                      return
+                    }
+                    router.push(getParentDetailUrl(parent.parent_id))
+                  }}
+                >
+                  {/* ID */}
+                  <TableCell className="py-3 px-4">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {(currentPage - 1) * pageSize + index + 1}
                     </span>
-                  </div>
-                </TableCell>
-
-                {/* Status */}
-                <TableCell className="py-3 px-4 text-center">
-                  <div className="max-w-[100px] mx-auto">
-                    <StatusBadge status={convertStatusToPrefixedFormat(parent.status, 'user')} />
-                  </div>
-                </TableCell>
-
-                {/* Actions - Only show for admin */}
-                {isAdmin && (
-                  <TableCell data-no-navigation className="py-3 px-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {/* Only show edit for admin */}
-                        {isAdmin && (
-                          <DropdownMenuItem asChild className="cursor-pointer text-sm">
-                            <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Parent
-                            </Link>
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
-                )}
-              </TableRow>
-            ))
+                  {/* Parent Info */}
+                  <TableCell className="py-3 px-4">
+                    <div className="flex items-center gap-3">
+                      {parent.avatar_url ? (
+                        <AvatarIcon url={parent.avatar_url} size="medium" />
+                      ) : (
+                        <Avatar className="h-9 w-9 border border-border/50 shadow-sm">
+                          <AvatarFallback className="bg-primary/5 text-primary text-sm font-semibold">
+                            {parent.first_name[0]}
+                            {parent.last_name[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div className="space-y-0.5">
+                        <p className="font-semibold text-sm text-foreground">
+                          {parent.first_name} {parent.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {parent.gender || ''}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Contact Info */}
+                  <TableCell className="py-3 px-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="text-foreground/80">{parent.email || 'None'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="text-foreground/80">{parent.phone || 'None'}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Location */}
+                  <TableCell className="py-3 px-4">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-sm text-foreground/80">{parent.country || 'None'}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground ml-5">{parent.language || 'None'}</p>
+                    </div>
+                  </TableCell>
+
+                  {/* Students */}
+                  <TableCell className="py-3 px-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-foreground/80">
+                        {studentData[parent.parent_id]?.length > 0
+                          ? studentData[parent.parent_id].map(student =>
+                            `${student.first_name} ${student.last_name}`
+                          ).join(', ')
+                          : 'None'
+                        }
+                      </span>
+                    </div>
+                  </TableCell>
+
+                  {/* Status */}
+                  <TableCell className="py-3 px-4 text-center">
+                    <div className="max-w-[100px] mx-auto">
+                      <StatusBadge status={convertStatusToPrefixedFormat(parent.status, 'user')} />
+                    </div>
+                  </TableCell>
+
+                  {/* Actions - Only show for admin */}
+                  {isAdmin && (
+                    <TableCell data-no-navigation className="py-3 px-4">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {/* Only show edit for admin */}
+                          {isAdmin && (
+                            <DropdownMenuItem asChild className="cursor-pointer text-sm">
+                              <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Parent
+                              </Link>
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
             )}
           </TableBody>
         </Table>

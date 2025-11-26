@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/client"
 
 type StudentInvoiceData = {
     student_subscription: string
-    months: string[]
+    months: string
     issue_date: string
     due_date: string
     status?: string
@@ -36,15 +36,16 @@ export async function createStudentInvoice(invoiceData: StudentInvoiceData) {
 
 export async function createStudentInvoiceFromSubscription(
     studentSubscriptionId: string,
-    months: string[],
+    months: string,
     issueDate: string,
-    dueDate: string
+    dueDate: string,
+    status?: string
 ) {
     return createStudentInvoice({
         student_subscription: studentSubscriptionId,
         months,
         issue_date: issueDate,
         due_date: dueDate,
-        status: 'pending'
+        status: status || 'pending'
     })
 } 
