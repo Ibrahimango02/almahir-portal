@@ -185,17 +185,14 @@ export function AdminsTable({ admins }: AdminsTableProps) {
                                     <React.Fragment key={group.status}>
                                         {/* Group Header */}
                                         <TableRow className="bg-muted/50 hover:bg-muted/50 border-b-2 border-border">
-                                            <TableCell 
-                                                colSpan={7} 
+                                            <TableCell
+                                                colSpan={7}
                                                 className="py-3 px-4"
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <StatusBadge status={convertStatusToPrefixedFormat(group.status, 'user')} />
-                                                    <span className="text-sm font-semibold text-foreground/80 capitalize">
-                                                        {group.status} Admins
-                                                    </span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        ({groupTotalCount} {groupTotalCount === 1 ? 'admin' : 'admins'})
+                                                        ({groupTotalCount})
                                                     </span>
                                                 </div>
                                             </TableCell>

@@ -216,11 +216,8 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                       >
                         <div className="flex items-center gap-2">
                           <StatusBadge status={convertStatusToPrefixedFormat(group.status, 'user')} />
-                          <span className="text-sm font-semibold text-foreground/80 capitalize">
-                            {group.status} Parents
-                          </span>
                           <span className="text-xs text-muted-foreground">
-                            ({groupTotalCount} {groupTotalCount === 1 ? 'parent' : 'parents'})
+                            ({groupTotalCount})
                           </span>
                         </div>
                       </TableCell>

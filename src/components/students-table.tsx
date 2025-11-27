@@ -228,11 +228,8 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                       >
                         <div className="flex items-center gap-2">
                           <StatusBadge status={convertStatusToPrefixedFormat(group.status, 'user')} />
-                          <span className="text-sm font-semibold text-foreground/80 capitalize">
-                            {group.status} Students
-                          </span>
                           <span className="text-xs text-muted-foreground">
-                            ({groupTotalCount} {groupTotalCount === 1 ? 'student' : 'students'})
+                            ({groupTotalCount})
                           </span>
                         </div>
                       </TableCell>

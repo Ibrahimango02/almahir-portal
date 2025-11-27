@@ -197,17 +197,14 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                   <React.Fragment key={group.status}>
                     {/* Group Header */}
                     <TableRow className="bg-muted/50 hover:bg-muted/50 border-b-2 border-border">
-                      <TableCell 
-                        colSpan={8} 
+                      <TableCell
+                        colSpan={8}
                         className="py-3 px-4"
                       >
                         <div className="flex items-center gap-2">
                           <StatusBadge status={convertStatusToPrefixedFormat(group.status, 'user')} />
-                          <span className="text-sm font-semibold text-foreground/80 capitalize">
-                            {group.status} Teachers
-                          </span>
                           <span className="text-xs text-muted-foreground">
-                            ({groupTotalCount} {groupTotalCount === 1 ? 'teacher' : 'teachers'})
+                            ({groupTotalCount})
                           </span>
                         </div>
                       </TableCell>
