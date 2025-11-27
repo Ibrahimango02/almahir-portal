@@ -64,10 +64,29 @@ export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymen
     const totalItems = payments.length
     const totalPages = Math.ceil(totalItems / pageSize)
 
+    // Helper function to get status priority (lower number = higher priority)
+    const getStatusPriority = (status: string): number => {
+        switch (status.toLowerCase()) {
+            case 'overdue': return 0
+            case 'pending': return 1
+            case 'paid': return 2
+            case 'cancelled': return 3
+            default: return 4
+        }
+    }
+
     // Sort payments
     const sortedPayments = [...payments].sort((a, b) => {
+        // First, sort by status priority (overdue > pending > paid > cancelled)
+        const aStatusPriority = getStatusPriority(a.status)
+        const bStatusPriority = getStatusPriority(b.status)
+        if (aStatusPriority !== bStatusPriority) {
+            return aStatusPriority - bStatusPriority
+        }
+
+        // If statuses are the same, apply user-selected sort
         if (sortConfig.direction === 'none') {
-            return 0 // No sorting
+            return 0 // No additional sorting
         }
 
         if (sortConfig.key === 'session') {
