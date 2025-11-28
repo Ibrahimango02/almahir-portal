@@ -440,32 +440,3 @@ export type NotificationCounts = {
     by_type: Record<string, number>
 }
 
-export type ChatMessage = {
-    id: string
-    room_id: string
-    sender_id: string
-    message: string
-    created_at: string
-    sender_name?: string
-    sender_avatar?: string
-}
-
-export type ChatRoom = {
-    id: string
-    name: string
-    type: 'class' | 'direct' | 'group'
-    class_id?: string
-    created_by?: string
-    created_at: string
-    updated_at: string
-}
-
-export type ChatRoomParticipant = {
-    id: string
-    room_id: string
-    user_id: string
-    role: 'admin' | 'moderator' | 'member'
-    joined_at: string
-    user_name?: string
-    user_avatar?: string
-}

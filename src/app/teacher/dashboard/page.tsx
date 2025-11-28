@@ -76,7 +76,7 @@ export default function TeacherDashboard() {
                         Welcome, {profile?.first_name} {profile?.last_name}!
                     </h2>
                     <p className="mt-2 text-green-100">
-                        Al-Mahir Academy Teacher Portal
+                        Almahir Academy Teacher Portal
                     </p>
                 </div>
             </div>

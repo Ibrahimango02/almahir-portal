@@ -60,7 +60,7 @@ export function DashboardContent({ profile, sessionsData }: DashboardContentProp
                         Welcome, {welcomeName}!
                     </h2>
                     <p className="mt-2 text-green-100">
-                        Al-Mahir Academy Parent Portal
+                        Almahir Academy Parent Portal
                     </p>
                 </div>
             </div>

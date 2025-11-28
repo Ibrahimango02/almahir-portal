@@ -137,7 +137,7 @@ export default function AdminDashboard() {
             Welcome, {profile?.first_name} {profile?.last_name}!
           </h2>
           <p className="mt-2 text-green-100">
-            Al-Mahir Academy Administrative Dashboard
+            Almahir Academy Administrative Dashboard
           </p>
         </div>
       </div>

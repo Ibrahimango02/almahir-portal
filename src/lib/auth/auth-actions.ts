@@ -184,10 +184,21 @@ export async function sendPasswordResetEmail(formData: FormData) {
         return { error: 'Email is required' }
     }
 
+    // Get the base URL - prioritize NEXT_PUBLIC_APP_URL, then VERCEL_URL, then localhost
+    let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+    if (!baseUrl) {
+        // Vercel automatically sets VERCEL_URL in production
+        if (process.env.VERCEL_URL) {
+            baseUrl = `https://${process.env.VERCEL_URL}`
+        } else {
+            baseUrl = 'http://localhost:3000'
+        }
+    }
+
     // Even if user doesn't exist in profiles, try to send reset email
     // Supabase will handle the case where the email doesn't exist
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`,
+        redirectTo: `${baseUrl}/reset-password`,
     })
 
     if (error) {

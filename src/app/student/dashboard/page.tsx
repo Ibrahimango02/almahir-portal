@@ -80,7 +80,7 @@ export default function StudentDashboard() {
                         Welcome, {profile?.first_name} {profile?.last_name}!
                     </h2>
                     <p className="mt-2 text-green-100">
-                        Al-Mahir Academy Student Portal
+                        Almahir Academy Student Portal
                     </p>
                 </div>
             </div>
