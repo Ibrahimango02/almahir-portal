@@ -219,6 +219,27 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 </div>
               )}
 
+              {/* Billing Information */}
+              <Separator />
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <CreditCard className="h-4 w-4 mr-2 text-primary" />
+                  Billing Information
+                </h3>
+                <div className="space-y-3 pl-6">
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Billing Name:</span>
+                    <span className="text-sm text-muted-foreground">{student.billing_name || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Payment Method:</span>
+                    <span className="text-sm text-muted-foreground">{student.payment_method || 'None'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Enrollment Date - Styled like Notes section */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">

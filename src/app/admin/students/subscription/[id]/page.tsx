@@ -2,7 +2,7 @@
 
 import { notFound, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CreditCard, Calendar } from "lucide-react"
+import { CreditCard } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -103,7 +103,6 @@ export default function StudentSubscriptionPage({ params }: { params: Promise<{ 
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2">
-                                <Calendar className="h-5 w-5 text-primary" />
                                 Current Subscription Details
                             </CardTitle>
                         </div>

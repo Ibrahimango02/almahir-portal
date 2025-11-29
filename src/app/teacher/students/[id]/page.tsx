@@ -167,17 +167,6 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
                             <Separator />
 
-                            {/* Notes */}
-                            {student.notes && (
-                                <div>
-                                    <h3 className="text-base font-semibold flex items-center mb-3">
-                                        <BookOpen className="h-4 w-4 mr-2 text-primary" />
-                                        Notes
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground leading-relaxed pl-6">{student.notes}</p>
-                                </div>
-                            )}
-
                             {/* Enrollment Date - Styled like Notes section */}
                             <div>
                                 <h3 className="text-base font-semibold flex items-center mb-3">

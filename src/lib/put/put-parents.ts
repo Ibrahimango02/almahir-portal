@@ -5,6 +5,8 @@ export async function updateParents(parentId: string, data: {
     status: string;
     student_id: string[];
     notes?: string | null;
+    payment_method?: string | null;
+    billing_name?: string | null;
 }) {
     const supabase = createClient()
 
@@ -42,6 +44,8 @@ export async function updateParents(parentId: string, data: {
                     .from('parents')
                     .update({
                         notes: data.notes || null,
+                        payment_method: data.payment_method || null,
+                        billing_name: data.billing_name || null,
                         updated_at: new Date().toISOString()
                     })
                     .eq('profile_id', parentId)
@@ -56,12 +60,38 @@ export async function updateParents(parentId: string, data: {
                     .insert({
                         profile_id: parentId,
                         notes: data.notes || null,
+                        payment_method: data.payment_method || null,
+                        billing_name: data.billing_name || null,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     })
 
                 if (parentError) {
                     throw new Error(`Failed to create parent record: ${parentError.message}`)
+                }
+            }
+        } else {
+            // Even if notes is undefined, we might still need to update payment_method and billing_name
+            const { data: existingParent } = await supabase
+                .from('parents')
+                .select('profile_id')
+                .eq('profile_id', parentId)
+                .single()
+
+            if (existingParent && (data.payment_method !== undefined || data.billing_name !== undefined)) {
+                const updateData: { payment_method?: string | null; billing_name?: string | null; updated_at: string } = {
+                    updated_at: new Date().toISOString()
+                }
+                if (data.payment_method !== undefined) updateData.payment_method = data.payment_method || null
+                if (data.billing_name !== undefined) updateData.billing_name = data.billing_name || null
+
+                const { error: parentError } = await supabase
+                    .from('parents')
+                    .update(updateData)
+                    .eq('profile_id', parentId)
+
+                if (parentError) {
+                    throw new Error(`Failed to update parent: ${parentError.message}`)
                 }
             }
         }

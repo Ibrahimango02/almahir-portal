@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 
-export async function updateStudent(studentId: string, data: { notes?: string; status: string; birth_date?: string | null }) {
+export async function updateStudent(studentId: string, data: { notes?: string; status: string; birth_date?: string | null; payment_method?: string | null; billing_name?: string | null }) {
     const supabase = createClient()
 
     // First, check if this is a dependent or independent student
@@ -20,6 +20,8 @@ export async function updateStudent(studentId: string, data: { notes?: string; s
         .update({
             notes: data.notes,
             birth_date: data.birth_date || null,
+            payment_method: data.payment_method || null,
+            billing_name: data.billing_name || null,
             updated_at: new Date().toISOString()
         })
         .eq('id', studentId)

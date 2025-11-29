@@ -30,6 +30,8 @@ export default function EditStudentPage() {
     status: "",
     notes: "",
     birth_date: "",
+    payment_method: "",
+    billing_name: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -43,6 +45,8 @@ export default function EditStudentPage() {
             status: student.status,
             notes: student.notes || "",
             birth_date: student.birth_date ? new Date(student.birth_date).toISOString().split('T')[0] : "",
+            payment_method: student.payment_method || "",
+            billing_name: student.billing_name || "",
           })
         }
       } catch (error) {
@@ -84,6 +88,8 @@ export default function EditStudentPage() {
       await updateStudent(student.student_id, {
         ...formData,
         birth_date: formData.birth_date || null,
+        payment_method: formData.payment_method || null,
+        billing_name: formData.billing_name || null,
       })
 
       toast({
@@ -159,6 +165,35 @@ export default function EditStudentPage() {
                 rows={4}
                 className="resize-none"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="billing_name">Billing Name</Label>
+                <Input
+                  id="billing_name"
+                  name="billing_name"
+                  value={formData.billing_name}
+                  onChange={handleChange}
+                  placeholder="Enter billing name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_method">Payment Method</Label>
+                <Select value={formData.payment_method} onValueChange={(value) => handleSelectChange("payment_method", value)}>
+                  <SelectTrigger id="payment_method">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Stripe">Stripe</SelectItem>
+                    <SelectItem value="PayPal">PayPal</SelectItem>
+                    <SelectItem value="Bank">Bank</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Email">Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex justify-end gap-4">

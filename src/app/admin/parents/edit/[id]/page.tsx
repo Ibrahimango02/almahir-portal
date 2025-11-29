@@ -33,6 +33,8 @@ export default function EditParentPage() {
     status: "",
     notes: "",
     students: [] as StudentType[],
+    payment_method: "",
+    billing_name: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -78,6 +80,8 @@ export default function EditParentPage() {
             status: parentData.status || "",
             notes: parentData.notes || "",
             students: associatedStudents,
+            payment_method: parentData.payment_method || "",
+            billing_name: parentData.billing_name || "",
           })
         }
       } catch (error) {
@@ -191,6 +195,8 @@ export default function EditParentPage() {
       await updateParents(parent.parent_id, {
         status: formData.status,
         notes: formData.notes || null,
+        payment_method: formData.payment_method || null,
+        billing_name: formData.billing_name || null,
         student_id: [...formData.students.map(student => student.student_id), ...newlyCreatedStudentIds]
       })
 
@@ -253,6 +259,35 @@ export default function EditParentPage() {
                   className="resize-none"
                   placeholder="Add any additional notes about the parent..."
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="billing_name">Billing Name</Label>
+                  <Input
+                    id="billing_name"
+                    name="billing_name"
+                    value={formData.billing_name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, billing_name: e.target.value }))}
+                    placeholder="Enter billing name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">Payment Method</Label>
+                  <Select value={formData.payment_method} onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}>
+                    <SelectTrigger id="payment_method">
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Stripe">Stripe</SelectItem>
+                      <SelectItem value="PayPal">PayPal</SelectItem>
+                      <SelectItem value="Bank">Bank</SelectItem>
+                      <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="Email">Email</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-4">

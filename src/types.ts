@@ -57,6 +57,8 @@ export type ParentType = {
     role: string
     avatar_url: string | null
     notes: string | null
+    payment_method: string | null
+    billing_name: string | null
     created_at: string
     updated_at: string | null
 }
@@ -67,6 +69,8 @@ export type StudentType = {
     profile_id: string | null
     birth_date: string | null
     notes: string | null
+    payment_method: string | null
+    billing_name: string | null
     created_at: string
     updated_at: string | null
     // Profile data (either from profiles or child_profiles)

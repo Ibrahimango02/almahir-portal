@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Edit, Contact, DollarSign, User, FileText } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, DollarSign, User, FileText, CreditCard } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -128,6 +128,25 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                   <Separator />
                 </>
               )}
+
+              {/* Billing Information */}
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <CreditCard className="h-4 w-4 mr-2 text-primary" />
+                  Billing Information
+                </h3>
+                <div className="space-y-3 pl-6">
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Billing Name:</span>
+                    <span className="text-sm text-muted-foreground">{parent.billing_name || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Payment Method:</span>
+                    <span className="text-sm text-muted-foreground">{parent.payment_method || 'None'}</span>
+                  </div>
+                </div>
+              </div>
+              <Separator />
 
               {/* Students Section */}
               <div>
