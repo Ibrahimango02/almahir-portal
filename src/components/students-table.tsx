@@ -383,20 +383,22 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                                           Edit Student
                                         </Link>
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="cursor-pointer text-sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setSelectedStudent({
-                                            id: student.student_id,
-                                            name: `${student.first_name} ${student.last_name}`
-                                          })
-                                          setResetPasswordDialogOpen(true)
-                                        }}
-                                      >
-                                        <Lock className="mr-2 h-4 w-4" />
-                                        Reset Password
-                                      </DropdownMenuItem>
+                                      {student.profile_id && (
+                                        <DropdownMenuItem
+                                          className="cursor-pointer text-sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedStudent({
+                                              id: student.profile_id!,
+                                              name: `${student.first_name} ${student.last_name}`
+                                            })
+                                            setResetPasswordDialogOpen(true)
+                                          }}
+                                        >
+                                          <Lock className="mr-2 h-4 w-4" />
+                                          Reset Password
+                                        </DropdownMenuItem>
+                                      )}
                                     </>
                                   )}
                                 </DropdownMenuContent>
