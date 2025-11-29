@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
+import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Lock } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
@@ -27,6 +27,7 @@ import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
 import { EmptyTableState } from "./empty-table-state"
 import { Users } from "lucide-react"
+import { ResetPasswordDialog } from "./reset-password-dialog"
 
 // Define types for related data
 type ParentType = {
@@ -46,6 +47,8 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -373,12 +376,28 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                                   </DropdownMenuItem>
                                   {/* Only show edit for admin */}
                                   {isAdmin && (
-                                    <DropdownMenuItem asChild className="cursor-pointer text-sm">
-                                      <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Edit Student
-                                      </Link>
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem asChild className="cursor-pointer text-sm">
+                                        <Link href={getActionUrl('edit', student.student_id)} className="flex items-center">
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Edit Student
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="cursor-pointer text-sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setSelectedStudent({
+                                            id: student.student_id,
+                                            name: `${student.first_name} ${student.last_name}`
+                                          })
+                                          setResetPasswordDialogOpen(true)
+                                        }}
+                                      >
+                                        <Lock className="mr-2 h-4 w-4" />
+                                        Reset Password
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -404,6 +423,16 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+
+      {/* Reset Password Dialog */}
+      {selectedStudent && (
+        <ResetPasswordDialog
+          open={resetPasswordDialogOpen}
+          onOpenChange={setResetPasswordDialogOpen}
+          userId={selectedStudent.id}
+          userName={selectedStudent.name}
+        />
+      )}
     </div>
   )
 }

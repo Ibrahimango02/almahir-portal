@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, Mail, Phone, MapPin } from "lucide-react"
+import { Edit, MoreHorizontal, Mail, Phone, MapPin, Lock } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
@@ -27,6 +27,7 @@ import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
 import { EmptyTableState } from "./empty-table-state"
 import { Users } from "lucide-react"
+import { ResetPasswordDialog } from "./reset-password-dialog"
 
 interface ParentsTableProps {
   parents: ParentType[]
@@ -39,6 +40,8 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
+  const [selectedParent, setSelectedParent] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -338,12 +341,28 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
                                   <DropdownMenuSeparator />
                                   {/* Only show edit for admin */}
                                   {isAdmin && (
-                                    <DropdownMenuItem asChild className="cursor-pointer text-sm">
-                                      <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
-                                        <Edit className="mr-2 h-4 w-4" />
-                                        Edit Parent
-                                      </Link>
-                                    </DropdownMenuItem>
+                                    <>
+                                      <DropdownMenuItem asChild className="cursor-pointer text-sm">
+                                        <Link href={getActionUrl('edit', parent.parent_id)} className="flex items-center">
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Edit Parent
+                                        </Link>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        className="cursor-pointer text-sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setSelectedParent({
+                                            id: parent.parent_id,
+                                            name: `${parent.first_name} ${parent.last_name}`
+                                          })
+                                          setResetPasswordDialogOpen(true)
+                                        }}
+                                      >
+                                        <Lock className="mr-2 h-4 w-4" />
+                                        Reset Password
+                                      </DropdownMenuItem>
+                                    </>
                                   )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -369,6 +388,16 @@ export function ParentsTable({ parents, userRole }: ParentsTableProps) {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+
+      {/* Reset Password Dialog */}
+      {selectedParent && (
+        <ResetPasswordDialog
+          open={resetPasswordDialogOpen}
+          onOpenChange={setResetPasswordDialogOpen}
+          userId={selectedParent.id}
+          userName={selectedParent.name}
+        />
+      )}
     </div>
   )
 }

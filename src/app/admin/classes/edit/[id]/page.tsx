@@ -48,7 +48,7 @@ const formSchema = z.object({
     daysRepeated: z.array(z.string()).min(1, { message: "Please select at least one day" }),
     times: z.record(z.object({
         start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
-        end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: "Please enter a valid time (HH:MM)" }),
+        duration: z.string().min(1, { message: "Please select a duration" }),
     })),
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
@@ -62,29 +62,7 @@ const formSchema = z.object({
         message: "End date must be after or equal to start date",
         path: ["endDate"],
     }
-).superRefine((data, ctx) => {
-    // Check if there are any times defined
-    if (!data.times || Object.keys(data.times).length === 0) return
-
-    // Validate each day's times
-    for (const [day, timeData] of Object.entries(data.times)) {
-        if (timeData.start && timeData.end) {
-            // Convert times to minutes for comparison
-            const startMinutes = parseInt(timeData.start.split(':')[0]) * 60 + parseInt(timeData.start.split(':')[1])
-            const endMinutes = parseInt(timeData.end.split(':')[0]) * 60 + parseInt(timeData.end.split(':')[1])
-
-            // If end time is earlier in the day than start time, it means the class runs past midnight
-            // This is valid (e.g., 11:00 PM to 12:00 AM)
-            if (startMinutes >= endMinutes && endMinutes !== 0) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "End time must be after start time, unless the class runs past midnight (ending at 12:00 AM)",
-                    path: ["times", day, "end"]
-                })
-            }
-        }
-    }
-})
+)
 
 // Add days of the week array
 const daysOfWeek = [
@@ -125,38 +103,45 @@ const TIME_OPTIONS: TimeOption[] = Array.from(
     }
 )
 
-const formatDuration = (minutes: number): string => {
-    if (minutes < 60) {
-        return `${minutes} mins`
-    } else if (minutes === 60) {
-        return "1 hr"
-    } else {
-        const hours = minutes / 60
-        // Format to 1 decimal place if not a whole number, otherwise show as integer
-        const formattedHours = hours % 1 === 0 ? hours.toString() : hours.toFixed(1)
-        return `${formattedHours} hrs`
-    }
+// Duration options in minutes
+const DURATION_OPTIONS = [
+    { value: "15", label: "15 mins" },
+    { value: "30", label: "30 mins" },
+    { value: "45", label: "45 mins" },
+    { value: "60", label: "1 hr" },
+    { value: "90", label: "1.5 hrs" },
+    { value: "120", label: "2 hrs" },
+    { value: "150", label: "2.5 hrs" },
+    { value: "180", label: "3 hrs" },
+    { value: "240", label: "4 hrs" },
+]
+
+// Calculate end time from start time and duration (in minutes)
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const startTotalMinutes = startHour * 60 + startMinute
+    const endTotalMinutes = startTotalMinutes + durationMinutes
+
+    // Handle overflow past midnight
+    const endHour = Math.floor((endTotalMinutes % (24 * 60)) / 60)
+    const endMinute = (endTotalMinutes % (24 * 60)) % 60
+
+    return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
 }
 
-const getEndTimeOptions = (startValue?: string): TimeOption[] => {
-    if (!startValue) return []
-
-    const [startHour, startMinute] = startValue.split(':').map(Number)
+// Calculate duration in minutes from start and end times
+const calculateDuration = (startTime: string, endTime: string): number => {
+    const [startHour, startMinute] = startTime.split(':').map(Number)
+    const [endHour, endMinute] = endTime.split(':').map(Number)
     const startTotalMinutes = startHour * 60 + startMinute
+    const endTotalMinutes = endHour * 60 + endMinute
 
-    return TIME_OPTIONS
-        .filter((option) => option.value > startValue)
-        .map((option) => {
-            const [endHour, endMinute] = option.value.split(':').map(Number)
-            const endTotalMinutes = endHour * 60 + endMinute
-            const durationMinutes = endTotalMinutes - startTotalMinutes
-            const durationLabel = formatDuration(durationMinutes)
+    // Handle case where end time is next day (past midnight)
+    if (endTotalMinutes < startTotalMinutes) {
+        return (24 * 60) - startTotalMinutes + endTotalMinutes
+    }
 
-            return {
-                value: option.value,
-                label: `${option.label} (${durationLabel})`,
-            }
-        })
+    return endTotalMinutes - startTotalMinutes
 }
 
 
@@ -212,10 +197,16 @@ export default function EditClassPage() {
 
         setCheckingConflicts(true)
         try {
-            // Filter times to only include selected days
+            // Filter times to only include selected days and calculate end times from duration
             const classTimes = selectedDays.reduce((acc, day) => {
-                if (times[day]?.start && times[day]?.end) {
-                    acc[day] = times[day]
+                const timeSlot = times[day]
+                if (timeSlot?.start && timeSlot?.duration) {
+                    const durationMinutes = parseInt(timeSlot.duration)
+                    const endTime = calculateEndTime(timeSlot.start, durationMinutes)
+                    acc[day] = {
+                        start: timeSlot.start,
+                        end: endTime
+                    }
                 }
                 return acc
             }, {} as Record<string, { start: string; end: string }>)
@@ -318,7 +309,7 @@ export default function EditClassPage() {
                 if (classDataResult) {
                     // Handle new object structure for days_repeated
                     const lowercaseDays: string[] = []
-                    const times: Record<string, { start: string; end: string }> = {}
+                    const times: Record<string, { start: string; duration: string }> = {}
 
                     // Helper function to convert UTC HH:MM to local HH:MM
                     const convertUtcTimeToLocal = (utcTime: string): string => {
@@ -342,15 +333,25 @@ export default function EditClassPage() {
 
                     // Process the new object structure
                     // Convert UTC HH:MM times back to local HH:MM for display
+                    // Calculate duration from start and end times
                     if (classDataResult.days_repeated && typeof classDataResult.days_repeated === 'object') {
                         Object.entries(classDataResult.days_repeated).forEach(([day, timeSlot]) => {
                             if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
                                 // Normalize day key to lowercase to match form expectations
                                 const dayKey = day.toLowerCase()
                                 lowercaseDays.push(dayKey)
+                                const localStart = convertUtcTimeToLocal(timeSlot.start)
+                                const localEnd = convertUtcTimeToLocal(timeSlot.end)
+                                const durationMinutes = calculateDuration(localStart, localEnd)
+
+                                // Find the closest duration option
+                                const closestDuration = DURATION_OPTIONS.reduce((prev, curr) => {
+                                    return Math.abs(parseInt(curr.value) - durationMinutes) < Math.abs(parseInt(prev.value) - durationMinutes) ? curr : prev
+                                })
+
                                 times[dayKey] = {
-                                    start: convertUtcTimeToLocal(timeSlot.start),
-                                    end: convertUtcTimeToLocal(timeSlot.end)
+                                    start: localStart,
+                                    duration: closestDuration.value
                                 }
                             }
                         })
@@ -408,6 +409,10 @@ export default function EditClassPage() {
 
             // Convert local times to UTC before saving
             const timesWithUtc = Object.entries(values.times).reduce((acc, [day, time]) => {
+                // Calculate end time from start time and duration
+                const durationMinutes = parseInt(time.duration)
+                const endTime = calculateEndTime(time.start, durationMinutes)
+
                 // For each day, convert the local time to UTC
                 const startUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
@@ -416,7 +421,7 @@ export default function EditClassPage() {
                 );
                 const endUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
-                    time.end + ':00',
+                    endTime + ':00',
                     timezone
                 );
 
@@ -444,7 +449,11 @@ export default function EditClassPage() {
 
             values.daysRepeated.forEach(day => {
                 const timeSlot = values.times[day]
-                if (timeSlot?.start && timeSlot?.end) {
+                if (timeSlot?.start && timeSlot?.duration) {
+                    // Calculate end time from start time and duration
+                    const durationMinutes = parseInt(timeSlot.duration)
+                    const endTime = calculateEndTime(timeSlot.start, durationMinutes)
+
                     // Convert local times to UTC and extract HH:MM format
                     const startUtc = combineDateTimeToUtc(
                         format(values.startDate, 'yyyy-MM-dd'),
@@ -453,7 +462,7 @@ export default function EditClassPage() {
                     )
                     const endUtc = combineDateTimeToUtc(
                         format(values.startDate, 'yyyy-MM-dd'),
-                        timeSlot.end + ':00',
+                        endTime + ':00',
                         timezone
                     )
 
@@ -785,11 +794,6 @@ export default function EditClassPage() {
                                                                                     value={startFieldValue}
                                                                                     onValueChange={(value: string) => {
                                                                                         field.onChange(value)
-                                                                                        const endFieldName = `times.${day}.end` as const
-                                                                                        const currentEndValue = form.getValues(endFieldName) as string | undefined
-                                                                                        if (currentEndValue && currentEndValue <= value) {
-                                                                                            form.setValue(endFieldName, undefined as unknown as string, { shouldValidate: true })
-                                                                                        }
                                                                                         setTimeout(checkConflicts, 300)
                                                                                     }}
                                                                                 >
@@ -812,28 +816,27 @@ export default function EditClassPage() {
                                                             />
                                                             <FormField
                                                                 control={form.control}
-                                                                name={`times.${day}.end` as keyof z.infer<typeof formSchema>}
+                                                                name={`times.${day}.duration` as keyof z.infer<typeof formSchema>}
                                                                 render={({ field }) => {
                                                                     const startValue = form.watch(`times.${day}.start` as const) as string | undefined
-                                                                    const availableEndOptions = getEndTimeOptions(startValue)
-                                                                    const endFieldValue = field.value as string | undefined
+                                                                    const durationValue = field.value as string | undefined
                                                                     return (
                                                                         <FormItem>
-                                                                            <FormLabel className="text-xs font-medium text-gray-600">End Time</FormLabel>
+                                                                            <FormLabel className="text-xs font-medium text-gray-600">Duration</FormLabel>
                                                                             <FormControl>
                                                                                 <Select
-                                                                                    value={endFieldValue}
+                                                                                    value={durationValue}
                                                                                     onValueChange={(value: string) => {
                                                                                         field.onChange(value)
                                                                                         setTimeout(checkConflicts, 300)
                                                                                     }}
-                                                                                    disabled={!startValue || availableEndOptions.length === 0}
+                                                                                    disabled={!startValue}
                                                                                 >
                                                                                     <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20 disabled:opacity-80">
-                                                                                        <SelectValue placeholder={startValue ? "Select end time" : "Pick start time first"} />
+                                                                                        <SelectValue placeholder={startValue ? "Select duration" : "Pick start time first"} />
                                                                                     </SelectTrigger>
                                                                                     <SelectContent className="max-h-64">
-                                                                                        {availableEndOptions.map((option) => (
+                                                                                        {DURATION_OPTIONS.map((option) => (
                                                                                             <SelectItem key={option.value} value={option.value}>
                                                                                                 {option.label}
                                                                                             </SelectItem>
@@ -847,6 +850,22 @@ export default function EditClassPage() {
                                                                 }}
                                                             />
                                                         </div>
+                                                        {/* Display calculated end time */}
+                                                        {(() => {
+                                                            const startTime = form.watch(`times.${day}.start` as const) as string | undefined
+                                                            const duration = form.watch(`times.${day}.duration` as const) as string | undefined
+                                                            if (startTime && duration) {
+                                                                const endTime = calculateEndTime(startTime, parseInt(duration))
+                                                                const [endHour, endMinute] = endTime.split(':').map(Number)
+                                                                const endTimeLabel = formatTimeLabel(endHour, endMinute)
+                                                                return (
+                                                                    <div className="text-xs text-gray-600 mt-1">
+                                                                        End time: <span className="font-medium text-gray-900">{endTimeLabel}</span>
+                                                                    </div>
+                                                                )
+                                                            }
+                                                            return null
+                                                        })()}
                                                     </div>
                                                 ))}
                                             </div>

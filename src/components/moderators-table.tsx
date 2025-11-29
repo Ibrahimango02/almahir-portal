@@ -10,9 +10,19 @@ import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TablePagination } from "./table-pagination"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, MoreHorizontal, Lock } from "lucide-react"
 import { EmptyTableState } from "./empty-table-state"
 import { ShieldCheck } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { ResetPasswordDialog } from "./reset-password-dialog"
 
 interface ModeratorsTableProps {
     moderators: ProfileType[]
@@ -23,6 +33,8 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(100)
+    const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
+    const [selectedModerator, setSelectedModerator] = useState<{ id: string; name: string } | null>(null)
 
     // Group and sort moderators by status, then alphabetically by name
     const groupedModerators = useMemo(() => {
@@ -122,12 +134,13 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Contact</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide">Location</TableHead>
                             <TableHead className="h-11 px-4 font-semibold text-foreground/90 text-sm tracking-wide text-center">Status</TableHead>
+                            <TableHead className="w-[50px] px-4"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {paginatedModerators.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="h-24">
+                                <TableCell colSpan={6} className="h-24">
                                     <EmptyTableState
                                         icon={ShieldCheck}
                                         title="No moderators found"
@@ -143,7 +156,7 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                         {/* Group Header */}
                                         <TableRow className="bg-muted/50 hover:bg-muted/50 border-b-2 border-border">
                                             <TableCell 
-                                                colSpan={5} 
+                                                colSpan={6} 
                                                 className="py-3 px-4"
                                             >
                                                 <div className="flex items-center gap-2">
@@ -162,7 +175,18 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                                     key={moderator.id}
                                                     style={globalIndex % 2 !== 0 ? { backgroundColor: 'rgba(220, 252, 231, 0.27)' } : { backgroundColor: 'transparent' }}
                                                     className="hover:bg-muted/100 transition-all duration-200 border-b border-border/30 cursor-pointer"
-                                                    onClick={() => router.push(`/admin/moderators/${moderator.id}`)}
+                                                    onClick={(e) => {
+                                                        // Prevent navigation if clicking on actions or other interactive elements
+                                                        if (
+                                                            e.target instanceof HTMLElement &&
+                                                            (e.target.closest("button") ||
+                                                                e.target.closest("a") ||
+                                                                e.target.closest("[data-no-navigation]"))
+                                                        ) {
+                                                            return
+                                                        }
+                                                        router.push(`/admin/moderators/${moderator.id}`)
+                                                    }}
                                                 >
                                                     {/* ID */}
                                                     <TableCell className="py-3 px-4">
@@ -222,6 +246,40 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                                             <StatusBadge status={convertStatusToPrefixedFormat(moderator.status, 'user')} />
                                                         </div>
                                                     </TableCell>
+
+                                                    {/* Actions */}
+                                                    <TableCell data-no-navigation className="py-3 px-4">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-7 w-7 hover:bg-primary/10 hover:text-primary transition-colors"
+                                                                >
+                                                                    <MoreHorizontal className="h-4 w-4" />
+                                                                    <span className="sr-only">Open menu</span>
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent align="end" className="w-48">
+                                                                <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem
+                                                                    className="cursor-pointer text-sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setSelectedModerator({
+                                                                            id: moderator.id,
+                                                                            name: `${moderator.first_name} ${moderator.last_name}`
+                                                                        })
+                                                                        setResetPasswordDialogOpen(true)
+                                                                    }}
+                                                                >
+                                                                    <Lock className="mr-2 h-4 w-4" />
+                                                                    Reset Password
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </TableCell>
                                                 </TableRow>
                                             )
                                         })}
@@ -240,6 +298,16 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                 onPageChange={setCurrentPage}
                 onPageSizeChange={setPageSize}
             />
+
+            {/* Reset Password Dialog */}
+            {selectedModerator && (
+                <ResetPasswordDialog
+                    open={resetPasswordDialogOpen}
+                    onOpenChange={setResetPasswordDialogOpen}
+                    userId={selectedModerator.id}
+                    userName={selectedModerator.name}
+                />
+            )}
         </div>
     )
 } 

@@ -6,6 +6,7 @@ import { cookies } from 'next/headers'
 
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function login(formData: FormData) {
     const cookieStore = await cookies()
@@ -184,21 +185,10 @@ export async function sendPasswordResetEmail(formData: FormData) {
         return { error: 'Email is required' }
     }
 
-    // Get the base URL - prioritize NEXT_PUBLIC_APP_URL, then VERCEL_URL, then localhost
-    let baseUrl = process.env.NEXT_PUBLIC_APP_URL
-    if (!baseUrl) {
-        // Vercel automatically sets VERCEL_URL in production
-        if (process.env.VERCEL_URL) {
-            baseUrl = `https://${process.env.VERCEL_URL}`
-        } else {
-            baseUrl = 'http://localhost:3000'
-        }
-    }
-
     // Even if user doesn't exist in profiles, try to send reset email
     // Supabase will handle the case where the email doesn't exist
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${baseUrl}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password`,
     })
 
     if (error) {
@@ -234,6 +224,56 @@ export async function resetPassword(formData: FormData) {
     if (error) {
         console.error('Error resetting password:', error)
         return { error: error.message || 'Failed to reset password. The link may have expired.' }
+    }
+
+    revalidatePath('/', 'layout')
+    return { success: true }
+}
+
+export async function adminUpdateUserPassword(userId: string, newPassword: string) {
+    // Check if current user is admin
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+        return { error: 'Unauthorized: You must be logged in' }
+    }
+
+    // Get current user's role
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+    if (profile?.role !== 'admin') {
+        return { error: 'Unauthorized: Only admins can reset passwords' }
+    }
+
+    // Validate password
+    if (!newPassword || newPassword.length < 8) {
+        return { error: 'Password must be at least 8 characters long' }
+    }
+
+    // Use service role key for admin operations
+    const supabaseAdmin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false
+            }
+        }
+    )
+
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password: newPassword
+    })
+
+    if (error) {
+        console.error('Error updating user password:', error)
+        return { error: error.message || 'Failed to update password' }
     }
 
     revalidatePath('/', 'layout')

@@ -25,15 +25,15 @@ export default function ForgotPasswordPage() {
     try {
       const formData = new FormData()
       formData.append("email", email)
-      
+
       const result = await sendPasswordResetEmail(formData)
-      
+
       if (result?.error) {
         setMessage({ type: "error", text: result.error })
       } else {
-        setMessage({ 
-          type: "success", 
-          text: "If an account with that email exists, we've sent you a password reset link. Please check your email." 
+        setMessage({
+          type: "success",
+          text: "If an account with that email exists, we've sent you a password reset link. Please check your email."
         })
         setEmail("")
       }

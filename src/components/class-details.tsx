@@ -144,7 +144,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   const enrolledStudents = classData.students || []
   const daysRepeated = classData.days_repeated || {}
 
-  // Helper function to convert UTC HH:MM to local HH:MM
+  // Helper function to convert UTC HH:MM to local HH:MM in 12-hour format
   const convertUtcTimeToLocal = (utcTime: string): string => {
     try {
       const [hours, minutes] = utcTime.split(':').map(Number)
@@ -157,7 +157,11 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
         minutes
       ))
       const localDate = toZonedTime(utcDate, timezone)
-      return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`
+      const localHours = localDate.getHours()
+      const localMinutes = localDate.getMinutes()
+      const hour12 = localHours === 0 ? 12 : localHours > 12 ? localHours - 12 : localHours
+      const ampm = localHours >= 12 ? 'PM' : 'AM'
+      return `${hour12}:${String(localMinutes).padStart(2, '0')} ${ampm}`
     } catch (error) {
       console.error('Error converting UTC time to local:', error)
       return utcTime
@@ -225,7 +229,7 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                               className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
                             >
                               <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
-                              {day.charAt(0).toUpperCase() + day.slice(1)} {localStartTime}-{localEndTime}
+                              {day.charAt(0).toUpperCase() + day.slice(1)} {localStartTime} - {localEndTime}
                             </span>
                           )
                         })}

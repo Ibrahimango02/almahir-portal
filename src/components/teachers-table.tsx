@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin } from "lucide-react"
+import { Edit, MoreHorizontal, CalendarPlus, Mail, Phone, MapPin, Lock } from "lucide-react"
 
 import Link from "next/link"
 import { useState, useEffect, useMemo } from "react"
@@ -27,6 +27,7 @@ import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
 import { EmptyTableState } from "./empty-table-state"
 import { UserPen } from "lucide-react"
+import { ResetPasswordDialog } from "./reset-password-dialog"
 
 interface TeachersTableProps {
   teachers: TeacherType[]
@@ -39,6 +40,8 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(100)
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
+  const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false)
+  const [selectedTeacher, setSelectedTeacher] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -334,12 +337,28 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
                                 </DropdownMenuItem>
                                 {/* Only show edit for admin */}
                                 {isAdmin && (
-                                  <DropdownMenuItem asChild className="cursor-pointer text-sm">
-                                    <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center">
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Edit Teacher
-                                    </Link>
-                                  </DropdownMenuItem>
+                                  <>
+                                    <DropdownMenuItem asChild className="cursor-pointer text-sm">
+                                      <Link href={`/admin/teachers/edit/${teacher.teacher_id}`} className="flex items-center">
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit Teacher
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="cursor-pointer text-sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSelectedTeacher({
+                                          id: teacher.teacher_id,
+                                          name: `${teacher.first_name} ${teacher.last_name}`
+                                        })
+                                        setResetPasswordDialogOpen(true)
+                                      }}
+                                    >
+                                      <Lock className="mr-2 h-4 w-4" />
+                                      Reset Password
+                                    </DropdownMenuItem>
+                                  </>
                                 )}
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -364,6 +383,16 @@ export function TeachersTable({ teachers, userRole }: TeachersTableProps) {
         onPageChange={setCurrentPage}
         onPageSizeChange={setPageSize}
       />
+
+      {/* Reset Password Dialog */}
+      {selectedTeacher && (
+        <ResetPasswordDialog
+          open={resetPasswordDialogOpen}
+          onOpenChange={setResetPasswordDialogOpen}
+          userId={selectedTeacher.id}
+          userName={selectedTeacher.name}
+        />
+      )}
     </div>
   )
 }
