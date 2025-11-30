@@ -10,10 +10,10 @@ export function DevelopmentBanner() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const pathname = usePathname()
 
-  // Hide banner on registration page
-  if (pathname === "/" || pathname === "/register" || pathname === "/signup") {
+   // Hide banner on registration page and error pages
+  if (pathname === "/" || pathname === "/register" || pathname === "/signup" || pathname === "/error" || pathname.startsWith("/error") || pathname.includes("/error")) {
     return <TicketSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
-  }
+  } 
 
   return (
     <>
