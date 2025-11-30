@@ -24,12 +24,12 @@ export default function ErrorPage() {
                     </CardHeader>
                     <CardContent>
                         <p className="text-center text-muted-foreground">
-                            You don't have permission to access this page. Please contact your administrator if you believe this is an error.
+                            You don&apos;t have permission to access this page. Please contact your administrator if you believe this is an error.
                         </p>
                     </CardContent>
                     <CardFooter className="flex justify-center">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => router.push('/')}
                             className="w-full sm:w-auto"
                         >
