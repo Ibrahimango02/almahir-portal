@@ -28,8 +28,8 @@ export default function NotFound() {
                         </p>
                     </CardContent>
                     <CardFooter className="flex justify-center">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={() => router.push('/')}
                             className="w-full sm:w-auto"
                         >

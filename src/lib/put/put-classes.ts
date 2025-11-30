@@ -651,17 +651,17 @@ export async function rescheduleSession(params: {
         if (newStart <= now) {
             throw new Error('New session date must be in the future')
         }
-
-        // 3. Cancel the current session
-        const { error: cancelError } = await supabase
-            .from('class_sessions')
-            .update({
-                status: 'cancelled',
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', sessionId)
-
-        if (cancelError) throw cancelError
+        /* 
+                // 3. Cancel the current session
+                const { error: cancelError } = await supabase
+                    .from('class_sessions')
+                    .update({
+                        status: 'cancelled',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', sessionId)
+        
+                if (cancelError) throw cancelError */
 
         // 4. Create a new session with the new dates
         const { data: newSession, error: createError } = await supabase

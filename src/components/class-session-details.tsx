@@ -155,18 +155,21 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
   // Fetch cancelled by name if session is cancelled
   useEffect(() => {
     const fetchCancelledByName = async () => {
-      if (currentStatus === 'cancelled' && sessionHistory?.cancelled_by && userRole === 'admin') {
+      if (currentStatus === 'cancelled' && sessionHistory?.cancelled_by) {
         try {
           const name = await getUserNameById(sessionHistory.cancelled_by)
           setCancelledByName(name)
         } catch (error) {
           console.error('Error fetching cancelled by name:', error)
         }
+      } else if (currentStatus !== 'cancelled' || !sessionHistory?.cancelled_by) {
+        // Reset cancelledByName when session is not cancelled or cancelled_by is not available
+        setCancelledByName(null)
       }
     }
 
     fetchCancelledByName()
-  }, [currentStatus, sessionHistory?.cancelled_by, userRole])
+  }, [currentStatus, sessionHistory])
 
   // Calculate duration
   let durationMinutes = 60 // default to 1 hour
@@ -287,8 +290,8 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
           </div>
         </CardHeader>
 
-        {/* Show cancellation reason at the top for cancelled sessions (admin only) */}
-        {currentStatus === 'cancelled' && userRole === 'admin' && (
+        {/* Show cancellation reason at the top for cancelled sessions */}
+        {currentStatus === 'cancelled' && (
           <div className="px-6 pt-4">
             {loadingSessionHistory ? (
               <p className="text-sm text-muted-foreground">Loading cancellation details...</p>

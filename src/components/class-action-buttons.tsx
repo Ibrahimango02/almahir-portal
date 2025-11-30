@@ -616,9 +616,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button4: {
             icon: CalendarSync,
             onClick: handleRescheduleSession,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50",
-            title: "Reschedule Session (Disabled)",
-            disabled: true
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
+            title: "Reschedule Session",
+            disabled: isLoading
           },
           button5: {
             ...deleteButton,
@@ -628,9 +628,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button6: {
             icon: CalendarSync,
             onClick: handleRequestReschedule,
-            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
-            disabled: isLoading || !canCancelSession()
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
+            title: "Request Reschedule",
+            disabled: isLoading
           }
         }
 
