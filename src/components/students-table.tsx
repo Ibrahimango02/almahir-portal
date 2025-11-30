@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Lock } from "lucide-react"
+import { Edit, GraduationCap, MoreHorizontal, Mail, Phone, MapPin, Lock, Users } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect, useMemo } from "react"
 import { TablePagination } from "./table-pagination"
@@ -26,7 +26,6 @@ import AvatarIcon from "./avatar"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { getProfile } from "@/lib/get/get-profiles"
 import { EmptyTableState } from "./empty-table-state"
-import { Users } from "lucide-react"
 import { ResetPasswordDialog } from "./reset-password-dialog"
 
 // Define types for related data
@@ -278,9 +277,14 @@ export function StudentsTable({ students, userRole }: StudentsTableProps) {
                                 </Avatar>
                               )}
                               <div className="space-y-0.5">
-                                <p className="font-semibold text-sm text-foreground">
-                                  {student.first_name} {student.last_name}
-                                </p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-sm text-foreground">
+                                    {student.first_name} {student.last_name}
+                                  </p>
+                                  {student.student_type === 'dependent' && (
+                                    <Users className="h-3.5 w-3.5 text-blue-500" />
+                                  )}
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                   Age {student.age || 'N/A'} • {student.gender || 'N/A'}
                                 </p>

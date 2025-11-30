@@ -12,19 +12,21 @@ export async function getParents(): Promise<ParentType[]> {
 
     if (!profile) return []
 
-    // Get all parent notes, payment_method, and billing_name from parents table
+    // Get all parent notes, payment_method, billing_name, and billing_email from parents table
     const { data: parentsData } = await supabase
         .from('parents')
-        .select('profile_id, notes, payment_method, billing_name')
+        .select('profile_id, notes, payment_method, billing_name, billing_email')
 
     // Create maps for quick lookup
     const notesMap = new Map<string, string | null>()
     const paymentMethodMap = new Map<string, string | null>()
     const billingNameMap = new Map<string, string | null>()
+    const billingEmailMap = new Map<string, string | null>()
     parentsData?.forEach(parent => {
         notesMap.set(parent.profile_id, parent.notes || null)
         paymentMethodMap.set(parent.profile_id, parent.payment_method || null)
         billingNameMap.set(parent.profile_id, parent.billing_name || null)
+        billingEmailMap.set(parent.profile_id, parent.billing_email || null)
     })
 
     const combinedParents = profile?.map(parentProfile => {
@@ -43,6 +45,7 @@ export async function getParents(): Promise<ParentType[]> {
             notes: notesMap.get(parentProfile.id) || null,
             payment_method: paymentMethodMap.get(parentProfile.id) || null,
             billing_name: billingNameMap.get(parentProfile.id) || null,
+            billing_email: billingEmailMap.get(parentProfile.id) || null,
             created_at: parentProfile.created_at,
             updated_at: parentProfile.updated_at || null
         }
@@ -66,10 +69,10 @@ export async function getParentById(id: string): Promise<ParentType | null> {
         return null
     }
 
-    // Get notes, payment_method, and billing_name from parents table
+    // Get notes, payment_method, billing_name, and billing_email from parents table
     const { data: parentData } = await supabase
         .from('parents')
-        .select('notes, payment_method, billing_name')
+        .select('notes, payment_method, billing_name, billing_email')
         .eq('profile_id', id)
         .single()
 
@@ -89,6 +92,7 @@ export async function getParentById(id: string): Promise<ParentType | null> {
         notes: parentData?.notes || null,
         payment_method: parentData?.payment_method || null,
         billing_name: parentData?.billing_name || null,
+        billing_email: parentData?.billing_email || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }
@@ -218,6 +222,7 @@ export async function getAllParentStudents(parentIds: string[]): Promise<Record<
                 notes: student.notes,
                 payment_method: student.payment_method || null,
                 billing_name: student.billing_name || null,
+                billing_email: student.billing_email || null,
                 created_at: student.created_at,
                 updated_at: student.updated_at,
                 first_name: childProfile.first_name,
@@ -281,20 +286,22 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
 
     if (!parentProfiles) return []
 
-    // Get parent notes, payment_method, and billing_name from parents table
+    // Get parent notes, payment_method, billing_name, and billing_email from parents table
     const { data: parentsData } = await supabase
         .from('parents')
-        .select('profile_id, notes, payment_method, billing_name')
+        .select('profile_id, notes, payment_method, billing_name, billing_email')
         .in('profile_id', parentIds)
 
     // Create maps for quick lookup
     const notesMap = new Map<string, string | null>()
     const paymentMethodMap = new Map<string, string | null>()
     const billingNameMap = new Map<string, string | null>()
+    const billingEmailMap = new Map<string, string | null>()
     parentsData?.forEach(parent => {
         notesMap.set(parent.profile_id, parent.notes || null)
         paymentMethodMap.set(parent.profile_id, parent.payment_method || null)
         billingNameMap.set(parent.profile_id, parent.billing_name || null)
+        billingEmailMap.set(parent.profile_id, parent.billing_email || null)
     })
 
     // Map the profiles to ParentType
@@ -313,6 +320,7 @@ export async function getStudentParentsByTeacherId(teacherId: string): Promise<P
         notes: notesMap.get(profile.id) || null,
         payment_method: paymentMethodMap.get(profile.id) || null,
         billing_name: billingNameMap.get(profile.id) || null,
+        billing_email: billingEmailMap.get(profile.id) || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }))
@@ -382,6 +390,7 @@ export async function getParentStudentsForTeacher(parentId: string, teacherId: s
                 notes: student.notes,
                 payment_method: student.payment_method || null,
                 billing_name: student.billing_name || null,
+                billing_email: student.billing_email || null,
                 created_at: student.created_at,
                 updated_at: student.updated_at,
                 first_name: childProfile.first_name,

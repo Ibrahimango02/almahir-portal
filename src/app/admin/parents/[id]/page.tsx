@@ -141,6 +141,10 @@ export default async function ParentDetailPage({ params }: { params: Promise<{ i
                     <span className="text-sm text-muted-foreground">{parent.billing_name || 'None'}</span>
                   </div>
                   <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Billing Email:</span>
+                    <span className="text-sm text-muted-foreground break-all">{parent.billing_email || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
                     <span className="text-sm font-medium mr-2">Payment Method:</span>
                     <span className="text-sm text-muted-foreground">{parent.payment_method || 'None'}</span>
                   </div>

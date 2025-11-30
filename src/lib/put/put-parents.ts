@@ -7,6 +7,7 @@ export async function updateParents(parentId: string, data: {
     notes?: string | null;
     payment_method?: string | null;
     billing_name?: string | null;
+    billing_email?: string | null;
 }) {
     const supabase = createClient()
 
@@ -46,6 +47,7 @@ export async function updateParents(parentId: string, data: {
                         notes: data.notes || null,
                         payment_method: data.payment_method || null,
                         billing_name: data.billing_name || null,
+                        billing_email: data.billing_email || null,
                         updated_at: new Date().toISOString()
                     })
                     .eq('profile_id', parentId)
@@ -62,6 +64,7 @@ export async function updateParents(parentId: string, data: {
                         notes: data.notes || null,
                         payment_method: data.payment_method || null,
                         billing_name: data.billing_name || null,
+                        billing_email: data.billing_email || null,
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString()
                     })
@@ -78,12 +81,13 @@ export async function updateParents(parentId: string, data: {
                 .eq('profile_id', parentId)
                 .single()
 
-            if (existingParent && (data.payment_method !== undefined || data.billing_name !== undefined)) {
-                const updateData: { payment_method?: string | null; billing_name?: string | null; updated_at: string } = {
+            if (existingParent && (data.payment_method !== undefined || data.billing_name !== undefined || data.billing_email !== undefined)) {
+                const updateData: { payment_method?: string | null; billing_name?: string | null; billing_email?: string | null; updated_at: string } = {
                     updated_at: new Date().toISOString()
                 }
                 if (data.payment_method !== undefined) updateData.payment_method = data.payment_method || null
                 if (data.billing_name !== undefined) updateData.billing_name = data.billing_name || null
+                if (data.billing_email !== undefined) updateData.billing_email = data.billing_email || null
 
                 const { error: parentError } = await supabase
                     .from('parents')

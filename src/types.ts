@@ -59,6 +59,7 @@ export type ParentType = {
     notes: string | null
     payment_method: string | null
     billing_name: string | null
+    billing_email: string | null
     created_at: string
     updated_at: string | null
 }
@@ -71,6 +72,7 @@ export type StudentType = {
     notes: string | null
     payment_method: string | null
     billing_name: string | null
+    billing_email: string | null
     created_at: string
     updated_at: string | null
     // Profile data (either from profiles or child_profiles)
@@ -367,6 +369,8 @@ export type SessionHistoryType = {
     actual_end_time: string | null
     duration: string | null // PostgreSQL interval as string
     notes: string | null
+    cancellation_reason: string | null
+    cancelled_by: string | null
     created_at: string
     updated_at: string | null
 }

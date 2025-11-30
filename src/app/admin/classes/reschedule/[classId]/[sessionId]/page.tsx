@@ -5,7 +5,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { TimePicker } from "@/components/ui/time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { format, parse, isAfter, startOfDay } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 import Link from "next/link"
@@ -23,6 +23,77 @@ import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { combineDateTimeToUtc, utcToLocal, formatDateTime } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+
+// Time options and duration constants
+type TimeOption = {
+  value: string
+  label: string
+}
+
+const TIME_INCREMENT_MINUTES = 15
+
+const formatTimeLabel = (hours: number, minutes: number) => {
+  const period = hours >= 12 ? "PM" : "AM"
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12
+  const minuteString = minutes.toString().padStart(2, "0")
+  return `${displayHour}:${minuteString} ${period}`
+}
+
+const TIME_OPTIONS: TimeOption[] = Array.from(
+  { length: (24 * 60) / TIME_INCREMENT_MINUTES },
+  (_, index) => {
+    const totalMinutes = index * TIME_INCREMENT_MINUTES
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+    const value = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+    return {
+      value,
+      label: formatTimeLabel(hours, minutes),
+    }
+  }
+)
+
+// Duration options in minutes
+const DURATION_OPTIONS = [
+  { value: "15", label: "15 mins" },
+  { value: "30", label: "30 mins" },
+  { value: "45", label: "45 mins" },
+  { value: "60", label: "1 hr" },
+  { value: "90", label: "1.5 hrs" },
+  { value: "120", label: "2 hrs" },
+  { value: "150", label: "2.5 hrs" },
+  { value: "180", label: "3 hrs" },
+  { value: "240", label: "4 hrs" },
+]
+
+// Calculate end time from start time and duration (in minutes)
+const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+  const [startHour, startMinute] = startTime.split(':').map(Number)
+  const startTotalMinutes = startHour * 60 + startMinute
+  const endTotalMinutes = startTotalMinutes + durationMinutes
+
+  // Handle overflow past midnight
+  const endHour = Math.floor((endTotalMinutes % (24 * 60)) / 60)
+  const endMinute = (endTotalMinutes % (24 * 60)) % 60
+
+  return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`
+}
+
+// Calculate duration in minutes from start and end times
+const calculateDuration = (startTime: string, endTime: string): number => {
+  const [startHour, startMinute] = startTime.split(':').map(Number)
+  const [endHour, endMinute] = endTime.split(':').map(Number)
+
+  const startTotalMinutes = startHour * 60 + startMinute
+  let endTotalMinutes = endHour * 60 + endMinute
+
+  // Handle case where end time is next day (e.g., 23:00 to 01:00)
+  if (endTotalMinutes <= startTotalMinutes) {
+    endTotalMinutes += 24 * 60
+  }
+
+  return endTotalMinutes - startTotalMinutes
+}
 
 // Create a schema for form validation
 const formSchema = z
@@ -47,37 +118,12 @@ const formSchema = z
       .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
         message: "Please enter a valid time in 24-hour format (HH:MM)",
       }),
-    end_time: z
+    duration: z
       .string({
-        required_error: "Please enter an end time",
+        required_error: "Please select a duration",
       })
-      .regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-        message: "Please enter a valid time in 24-hour format (HH:MM)",
-      }),
+      .min(1, { message: "Please select a duration" }),
   })
-  .refine(
-    (data) => {
-      // Convert times to minutes for comparison
-      const [startHour, startMinute] = data.start_time.split(':').map(Number)
-      const [endHour, endMinute] = data.end_time.split(':').map(Number)
-
-      const startMinutes = startHour * 60 + startMinute
-      const endMinutes = endHour * 60 + endMinute
-
-      // If end time is earlier in the day than start time, it means the class runs past midnight
-      // This is valid (e.g., 11:00 PM to 12:00 AM)
-      if (endMinutes <= startMinutes) {
-        // Only allow this if the end time is 12:00 AM (00:00)
-        return endMinutes === 0
-      }
-
-      return true
-    },
-    {
-      message: "End time must be after start time, unless the class runs past midnight (ending at 12:00 AM)",
-      path: ["end_time"],
-    },
-  )
   .refine(
     (data) => {
       const selectedDate = startOfDay(data.date)
@@ -141,7 +187,7 @@ export default function ReschedulePage() {
     defaultValues: {
       date: classData ? parseLocalDate(formatDateTime(utcToLocal(classData.start_date, timezone), 'yyyy-MM-dd', timezone)) : new Date(),
       start_time: classData ? format(utcToLocal(classData.start_date, timezone), "HH:mm") : "",
-      end_time: classData ? format(utcToLocal(classData.end_date, timezone), "HH:mm") : "",
+      duration: "",
     },
   })
 
@@ -150,11 +196,19 @@ export default function ReschedulePage() {
     if (classData) {
       const startDateTime = utcToLocal(classData.start_date, timezone)
       const endDateTime = utcToLocal(classData.end_date, timezone)
+      const startTime = format(startDateTime, "HH:mm")
+      const endTime = format(endDateTime, "HH:mm")
+      const durationMinutes = calculateDuration(startTime, endTime)
+
+      // Find the closest duration option
+      const durationOption = DURATION_OPTIONS.find(opt => parseInt(opt.value) === durationMinutes)
+        || DURATION_OPTIONS.find(opt => parseInt(opt.value) >= durationMinutes)
+        || DURATION_OPTIONS[DURATION_OPTIONS.length - 1]
 
       form.reset({
         date: parseLocalDate(formatDateTime(startDateTime, 'yyyy-MM-dd', timezone)),
-        start_time: format(startDateTime, "HH:mm"),
-        end_time: format(endDateTime, "HH:mm"),
+        start_time: startTime,
+        duration: durationOption.value,
       })
     }
   }, [classData, form, timezone])
@@ -162,6 +216,10 @@ export default function ReschedulePage() {
   // Handle form submission
   async function onSubmit(data: FormValues) {
     try {
+      // Calculate end time from start time and duration
+      const durationMinutes = parseInt(data.duration)
+      const endTime = calculateEndTime(data.start_time, durationMinutes)
+
       // Convert local date and times to UTC before saving
       const startUtc = combineDateTimeToUtc(
         format(data.date, 'yyyy-MM-dd'),
@@ -170,7 +228,7 @@ export default function ReschedulePage() {
       );
       const endUtc = combineDateTimeToUtc(
         format(data.date, 'yyyy-MM-dd'),
-        data.end_time + ':00',
+        endTime + ':00',
         timezone
       );
 
@@ -290,12 +348,23 @@ export default function ReschedulePage() {
                       <FormLabel>
                         Start Time <span className="text-destructive">*</span>
                       </FormLabel>
-                      <TimePicker
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder="Select start time"
-                        className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                      />
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20">
+                            <SelectValue placeholder="Select start time" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {TIME_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -303,23 +372,55 @@ export default function ReschedulePage() {
 
                 <FormField
                   control={form.control}
-                  name="end_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        End Time <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <TimePicker
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder="Select end time"
-                        className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  name="duration"
+                  render={({ field }) => {
+                    const startValue = form.watch("start_time")
+                    return (
+                      <FormItem>
+                        <FormLabel>
+                          Duration <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            disabled={!startValue}
+                          >
+                            <SelectTrigger className="h-9 text-sm border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20 disabled:opacity-80">
+                              <SelectValue placeholder={startValue ? "Select duration" : "Pick start time first"} />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-64">
+                              {DURATION_OPTIONS.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )
+                  }}
                 />
               </div>
+
+              {/* Display calculated end time */}
+              {(() => {
+                const startTime = form.watch("start_time")
+                const duration = form.watch("duration")
+                if (startTime && duration) {
+                  const endTime = calculateEndTime(startTime, parseInt(duration))
+                  const [endHour, endMinute] = endTime.split(':').map(Number)
+                  const endTimeLabel = formatTimeLabel(endHour, endMinute)
+                  return (
+                    <div className="text-sm text-gray-600">
+                      End time: <span className="font-medium text-gray-900">{endTimeLabel}</span>
+                    </div>
+                  )
+                }
+                return null
+              })()}
 
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" type="button" asChild>

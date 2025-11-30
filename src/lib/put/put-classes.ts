@@ -290,16 +290,16 @@ export async function updateClass(params: {
                             // was on the "next day" in UTC terms. For EST/EDT (UTC-5/UTC-4), times after 7 PM
                             // local will be 0:00+ UTC the next day. So we'll add a day if UTC hour < 6.
                             // This heuristic works for most common timezones with offsets of 4-8 hours.
-                            
+
                             const utcYear = currentDateUtc.getUTCFullYear()
                             const utcMonth = currentDateUtc.getUTCMonth()
                             const utcDay = currentDateUtc.getUTCDate()
-                            
+
                             // Determine if the UTC time falls on the next day
                             // If UTC hour is early morning (0-5), it's likely the next calendar day
                             const startDateOffset = startHours < 6 ? 1 : 0
                             const endDateOffset = endHours < 6 ? 1 : 0
-                            
+
                             // Create the start datetime in UTC
                             const sessionStartDate = new Date(Date.UTC(
                                 utcYear,
@@ -319,8 +319,8 @@ export async function updateClass(params: {
                             // Calculate final end date offset
                             // If it spans midnight, end is on the day after start
                             // Otherwise, use the calculated endDateOffset
-                            const finalEndDateOffset = spansMidnight 
-                                ? startDateOffset + 1 
+                            const finalEndDateOffset = spansMidnight
+                                ? startDateOffset + 1
                                 : endDateOffset
 
                             const sessionEndDate = new Date(Date.UTC(
@@ -439,9 +439,11 @@ export async function updateSession(params: {
     sessionId: string;
     action: string;
     studentAttendance?: Record<string, boolean>;
+    cancellationReason?: string;
+    cancelledBy?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, studentAttendance } = params
+    const { sessionId, action, studentAttendance, cancellationReason, cancelledBy } = params
 
     try {
         switch (action.toLowerCase()) {
@@ -593,7 +595,9 @@ export async function updateSession(params: {
                     .from('session_history')
                     .upsert({
                         session_id: sessionId,
-                        notes: 'session cancelled'
+                        notes: 'session cancelled',
+                        cancellation_reason: cancellationReason || null,
+                        cancelled_by: cancelledBy || null
                     }, {
                         onConflict: 'session_id'
                     })

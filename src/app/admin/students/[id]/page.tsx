@@ -232,6 +232,10 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                     <span className="text-sm text-muted-foreground">{student.billing_name || 'None'}</span>
                   </div>
                   <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Billing Email:</span>
+                    <span className="text-sm text-muted-foreground break-all">{student.billing_email || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
                     <span className="text-sm font-medium mr-2">Payment Method:</span>
                     <span className="text-sm text-muted-foreground">{student.payment_method || 'None'}</span>
                   </div>

@@ -133,26 +133,10 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
     }
   }, [currentStatus, classData.session_id, classData.status])
 
-  // Fetch cancelled by name if session is cancelled
-  useEffect(() => {
-    const fetchCancelledByName = async () => {
-      if (currentStatus === 'cancelled' && classData.cancelled_by && userRole === 'admin') {
-        try {
-          const name = await getUserNameById(classData.cancelled_by)
-          setCancelledByName(name)
-        } catch (error) {
-          console.error('Error fetching cancelled by name:', error)
-        }
-      }
-    }
-
-    fetchCancelledByName()
-  }, [currentStatus, classData.cancelled_by, userRole])
-
-  // Fetch session history for completed sessions
+  // Fetch session history for completed or cancelled sessions
   useEffect(() => {
     const fetchSessionHistory = async () => {
-      if (currentStatus === 'complete' || currentStatus === 'absence') {
+      if (currentStatus === 'complete' || currentStatus === 'absence' || currentStatus === 'cancelled') {
         setLoadingSessionHistory(true)
         try {
           const history = await getSessionHistory(classData.session_id)
@@ -167,6 +151,22 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
 
     fetchSessionHistory()
   }, [currentStatus, classData.session_id])
+
+  // Fetch cancelled by name if session is cancelled
+  useEffect(() => {
+    const fetchCancelledByName = async () => {
+      if (currentStatus === 'cancelled' && sessionHistory?.cancelled_by && userRole === 'admin') {
+        try {
+          const name = await getUserNameById(sessionHistory.cancelled_by)
+          setCancelledByName(name)
+        } catch (error) {
+          console.error('Error fetching cancelled by name:', error)
+        }
+      }
+    }
+
+    fetchCancelledByName()
+  }, [currentStatus, sessionHistory?.cancelled_by, userRole])
 
   // Calculate duration
   let durationMinutes = 60 // default to 1 hour
@@ -288,13 +288,17 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
         </CardHeader>
 
         {/* Show cancellation reason at the top for cancelled sessions (admin only) */}
-        {currentStatus === 'cancelled' && userRole === 'admin' && classData.cancellation_reason && (
+        {currentStatus === 'cancelled' && userRole === 'admin' && (
           <div className="px-6 pt-4">
-            <CancellationReasonDisplay
-              cancellationReason={classData.cancellation_reason}
-              cancelledByName={cancelledByName}
-              rescheduleDate={classData.reschedule_date}
-            />
+            {loadingSessionHistory ? (
+              <p className="text-sm text-muted-foreground">Loading cancellation details...</p>
+            ) : sessionHistory?.cancellation_reason ? (
+              <CancellationReasonDisplay
+                cancellationReason={sessionHistory.cancellation_reason}
+                cancelledByName={cancelledByName}
+                rescheduleDate={classData.reschedule_date}
+              />
+            ) : null}
           </div>
         )}
 

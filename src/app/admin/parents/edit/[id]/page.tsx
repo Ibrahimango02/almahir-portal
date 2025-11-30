@@ -35,6 +35,7 @@ export default function EditParentPage() {
     students: [] as StudentType[],
     payment_method: "",
     billing_name: "",
+    billing_email: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -82,6 +83,7 @@ export default function EditParentPage() {
             students: associatedStudents,
             payment_method: parentData.payment_method || "",
             billing_name: parentData.billing_name || "",
+            billing_email: parentData.billing_email || "",
           })
         }
       } catch (error) {
@@ -197,6 +199,7 @@ export default function EditParentPage() {
         notes: formData.notes || null,
         payment_method: formData.payment_method || null,
         billing_name: formData.billing_name || null,
+        billing_email: formData.billing_email || null,
         student_id: [...formData.students.map(student => student.student_id), ...newlyCreatedStudentIds]
       })
 
@@ -274,6 +277,20 @@ export default function EditParentPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <Label htmlFor="billing_email">Billing Email</Label>
+                  <Input
+                    id="billing_email"
+                    name="billing_email"
+                    type="email"
+                    value={formData.billing_email}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, billing_email: e.target.value }))}
+                    placeholder="Enter billing email"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select value={formData.payment_method} onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}>
                     <SelectTrigger id="payment_method">
@@ -284,7 +301,6 @@ export default function EditParentPage() {
                       <SelectItem value="PayPal">PayPal</SelectItem>
                       <SelectItem value="Bank">Bank</SelectItem>
                       <SelectItem value="Cash">Cash</SelectItem>
-                      <SelectItem value="Email">Email</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

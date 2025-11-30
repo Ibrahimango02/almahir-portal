@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CircleOff, Calendar, LogOut, Trash2 } from "lucide-react"
+import { Video, Power, Play, CalendarSync, LogOut, Trash2 } from "lucide-react"
+import { FaRegCircleStop } from "react-icons/fa6";
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
@@ -58,6 +59,7 @@ type ClassActionButtonsProps = {
 export function ClassActionButtons({ classData, currentStatus, onStatusChange, showOnlyJoinCall = false, userRole, userId }: ClassActionButtonsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
+  const [showRescheduleDialog, setShowRescheduleDialog] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [rescheduleDate, setRescheduleDate] = useState("")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -258,58 +260,113 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
-  const handleLeaveSession = async () => {
-    // If user is a teacher, student, or parent, show cancellation dialog with reschedule requirement
+  const handleRequestReschedule = () => {
+    // Show reschedule dialog for teachers, students, and parents
+    if (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') {
+      setShowRescheduleDialog(true)
+    }
+  }
+
+  const handleCancelSession = () => {
+    // Show cancellation dialog for teachers, students, and parents
     if (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') {
       setShowCancellationDialog(true)
-      return
     }
+  }
 
+  const handleLeaveSession = async () => {
     // For admins only, proceed with normal cancellation
     await handleRescheduleOrCancellation()
   }
 
-  const handleRescheduleOrCancellation = async (reason?: string, rescheduleDate?: string) => {
+  const handleRescheduleRequest = async (reason: string, rescheduleDate: string) => {
     setIsLoading(true)
     try {
-      // For teachers, students, and parents, create a reschedule request without cancelling the session
-      if (rescheduleDate && (userRole === 'teacher' || userRole === 'student' || userRole === 'parent')) {
-        // Convert local datetime to UTC before storing in database
-        const localDate = new Date(rescheduleDate)
-        const utcDate = localToUtc(localDate, getUserTimezone())
+      // Convert local datetime to UTC before storing in database
+      const localDate = new Date(rescheduleDate)
+      const utcDate = localToUtc(localDate, getUserTimezone())
 
-        const rescheduleResult = await createRescheduleRequest({
-          sessionId: classData.session_id,
-          requestedBy: userId!,
-          requestedDate: utcDate.toISOString(),
-          reason: reason || 'No reason provided',
-          timezone: getUserTimezone()
+      const rescheduleResult = await createRescheduleRequest({
+        sessionId: classData.session_id,
+        requestedBy: userId!,
+        requestedDate: utcDate.toISOString(),
+        reason: reason,
+        timezone: getUserTimezone()
+      })
+
+      if (rescheduleResult.success) {
+        toast({
+          title: "Reschedule Request Submitted",
+          description: "Your reschedule request has been sent to administrators for approval. The session remains active until approved.",
         })
-
-        if (rescheduleResult.success) {
-          toast({
-            title: "Reschedule Request Submitted",
-            description: "Your reschedule request has been sent to administrators for approval. The session remains active until approved.",
-          })
-        } else {
-          throw new Error("Failed to create reschedule request")
-        }
+        setShowRescheduleDialog(false)
+        setCancellationReason("")
+        setRescheduleDate("")
       } else {
-        // For other users (admins, parents), proceed with normal cancellation
-        const result = await updateSession({
-          sessionId: classData.session_id,
-          action: 'leave'
-        })
+        throw new Error("Failed to create reschedule request")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process request. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-        if (result.success) {
-          toast({
-            title: "Session Cancelled",
-            description: reason ? "Session has been cancelled with the provided reason" : "You have left and cancelled the session",
-          })
-          onStatusChange("cancelled")
-        } else {
-          throw new Error("Failed to leave session")
-        }
+  const handleCancelSessionSubmit = async (reason: string) => {
+    setIsLoading(true)
+    try {
+      const result = await updateSession({
+        sessionId: classData.session_id,
+        action: 'leave',
+        cancellationReason: reason,
+        cancelledBy: userId || undefined
+      })
+
+      if (result.success) {
+        toast({
+          title: "Session Cancelled",
+          description: "Session has been cancelled with the provided reason",
+        })
+        onStatusChange("cancelled")
+        setShowCancellationDialog(false)
+        setCancellationReason("")
+      } else {
+        throw new Error("Failed to cancel session")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel session. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRescheduleOrCancellation = async (reason?: string) => {
+    setIsLoading(true)
+    try {
+      // For admins only, proceed with normal cancellation
+      const result = await updateSession({
+        sessionId: classData.session_id,
+        action: 'leave',
+        cancellationReason: reason || undefined,
+        cancelledBy: userId || undefined
+      })
+
+      if (result.success) {
+        toast({
+          title: "Session Cancelled",
+          description: reason ? "Session has been cancelled with the provided reason" : "You have left and cancelled the session",
+        })
+        onStatusChange("cancelled")
+      } else {
+        throw new Error("Failed to leave session")
       }
 
       setShowCancellationDialog(false)
@@ -326,6 +383,28 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
+  const handleRescheduleSubmit = async () => {
+    if (!cancellationReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for rescheduling the session",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (!rescheduleDate.trim()) {
+      toast({
+        title: "Reschedule Date Required",
+        description: "Please select a new desired date for the session",
+        variant: "destructive"
+      })
+      return
+    }
+
+    await handleRescheduleRequest(cancellationReason.trim(), rescheduleDate.trim())
+  }
+
   const handleCancellationSubmit = async () => {
     if (!cancellationReason.trim()) {
       toast({
@@ -336,17 +415,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
       return
     }
 
-    // For teachers, students, and parents, require a reschedule date
-    if ((userRole === 'teacher' || userRole === 'student' || userRole === 'parent') && !rescheduleDate.trim()) {
-      toast({
-        title: "Reschedule Date Required",
-        description: "Please select a new desired date for the session",
-        variant: "destructive"
-      })
-      return
-    }
-
-    await handleRescheduleOrCancellation(cancellationReason.trim(), rescheduleDate.trim())
+    await handleCancelSessionSubmit(cancellationReason.trim())
   }
 
   const handleDeleteSession = async () => {
@@ -407,13 +476,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           },
           button3: {
             icon: LogOut,
-            onClick: handleLeaveSession,
+            onClick: (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') ? handleCancelSession : handleLeaveSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Cancel Session" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Cancel Session \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
             disabled: isLoading || !canCancelSession()
           },
           button4: {
-            icon: Calendar,
+            icon: CalendarSync,
             onClick: handleRescheduleSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${currentStatus === 'scheduled' ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
             title: currentStatus === 'scheduled' ? "Reschedule Session" : "Reschedule Session (Disabled)",
@@ -423,6 +492,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             ...deleteButton,
             disabled: isLoading || currentStatus !== 'scheduled',
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-500 ${currentStatus === 'scheduled' ? 'bg-white text-red-600 hover:bg-red-100' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`
+          },
+          button6: {
+            icon: CalendarSync,
+            onClick: handleRequestReschedule,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
+            disabled: isLoading || !canCancelSession()
           }
         }
 
@@ -444,13 +520,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           },
           button3: {
             icon: LogOut,
-            onClick: handleLeaveSession,
+            onClick: (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') ? handleCancelSession : handleLeaveSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            title: canCancelSession() ? "Cancel Session" : "Cancel Session \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
           },
           button4: {
-            icon: Calendar,
+            icon: CalendarSync,
             onClick: () => { },
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Class \n(Disabled)",
@@ -460,6 +536,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             ...deleteButton,
             disabled: true,
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
+          },
+          button6: {
+            icon: CalendarSync,
+            onClick: handleRequestReschedule,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
+            disabled: isLoading || !canCancelSession()
           }
         }
 
@@ -473,7 +556,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: !canJoinClass()
           },
           button2: {
-            icon: CircleOff,
+            icon: FaRegCircleStop,
             onClick: handleEndSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-700 bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
             title: "End Session",
@@ -481,13 +564,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           },
           button3: {
             icon: LogOut,
-            onClick: handleLeaveSession,
+            onClick: (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') ? handleCancelSession : handleLeaveSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            title: canCancelSession() ? "Cancel Session" : "Cancel Session \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
           },
           button4: {
-            icon: Calendar,
+            icon: CalendarSync,
             onClick: () => { },
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Session \n(Disabled)",
@@ -497,6 +580,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             ...deleteButton,
             disabled: true,
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
+          },
+          button6: {
+            icon: CalendarSync,
+            onClick: handleRequestReschedule,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
+            disabled: isLoading || !canCancelSession()
           }
         }
 
@@ -510,21 +600,21 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: !canJoinClass()
           },
           button2: {
-            icon: Play,
+            icon: Power,
             onClick: () => { },
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Start Session (Disabled)",
+            title: "Initiate Session (Disabled)",
             disabled: true
           },
           button3: {
             icon: LogOut,
-            onClick: handleLeaveSession,
+            onClick: (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') ? handleCancelSession : handleLeaveSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            title: canCancelSession() ? "Cancel Session" : "Cancel Session \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
           },
           button4: {
-            icon: Calendar,
+            icon: CalendarSync,
             onClick: handleRescheduleSession,
             className: "flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50",
             title: "Reschedule Session (Disabled)",
@@ -534,6 +624,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             ...deleteButton,
             disabled: true,
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
+          },
+          button6: {
+            icon: CalendarSync,
+            onClick: handleRequestReschedule,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
+            disabled: isLoading || !canCancelSession()
           }
         }
 
@@ -547,21 +644,21 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             disabled: !canJoinClass()
           },
           button2: {
-            icon: Play,
+            icon: Power,
             onClick: () => { },
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Start Session \n(Disabled)",
+            title: "Initiate Session \n(Disabled)",
             disabled: true
           },
           button3: {
             icon: LogOut,
-            onClick: handleLeaveSession,
+            onClick: (userRole === 'teacher' || userRole === 'student' || userRole === 'parent') ? handleCancelSession : handleLeaveSession,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: canCancelSession() ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule" : "Cancel Session") : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Request Reschedule \n(Only available 2 hours before start time)" : "Cancel Session \n(Only available 2 hours before start time)"),
+            title: canCancelSession() ? "Cancel Session" : "Cancel Session \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
           },
           button4: {
-            icon: Calendar,
+            icon: CalendarSync,
             onClick: () => { },
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
             title: "Reschedule Session \n(Disabled)",
@@ -571,6 +668,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             ...deleteButton,
             disabled: true,
             className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
+          },
+          button6: {
+            icon: CalendarSync,
+            onClick: handleRequestReschedule,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
+            disabled: isLoading || !canCancelSession()
           }
         }
     }
@@ -606,8 +710,8 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               </Button>
             </div>
 
-            {/* Button 3 - Cancel/Reschedule (hidden for parents, students, and admins) */}
-            {userRole !== 'parent' && userRole !== 'student' && userRole !== 'admin' && (
+            {/* Button 3 - Cancel (for teachers, students, and parents) */}
+            {(userRole === 'teacher' || userRole === 'student' || userRole === 'parent') && (
               <div className="relative" title={config.button3.title}>
                 <Button
                   onClick={config.button3.onClick}
@@ -615,6 +719,19 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                   disabled={config.button3.disabled}
                 >
                   <config.button3.icon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Button 6 - Request Reschedule (for teachers, students, and parents) */}
+            {(userRole === 'teacher' || userRole === 'student' || userRole === 'parent') && (
+              <div className="relative" title={config.button6.title}>
+                <Button
+                  onClick={config.button6.onClick}
+                  className={config.button6.className}
+                  disabled={config.button6.disabled}
+                >
+                  <config.button6.icon className="h-4 w-4" />
                 </Button>
               </div>
             )}
@@ -646,82 +763,130 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           </>
         )}
 
-        {/* Show Reschedule/Cancel button for students even when showOnlyJoinCall is true (hidden for parents) */}
+        {/* Show Cancel and Reschedule buttons for students and parents even when showOnlyJoinCall is true */}
         {showOnlyJoinCall && (userRole === 'student' || userRole === 'parent') && (
-          <div className="relative" title={config.button3.title}>
-            <Button
-              onClick={config.button3.onClick}
-              className={config.button3.className}
-              disabled={config.button3.disabled}
-            >
-              <config.button3.icon className="h-4 w-4" />
-            </Button>
-          </div>
+          <>
+            <div className="relative" title={config.button3.title}>
+              <Button
+                onClick={config.button3.onClick}
+                className={config.button3.className}
+                disabled={config.button3.disabled}
+              >
+                <config.button3.icon className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="relative" title={config.button6.title}>
+              <Button
+                onClick={config.button6.onClick}
+                className={config.button6.className}
+                disabled={config.button6.disabled}
+              >
+                <config.button6.icon className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
         )}
       </div>
 
-      {/* Cancellation/Reschedule Dialog */}
+      {/* Cancellation Dialog (for teachers, students, and parents) */}
       <Dialog open={showCancellationDialog} onOpenChange={setShowCancellationDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? 'Request Session Reschedule' : 'Cancel Session'}
-            </DialogTitle>
-            {(
-              <div className="text-sm text-muted-foreground">
-                Current session date: {new Date(classData.start_time).toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
-              </div>
-            )}
+            <DialogTitle>Cancel Session</DialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Current session date: {new Date(classData.start_time).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="cancellation-reason">
-                {userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? 'Reschedule Reason *' : 'Cancellation Reason *'}
-              </Label>
+              <Label htmlFor="cancellation-reason">Cancellation Reason *</Label>
               <Textarea
                 id="cancellation-reason"
-                placeholder={
-                  userRole === 'teacher' || userRole === 'student' || userRole === 'parent'
-                    ? "Enter the reason for rescheduling this session..."
-                    : "Enter the reason for cancelling this session..."
-                }
+                placeholder="Enter the reason for cancelling this session..."
                 value={cancellationReason}
                 onChange={(e) => setCancellationReason(e.target.value)}
                 rows={4}
                 required
               />
             </div>
-
-            {/* Show date picker only for teachers, students, and parents */}
-            {(userRole === 'teacher' || userRole === 'student' || userRole === 'parent') && (
-              <div className="space-y-2">
-                <Label htmlFor="reschedule-date">New Date *</Label>
-                <Input
-                  id="reschedule-date"
-                  type="datetime-local"
-                  value={rescheduleDate}
-                  onChange={(e) => setRescheduleDate(e.target.value)}
-                  required
-                  min={new Date().toISOString().slice(0, 16)} // Prevent selecting past dates
-                />
-                <p className="text-sm text-muted-foreground">
-                  Please select a new date and time for this session (in your local timezone)
-                </p>
-              </div>
-            )}
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setShowCancellationDialog(false)
+                setCancellationReason("")
+              }}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCancellationSubmit}
+              disabled={isLoading || !cancellationReason.trim()}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
+            >
+              {isLoading ? "Cancelling..." : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Request Dialog (for teachers, students, and parents) */}
+      <Dialog open={showRescheduleDialog} onOpenChange={setShowRescheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Session Reschedule</DialogTitle>
+            <div className="text-sm text-muted-foreground">
+              Current session date: {new Date(classData.start_time).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reschedule-reason">Reschedule Reason *</Label>
+              <Textarea
+                id="reschedule-reason"
+                placeholder="Enter the reason for rescheduling this session..."
+                value={cancellationReason}
+                onChange={(e) => setCancellationReason(e.target.value)}
+                rows={4}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reschedule-date">New Date *</Label>
+              <Input
+                id="reschedule-date"
+                type="datetime-local"
+                value={rescheduleDate}
+                onChange={(e) => setRescheduleDate(e.target.value)}
+                required
+                min={new Date().toISOString().slice(0, 16)} // Prevent selecting past dates
+              />
+              <p className="text-sm text-muted-foreground">
+                Please select a new date and time for this session (in your local timezone)
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRescheduleDialog(false)
                 setCancellationReason("")
                 setRescheduleDate("")
               }}
@@ -730,18 +895,12 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               Cancel
             </Button>
             <Button
-              onClick={handleCancellationSubmit}
-              disabled={isLoading || !cancellationReason.trim() || ((userRole === 'teacher' || userRole === 'student' || userRole === 'parent') && !rescheduleDate.trim())}
-              className={
-                userRole === 'teacher' || userRole === 'student' || userRole === 'parent'
-                  ? "bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
-                  : "bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
-              }
+              onClick={handleRescheduleSubmit}
+              disabled={isLoading || !cancellationReason.trim() || !rescheduleDate.trim()}
+              className="text-white border-green-700 hover:bg-green-700"
+              style={{ backgroundColor: "#3d8f5b", color: "white" }}
             >
-              {isLoading
-                ? (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Submitting..." : "Cancelling...")
-                : (userRole === 'teacher' || userRole === 'student' || userRole === 'parent' ? "Submit Request" : "Confirm Cancellation")
-              }
+              {isLoading ? "Submitting..." : "Submit Request"}
             </Button>
           </DialogFooter>
         </DialogContent>

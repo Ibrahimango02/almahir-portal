@@ -32,6 +32,7 @@ export default function EditStudentPage() {
     birth_date: "",
     payment_method: "",
     billing_name: "",
+    billing_email: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -47,6 +48,7 @@ export default function EditStudentPage() {
             birth_date: student.birth_date ? new Date(student.birth_date).toISOString().split('T')[0] : "",
             payment_method: student.payment_method || "",
             billing_name: student.billing_name || "",
+            billing_email: student.billing_email || "",
           })
         }
       } catch (error) {
@@ -90,6 +92,7 @@ export default function EditStudentPage() {
         birth_date: formData.birth_date || null,
         payment_method: formData.payment_method || null,
         billing_name: formData.billing_name || null,
+        billing_email: formData.billing_email || null,
       })
 
       toast({
@@ -180,6 +183,20 @@ export default function EditStudentPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="billing_email">Billing Email</Label>
+                <Input
+                  id="billing_email"
+                  name="billing_email"
+                  type="email"
+                  value={formData.billing_email}
+                  onChange={handleChange}
+                  placeholder="Enter billing email"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
                 <Label htmlFor="payment_method">Payment Method</Label>
                 <Select value={formData.payment_method} onValueChange={(value) => handleSelectChange("payment_method", value)}>
                   <SelectTrigger id="payment_method">
@@ -190,7 +207,6 @@ export default function EditStudentPage() {
                     <SelectItem value="PayPal">PayPal</SelectItem>
                     <SelectItem value="Bank">Bank</SelectItem>
                     <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Email">Email</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
