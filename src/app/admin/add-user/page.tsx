@@ -22,11 +22,6 @@ export default function AddUserPage() {
         first_name: '',
         last_name: '',
         role: '',
-        phone: '',
-        gender: '',
-        country: '',
-        language: '',
-        status: 'active',
     })
 
     const handleChange = (field: string, value: string) => {
@@ -75,11 +70,6 @@ export default function AddUserPage() {
                 first_name: '',
                 last_name: '',
                 role: '',
-                phone: '',
-                gender: '',
-                country: '',
-                language: '',
-                status: 'active',
             })
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to create user'
@@ -96,17 +86,15 @@ export default function AddUserPage() {
     return (
         <div className="flex flex-col gap-6">
             <div>
-                <h1 className="text-3xl font-bold tracking-tight">Add User (Temporary)</h1>
-                <p className="text-muted-foreground mt-2">
-                    Manually add users to the database. This is a temporary page for administrative purposes.
-                </p>
+                <h1 className="text-3xl font-bold tracking-tight">Add User</h1>
+
             </div>
 
             <Card>
                 <CardHeader>
                     <CardTitle>User Information</CardTitle>
                     <CardDescription>
-                        Enter the user details below. Fields marked with * are required.
+                        Enter the user details below.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -194,79 +182,6 @@ export default function AddUserPage() {
                                     </SelectContent>
                                 </Select>
                             </div>
-
-                            {/* Status */}
-                            <div className="space-y-2">
-                                <Label htmlFor="status">Status</Label>
-                                <Select
-                                    value={formData.status}
-                                    onValueChange={(value) => handleChange('status', value)}
-                                >
-                                    <SelectTrigger id="status">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="active">Active</SelectItem>
-                                        <SelectItem value="inactive">Inactive</SelectItem>
-                                        <SelectItem value="archived">Archived</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Phone */}
-                            <div className="space-y-2">
-                                <Label htmlFor="phone">Phone</Label>
-                                <Input
-                                    id="phone"
-                                    type="tel"
-                                    placeholder="+1234567890"
-                                    value={formData.phone}
-                                    onChange={(e) => handleChange('phone', e.target.value)}
-                                />
-                            </div>
-
-                            {/* Gender */}
-                            <div className="space-y-2">
-                                <Label htmlFor="gender">Gender</Label>
-                                <Select
-                                    value={formData.gender}
-                                    onValueChange={(value) => handleChange('gender', value)}
-                                >
-                                    <SelectTrigger id="gender">
-                                        <SelectValue placeholder="Select gender" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="male">Male</SelectItem>
-                                        <SelectItem value="female">Female</SelectItem>
-                                        <SelectItem value="other">Other</SelectItem>
-                                        <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Country */}
-                            <div className="space-y-2">
-                                <Label htmlFor="country">Country</Label>
-                                <Input
-                                    id="country"
-                                    type="text"
-                                    placeholder="United States"
-                                    value={formData.country}
-                                    onChange={(e) => handleChange('country', e.target.value)}
-                                />
-                            </div>
-
-                            {/* Language */}
-                            <div className="space-y-2">
-                                <Label htmlFor="language">Language</Label>
-                                <Input
-                                    id="language"
-                                    type="text"
-                                    placeholder="English"
-                                    value={formData.language}
-                                    onChange={(e) => handleChange('language', e.target.value)}
-                                />
-                            </div>
                         </div>
 
                         <div className="flex justify-end gap-4">
@@ -280,18 +195,13 @@ export default function AddUserPage() {
                                         first_name: '',
                                         last_name: '',
                                         role: '',
-                                        phone: '',
-                                        gender: '',
-                                        country: '',
-                                        language: '',
-                                        status: 'active',
                                     })
                                 }}
                                 disabled={loading}
                             >
                                 Reset
                             </Button>
-                            <Button type="submit" disabled={loading}>
+                            <Button type="submit" variant="green" disabled={loading}>
                                 {loading ? 'Creating...' : 'Create User'}
                             </Button>
                         </div>

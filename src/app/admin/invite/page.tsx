@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { Mail, User } from "lucide-react"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
@@ -115,7 +116,6 @@ export default function InviteUserPage() {
             <Card className="max-w-4xl mx-auto w-full shadow-lg">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Mail className="h-5 w-5" />
                         Invite a New User
                     </CardTitle>
                     <CardDescription>
@@ -199,6 +199,15 @@ export default function InviteUserPage() {
                     </CardFooter>
                 </form>
             </Card>
+
+            <div className="text-center mt-6">
+                <Link
+                    href="/admin/add-user"
+                    className="text-base text-muted-foreground hover:text-primary underline"
+                >
+                    Or manually add a user instead
+                </Link>
+            </div>
         </div>
     )
 }
