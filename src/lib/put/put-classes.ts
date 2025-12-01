@@ -664,95 +664,21 @@ export async function rescheduleSession(params: {
         if (newStart <= now) {
             throw new Error('New session date must be in the future')
         }
-        /* 
-                // 3. Cancel the current session
-                const { error: cancelError } = await supabase
-                    .from('class_sessions')
-                    .update({
-                        status: 'cancelled',
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', sessionId)
-        
-                if (cancelError) throw cancelError */
 
-        // 4. Create a new session with the new dates
-        const { data: newSession, error: createError } = await supabase
+        // 3. Update the existing session with the new dates
+        const { error: updateError } = await supabase
             .from('class_sessions')
-            .insert({
-                class_id: currentSession.class_id,
+            .update({
                 start_date: newStartDate,
                 end_date: newEndDate,
-                status: 'scheduled',
-                created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             })
-            .select('id')
-            .single()
+            .eq('id', sessionId)
 
-        if (createError) throw createError
-        if (!newSession) throw new Error('Failed to create new session')
+        if (updateError) throw updateError
 
-        // 5. Get current teacher and student assignments for the class
-        const { data: currentTeachers } = await supabase
-            .from('class_teachers')
-            .select('teacher_id')
-            .eq('class_id', currentSession.class_id)
-
-        const { data: currentStudents } = await supabase
-            .from('class_students')
-            .select('student_id')
-            .eq('class_id', currentSession.class_id)
-
-        // 6. Create attendance records for the new session
-        const teacherAttendanceRecords = []
-        const studentAttendanceRecords = []
-
-        // Create teacher attendance records
-        if (currentTeachers && currentTeachers.length > 0) {
-            for (const teacher of currentTeachers) {
-                teacherAttendanceRecords.push({
-                    session_id: newSession.id,
-                    teacher_id: teacher.teacher_id,
-                    attendance_status: 'expected'
-                })
-            }
-        }
-
-        // Create student attendance records
-        if (currentStudents && currentStudents.length > 0) {
-            for (const student of currentStudents) {
-                studentAttendanceRecords.push({
-                    session_id: newSession.id,
-                    student_id: student.student_id,
-                    attendance_status: 'expected'
-                })
-            }
-        }
-
-        // Insert teacher attendance records
-        if (teacherAttendanceRecords.length > 0) {
-            const { error: teacherAttendanceError } = await supabase
-                .from('teacher_attendance')
-                .insert(teacherAttendanceRecords)
-
-            if (teacherAttendanceError) {
-                console.error('Error creating teacher attendance records:', teacherAttendanceError)
-                // Don't throw error here as the main operations were successful
-            }
-        }
-
-        // Insert student attendance records
-        if (studentAttendanceRecords.length > 0) {
-            const { error: studentAttendanceError } = await supabase
-                .from('student_attendance')
-                .insert(studentAttendanceRecords)
-
-            if (studentAttendanceError) {
-                console.error('Error creating student attendance records:', studentAttendanceError)
-                // Don't throw error here as the main operations were successful
-            }
-        }
+        // Note: Attendance records remain linked to the same session ID,
+        // so no need to recreate them. They will automatically reflect the updated session.
 
         return { success: true }
     } catch (error) {
