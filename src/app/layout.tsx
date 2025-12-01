@@ -16,7 +16,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: "Al-Mahir Academy",
+  title: "Almahir Academy",
   description: "Online academy management portal"
 }
 

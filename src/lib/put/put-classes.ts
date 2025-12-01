@@ -213,11 +213,22 @@ export async function updateClass(params: {
 
             if (fetchSessionsError) throw fetchSessionsError
 
-            // Separate sessions into past and future/current
+            // Separate sessions into past/current and future
+            // Only delete sessions that start on dates AFTER today (tomorrow or later)
+            // Preserve all sessions on today's date or earlier
             const now = new Date()
-            const futureSessions = existingSessions?.filter(session => new Date(session.start_date) > now) || []
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+            const tomorrowStart = new Date(todayStart)
+            tomorrowStart.setDate(tomorrowStart.getDate() + 1)
 
-            // Only delete future/current sessions, preserve past sessions
+            const futureSessions = existingSessions?.filter(session => {
+                const sessionStart = new Date(session.start_date)
+                const sessionDateStart = new Date(sessionStart.getFullYear(), sessionStart.getMonth(), sessionStart.getDate(), 0, 0, 0, 0)
+                // Only include sessions that start on tomorrow or later
+                return sessionDateStart >= tomorrowStart
+            }) || []
+
+            // Only delete future sessions (tomorrow or later), preserve today and past sessions
             // Attendance records will be automatically deleted due to CASCADE constraints
             if (futureSessions.length > 0) {
                 const futureSessionIds = futureSessions.map(session => session.id)
@@ -235,43 +246,53 @@ export async function updateClass(params: {
             if (finalStartDate && finalEndDate && finalDaysRepeated && finalTimes && Object.keys(finalTimes).length > 0) {
                 const sessions = []
 
-                // Helper function to get day name with capital first letter from UTC date
-                const getDayName = (utcDate: Date) => {
-                    // Use UTC day of week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+                // Helper function to get day name with capital first letter from a local date
+                const getDayName = (date: Date) => {
+                    // Use local date components to get the correct day of week
+                    // format() from date-fns uses local timezone by default
                     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-                    const utcDay = utcDate.getUTCDay()
-                    return dayNames[utcDay]
+                    const localDay = date.getDay()
+                    return dayNames[localDay]
                 }
 
-                // Generate sessions for each day in the date range, starting from today or the start date (whichever is later)
+                // Generate sessions for each day in the date range, starting from tomorrow or the start date (whichever is later)
+                // This ensures we don't regenerate sessions on today's date
                 const now = new Date()
                 const startDateObj = new Date(finalStartDate)
                 const endDateObj = new Date(finalEndDate)
 
-                // Use the later of today or the start date to avoid creating past sessions
-                // Work with UTC dates to ensure consistency
-                const nowUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-                const startDateUtc = new Date(Date.UTC(
-                    startDateObj.getUTCFullYear(),
-                    startDateObj.getUTCMonth(),
-                    startDateObj.getUTCDate()
-                ))
-                const endDateUtc = new Date(Date.UTC(
-                    endDateObj.getUTCFullYear(),
-                    endDateObj.getUTCMonth(),
-                    endDateObj.getUTCDate()
-                ))
+                // Extract local date components to preserve the correct day of week
+                // We'll iterate through local dates to match the days_repeated correctly
+                const nowLocalYear = now.getFullYear()
+                const nowLocalMonth = now.getMonth()
+                const nowLocalDay = now.getDate()
 
-                // Use the later of today (UTC) or the start date (UTC) to avoid creating past sessions
-                let currentDateUtc = nowUtc > startDateUtc ? nowUtc : startDateUtc
+                // Calculate tomorrow's date
+                const tomorrowLocalDate = new Date(nowLocalYear, nowLocalMonth, nowLocalDay + 1, 0, 0, 0, 0)
+
+                const startLocalYear = startDateObj.getFullYear()
+                const startLocalMonth = startDateObj.getMonth()
+                const startLocalDay = startDateObj.getDate()
+
+                const endLocalYear = endDateObj.getFullYear()
+                const endLocalMonth = endDateObj.getMonth()
+                const endLocalDay = endDateObj.getDate()
+
+                // Create local date objects for iteration
+                const startLocalDate = new Date(startLocalYear, startLocalMonth, startLocalDay, 0, 0, 0, 0)
+                const endLocalDate = new Date(endLocalYear, endLocalMonth, endLocalDay, 23, 59, 59, 999)
+
+                // Start generating sessions from tomorrow (or the start date if it's in the future)
+                // This ensures we don't regenerate sessions on today's date
+                let currentLocalDate = tomorrowLocalDate > startLocalDate ? tomorrowLocalDate : startLocalDate
 
                 // If the start date is in the future, use that instead
-                if (startDateUtc > nowUtc) {
-                    currentDateUtc = startDateUtc
+                if (startLocalDate > tomorrowLocalDate) {
+                    currentLocalDate = startLocalDate
                 }
 
-                while (currentDateUtc <= endDateUtc) {
-                    const dayName = getDayName(currentDateUtc)
+                while (currentLocalDate <= endLocalDate) {
+                    const dayName = getDayName(currentLocalDate)
                     const lowercaseDayName = dayName.toLowerCase()
 
                     // Check if this day has a schedule in days_repeated
@@ -282,51 +303,43 @@ export async function updateClass(params: {
                             const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                             const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                            // The times in days_repeated are UTC times converted from local times.
-                            // When a local time like 8:00 PM EST is converted to UTC, it becomes 1:00 AM the next day.
-                            // So we need to check if the UTC time represents a time on the next calendar day.
+                            // The times in days_repeated are UTC times that represent local times on specific days.
+                            // For example, Monday 12:00AM EST = Monday 5:00AM UTC.
+                            // We need to create the session on the correct day (Monday in this case).
                             // 
-                            // Strategy: If the UTC hour is early (0-5 AM), it likely represents a time that
-                            // was on the "next day" in UTC terms. For EST/EDT (UTC-5/UTC-4), times after 7 PM
-                            // local will be 0:00+ UTC the next day. So we'll add a day if UTC hour < 6.
-                            // This heuristic works for most common timezones with offsets of 4-8 hours.
+                            // Strategy: Use the local date components to determine the day of week,
+                            // then get the UTC date components for that local date, and apply the UTC time.
 
-                            const utcYear = currentDateUtc.getUTCFullYear()
-                            const utcMonth = currentDateUtc.getUTCMonth()
-                            const utcDay = currentDateUtc.getUTCDate()
+                            // Get UTC date components for this local date
+                            // This ensures we're working with the correct UTC date that corresponds to the local date
+                            const utcYear = currentLocalDate.getUTCFullYear()
+                            const utcMonth = currentLocalDate.getUTCMonth()
+                            const utcDay = currentLocalDate.getUTCDate()
 
-                            // Determine if the UTC time falls on the next day
-                            // If UTC hour is early morning (0-5), it's likely the next calendar day
-                            const startDateOffset = startHours < 6 ? 1 : 0
-                            const endDateOffset = endHours < 6 ? 1 : 0
-
-                            // Create the start datetime in UTC
+                            // Create the start datetime in UTC using the UTC date components
+                            // The UTC time from days_repeated is already the correct UTC time for this day
                             const sessionStartDate = new Date(Date.UTC(
                                 utcYear,
                                 utcMonth,
-                                utcDay + startDateOffset,
+                                utcDay,
                                 startHours,
                                 startMinutes,
                                 0,
                                 0
                             ))
 
-                            // Check if end time is earlier than start time (spans midnight)
+                            // Check if end time is earlier than start time (spans midnight in UTC)
                             const endTimeMinutes = endHours * 60 + endMinutes
                             const startTimeMinutes = startHours * 60 + startMinutes
                             const spansMidnight = endTimeMinutes <= startTimeMinutes
 
-                            // Calculate final end date offset
-                            // If it spans midnight, end is on the day after start
-                            // Otherwise, use the calculated endDateOffset
-                            const finalEndDateOffset = spansMidnight
-                                ? startDateOffset + 1
-                                : endDateOffset
+                            // Calculate end date: if it spans midnight, end is on the day after start
+                            const endDateOffset = spansMidnight ? 1 : 0
 
                             const sessionEndDate = new Date(Date.UTC(
                                 utcYear,
                                 utcMonth,
-                                utcDay + finalEndDateOffset,
+                                utcDay + endDateOffset,
                                 endHours,
                                 endMinutes,
                                 0,
@@ -345,8 +358,8 @@ export async function updateClass(params: {
                         }
                     }
 
-                    // Move to next day in UTC
-                    currentDateUtc = addDays(currentDateUtc, 1)
+                    // Move to next day using local date arithmetic
+                    currentLocalDate = addDays(currentLocalDate, 1)
                 }
 
                 // Insert all new sessions

@@ -174,17 +174,22 @@ export default function RegisterPage() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col relative">
+            {/* Background Image */}
+            <div
+                className="fixed inset-0 z-0"
+                style={{
+                    backgroundImage: 'url("/background-img3.png")',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                }}
+            />
+            {/* Overlay for better readability */}
+            <div className="fixed inset-0 z-0 bg-white/20" />
+
             {/* Header Section with White Background */}
-            <div className="bg-white relative overflow-hidden">
-                {/* Geometric Pattern Overlay - Islamic geometric pattern */}
-                <div
-                    className="absolute inset-0 opacity-20"
-                    style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%233d8f5b' stroke-width='2' opacity='0.6'%3E%3Cpath d='M50 0 L60 20 L80 20 L65 35 L70 55 L50 45 L30 55 L35 35 L20 20 L40 20 Z'/%3E%3Cpath d='M0 50 L20 40 L20 20 L35 35 L55 30 L45 50 L55 70 L35 65 L20 80 L20 60 Z'/%3E%3Cpath d='M50 100 L40 80 L20 80 L35 65 L30 45 L50 55 L70 45 L65 65 L80 80 L60 80 Z'/%3E%3Cpath d='M100 50 L80 60 L80 80 L65 65 L45 70 L55 50 L45 30 L65 35 L80 20 L80 40 Z'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='3' fill='%233d8f5b' opacity='0.4'/%3E%3C/svg%3E")`,
-                        backgroundSize: '100px 100px'
-                    }}
-                />
+            <div className="bg-white/70 backdrop-blur-sm relative z-10 overflow-hidden">
 
                 {/* Logo and Title */}
                 <div className="relative z-10 flex flex-col items-center justify-center py-12 px-4">
@@ -197,15 +202,15 @@ export default function RegisterPage() {
                             className="object-contain"
                         />
                     </div>
-                    <h1 className="text-3xl font-bold text-[#1a4d2e] mb-2">Al-Mahir Quran Academy</h1>
+                    <h1 className="text-3xl font-bold text-[#1a4d2e] mb-2">Almahir Quran Academy</h1>
                     <p className="text-xl text-[#3d8f5b]">أكاديمية الماهر بالقرآن</p>
                 </div>
             </div>
 
             {/* Registration Form Section */}
-            <div className="flex-1 flex items-center justify-center bg-gray-50 py-12 px-4">
+            <div className="flex-1 flex items-center justify-center py-12 px-4 relative z-10">
                 <div className="w-full max-w-2xl">
-                    <div className="bg-white rounded-lg shadow-xl p-8 md:p-12">
+                    <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-8 md:p-12">
                         <h2 className="text-3xl font-bold text-center mb-8 text-gray-900">
                             Registration Form
                         </h2>

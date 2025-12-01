@@ -108,21 +108,37 @@ export async function createClass(classData: ClassData) {
         }
 
         // Generate class sessions for each day between start and end date
+        // Parse start and end dates - these are UTC ISO strings
         const startDate = new Date(classData.start_date)
         const endDate = new Date(classData.end_date)
         const sessions = []
 
-        // Helper function to get day name with capital first letter
+        // Helper function to get day name with capital first letter from a local date
         const getDayName = (date: Date) => {
+            // Use local date components to get the correct day of week
+            // format() from date-fns uses local timezone by default
             const dayName = format(date, 'EEEE').toLowerCase()
             // Convert to capital first letter (e.g., "monday" -> "Monday")
             return dayName.charAt(0).toUpperCase() + dayName.slice(1)
         }
 
+        // Extract local date components from start date to preserve day of week
+        // We'll iterate through local dates to match the days_repeated correctly
+        const startLocalYear = startDate.getFullYear()
+        const startLocalMonth = startDate.getMonth()
+        const startLocalDay = startDate.getDate()
+
+        const endLocalYear = endDate.getFullYear()
+        const endLocalMonth = endDate.getMonth()
+        const endLocalDay = endDate.getDate()
+
+        // Create local date objects for iteration
+        let currentLocalDate = new Date(startLocalYear, startLocalMonth, startLocalDay, 0, 0, 0, 0)
+        const endLocalDate = new Date(endLocalYear, endLocalMonth, endLocalDay, 23, 59, 59, 999)
+
         // Generate sessions for each day in the date range
-        let currentDate = startDate
-        while (currentDate <= endDate) {
-            const dayName = getDayName(currentDate)
+        while (currentLocalDate <= endLocalDate) {
+            const dayName = getDayName(currentLocalDate)
             const lowercaseDayName = dayName.toLowerCase()
 
             // Check if this day has a schedule in days_repeated
@@ -133,51 +149,43 @@ export async function createClass(classData: ClassData) {
                     const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                     const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                    // The times in days_repeated are UTC times converted from local times.
-                    // When a local time like 8:00 PM EST is converted to UTC, it becomes 1:00 AM the next day.
-                    // So we need to check if the UTC time represents a time on the next calendar day.
+                    // The times in days_repeated are UTC times that represent local times on specific days.
+                    // For example, Monday 12:00AM EST = Monday 5:00AM UTC.
+                    // We need to create the session on the correct day (Monday in this case).
                     // 
-                    // Strategy: If the UTC hour is early (0-5 AM), it likely represents a time that
-                    // was on the "next day" in UTC terms. For EST/EDT (UTC-5/UTC-4), times after 7 PM
-                    // local will be 0:00+ UTC the next day. So we'll add a day if UTC hour < 6.
-                    // This heuristic works for most common timezones with offsets of 4-8 hours.
-                    
-                    const utcYear = currentDate.getUTCFullYear()
-                    const utcMonth = currentDate.getUTCMonth()
-                    const utcDay = currentDate.getUTCDate()
-                    
-                    // Determine if the UTC time falls on the next day
-                    // If UTC hour is early morning (0-5), it's likely the next calendar day
-                    const startDateOffset = startHours < 6 ? 1 : 0
-                    const endDateOffset = endHours < 6 ? 1 : 0
-                    
-                    // Create the start datetime in UTC
+                    // Strategy: Use the local date components to determine the day of week,
+                    // then get the UTC date components for that local date, and apply the UTC time.
+
+                    // Get UTC date components for this local date
+                    // This ensures we're working with the correct UTC date that corresponds to the local date
+                    const utcYear = currentLocalDate.getUTCFullYear()
+                    const utcMonth = currentLocalDate.getUTCMonth()
+                    const utcDay = currentLocalDate.getUTCDate()
+
+                    // Create the start datetime in UTC using the UTC date components
+                    // The UTC time from days_repeated is already the correct UTC time for this day
                     const sessionStartDate = new Date(Date.UTC(
                         utcYear,
                         utcMonth,
-                        utcDay + startDateOffset,
+                        utcDay,
                         startHours,
                         startMinutes,
                         0,
                         0
                     ))
 
-                    // Check if end time is earlier than start time (spans midnight)
+                    // Check if end time is earlier than start time (spans midnight in UTC)
                     const endTimeMinutes = endHours * 60 + endMinutes
                     const startTimeMinutes = startHours * 60 + startMinutes
                     const spansMidnight = endTimeMinutes <= startTimeMinutes
 
-                    // Calculate final end date offset
-                    // If it spans midnight, end is on the day after start
-                    // Otherwise, use the calculated endDateOffset
-                    const finalEndDateOffset = spansMidnight 
-                        ? startDateOffset + 1 
-                        : endDateOffset
+                    // Calculate end date: if it spans midnight, end is on the day after start
+                    const endDateOffset = spansMidnight ? 1 : 0
 
                     const sessionEndDate = new Date(Date.UTC(
                         utcYear,
                         utcMonth,
-                        utcDay + finalEndDateOffset,
+                        utcDay + endDateOffset,
                         endHours,
                         endMinutes,
                         0,
@@ -196,8 +204,8 @@ export async function createClass(classData: ClassData) {
                 }
             }
 
-            // Move to next day
-            currentDate = addDays(currentDate, 1)
+            // Move to next day using local date arithmetic
+            currentLocalDate = addDays(currentLocalDate, 1)
         }
 
         // Insert all sessions
