@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
-import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User, BookOpen } from "lucide-react"
+import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User, BookOpen, Search, X, ChevronDown } from "lucide-react"
 import { getResourcesWithClassInfo } from "@/lib/get/get-resources"
 import { createResource } from "@/lib/post/post-resources"
 import { deleteResource } from "@/lib/delete/delete-resources"
@@ -17,7 +17,6 @@ import { getClassesForResourceUpload } from "@/lib/get/get-resources"
 import { ResourceType } from "@/types"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 type ResourceWithUploader = ResourceType & {
     uploader?: {
@@ -39,6 +38,10 @@ export default function ResourcesPage() {
     const [isDeleting, setIsDeleting] = useState(false)
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
     const [resourceToDelete, setResourceToDelete] = useState<ResourceType | null>(null)
+    const [selectedClassId, setSelectedClassId] = useState<string>("")
+    const [classSearchValue, setClassSearchValue] = useState("")
+    const [isClassDropdownOpen, setIsClassDropdownOpen] = useState(false)
+    const classDropdownRef = useRef<HTMLDivElement>(null)
     const { toast } = useToast()
 
     const fetchResources = useCallback(async () => {
@@ -95,6 +98,41 @@ export default function ResourcesPage() {
         fetchClasses()
     }, [])
 
+    // Filter classes based on search
+    const filteredClasses = useMemo(() => {
+        if (!classSearchValue) return classes
+        return classes.filter(classItem => {
+            const title = classItem.title.toLowerCase()
+            const subject = classItem.subject?.toLowerCase() || ""
+            const searchLower = classSearchValue.toLowerCase()
+            return title.includes(searchLower) || subject.includes(searchLower)
+        })
+    }, [classes, classSearchValue])
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (classDropdownRef.current && !classDropdownRef.current.contains(event.target as Node)) {
+                setIsClassDropdownOpen(false)
+                setClassSearchValue("")
+            }
+        }
+
+        if (isClassDropdownOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [isClassDropdownOpen])
+
+    // Reset form when dialog closes
+    useEffect(() => {
+        if (!isDialogOpen) {
+            setSelectedClassId("")
+            setClassSearchValue("")
+            setIsClassDropdownOpen(false)
+        }
+    }, [isDialogOpen])
+
     const handleUpload = async (formData: FormData) => {
         setIsUploading(true)
         try {
@@ -114,6 +152,23 @@ export default function ResourcesPage() {
         } finally {
             setIsUploading(false)
         }
+    }
+
+    const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+
+        // Validate that a class is selected
+        if (!selectedClassId) {
+            toast({
+                title: "Validation Error",
+                description: "Please select a class before uploading the resource",
+                variant: "destructive",
+            })
+            return
+        }
+
+        const formData = new FormData(e.currentTarget)
+        await handleUpload(formData)
     }
 
     const handleDeleteClick = (resource: ResourceType) => {
@@ -192,7 +247,7 @@ export default function ResourcesPage() {
                         <DialogHeader>
                             <DialogTitle>Upload New Resource</DialogTitle>
                         </DialogHeader>
-                        <form action={handleUpload} className="space-y-4">
+                        <form onSubmit={handleFormSubmit} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="title">Title</Label>
                                 <Input
@@ -213,18 +268,88 @@ export default function ResourcesPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="classId">Class (Required)</Label>
-                                <Select name="classId" required>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a class" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {classes.map((classItem) => (
-                                            <SelectItem key={classItem.id} value={classItem.id}>
-                                                {classItem.title} {classItem.subject && `(${classItem.subject})`}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="relative" ref={classDropdownRef}>
+                                    <input
+                                        type="hidden"
+                                        name="classId"
+                                        value={selectedClassId}
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isClassDropdownOpen}
+                                        className="w-full justify-between h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20 font-normal"
+                                        onClick={() => setIsClassDropdownOpen(!isClassDropdownOpen)}
+                                    >
+                                        <span className={!selectedClassId ? "text-gray-500" : ""}>
+                                            {selectedClassId
+                                                ? classes.find(c => c.id === selectedClassId)?.title +
+                                                (classes.find(c => c.id === selectedClassId)?.subject ?
+                                                    ` (${classes.find(c => c.id === selectedClassId)?.subject})` : '')
+                                                : "Select a class"}
+                                        </span>
+                                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+
+                                    {isClassDropdownOpen && (
+                                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-hidden">
+                                            <div className="p-2 border-b">
+                                                <div className="relative">
+                                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                                                    <Input
+                                                        placeholder="Search classes..."
+                                                        value={classSearchValue}
+                                                        onChange={(e) => setClassSearchValue(e.target.value)}
+                                                        className="pl-8 pr-8 h-9"
+                                                        autoFocus
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Escape') {
+                                                                setIsClassDropdownOpen(false)
+                                                                setClassSearchValue("")
+                                                            }
+                                                        }}
+                                                    />
+                                                    {classSearchValue && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setClassSearchValue("")}
+                                                            className="absolute right-2 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="max-h-48 overflow-y-auto">
+                                                {filteredClasses.length === 0 ? (
+                                                    <div className="p-4 text-center text-sm text-gray-500">
+                                                        No classes found
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        {filteredClasses.map((classItem) => (
+                                                            <button
+                                                                key={classItem.id}
+                                                                type="button"
+                                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none ${selectedClassId === classItem.id ? 'bg-gray-100' : ''
+                                                                    }`}
+                                                                onClick={() => {
+                                                                    setSelectedClassId(classItem.id)
+                                                                    setIsClassDropdownOpen(false)
+                                                                    setClassSearchValue("")
+                                                                }}
+                                                            >
+                                                                {classItem.title} {classItem.subject && `(${classItem.subject})`}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="file">File (PDF)</Label>

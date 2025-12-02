@@ -15,7 +15,8 @@ import {
   Bookmark,
   LibraryBig,
   FolderOpen,
-  DollarSign
+  DollarSign,
+  ScrollText
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -57,6 +58,12 @@ const routes = [
     color: "text-green-600",
   },
   {
+    label: "Reports",
+    icon: ScrollText,
+    href: "/teacher/reports",
+    color: "text-green-600",
+  },
+  {
     label: "Payments",
     icon: DollarSign,
     href: "/teacher/payments",
@@ -67,7 +74,7 @@ const routes = [
     icon: Bookmark,
     href: "/teacher/rules",
     color: "text-green-600",
-  },
+  }
 ]
 
 export function TeacherSidebar() {
