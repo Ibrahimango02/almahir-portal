@@ -6,7 +6,7 @@ import { FaRegCircleStop } from "react-icons/fa6";
 import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { updateSession } from "@/lib/put/put-classes"
+import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
 import { deleteSession } from "@/lib/delete/delete-classes"
 import { createRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { getUserTimezone, localToUtc } from "@/lib/utils/timezone"
@@ -55,9 +55,13 @@ type ClassActionButtonsProps = {
   showOnlyJoinCall?: boolean
   userRole?: 'admin' | 'moderator' | 'teacher' | 'student' | 'parent'
   userId?: string
+  existingAttendance?: {
+    teacherAttendance: Array<{ teacher_id: string; attendance_status: string }>
+    studentAttendance: Array<{ student_id: string; attendance_status: string }>
+  }
 }
 
-export function ClassActionButtons({ classData, currentStatus, onStatusChange, showOnlyJoinCall = false, userRole, userId }: ClassActionButtonsProps) {
+export function ClassActionButtons({ classData, currentStatus, onStatusChange, showOnlyJoinCall = false, userRole, userId, existingAttendance }: ClassActionButtonsProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showCancellationDialog, setShowCancellationDialog] = useState(false)
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false)
@@ -218,26 +222,72 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
+  // Check if attendance has been saved for all students and teachers
+  const isAttendanceSaved = () => {
+    if (!existingAttendance) {
+      return false
+    }
+
+    // Check if all students have attendance records
+    const studentIds = new Set(classData.students.map(s => s.student_id))
+    const savedStudentIds = new Set(existingAttendance.studentAttendance.map(a => a.student_id))
+    const allStudentsHaveAttendance = studentIds.size === 0 || Array.from(studentIds).every(id => savedStudentIds.has(id))
+
+    // Check if all teachers have attendance records
+    const teacherIds = new Set(classData.teachers.map(t => t.teacher_id))
+    const savedTeacherIds = new Set(existingAttendance.teacherAttendance.map(a => a.teacher_id))
+    const allTeachersHaveAttendance = teacherIds.size === 0 || Array.from(teacherIds).every(id => savedTeacherIds.has(id))
+
+    return allStudentsHaveAttendance && allTeachersHaveAttendance
+  }
+
   const handleEndSession = async () => {
     setIsLoading(true)
     try {
-      // Get current attendance data from classData
-      const studentAttendance = classData.attendance || {}
-
-      // If no attendance data exists, assume students are present (default behavior)
-      // This prevents automatically marking all sessions as absence
-      if (Object.keys(studentAttendance).length === 0) {
-        // No attendance data available, assume students are present
-        // Teachers would typically mark attendance before ending a session
-        classData.students.forEach(student => {
-          studentAttendance[student.student_id] = true // Assume present by default
+      // Get saved attendance data from existingAttendance
+      if (!existingAttendance || !isAttendanceSaved()) {
+        toast({
+          title: "Attendance Required",
+          description: "Please save attendance for all students and teachers before ending the session.",
+          variant: "destructive"
         })
+        setIsLoading(false)
+        return
       }
 
+      // Build student attendance map from saved data
+      const studentAttendance: Record<string, boolean> = {}
+      classData.students.forEach(student => {
+        const attendanceRecord = existingAttendance.studentAttendance.find(
+          a => a.student_id === student.student_id
+        )
+        // Use saved attendance status, default to false if not found
+        studentAttendance[student.student_id] = attendanceRecord?.attendance_status === 'present'
+      })
+
+      // Build teacher attendance map from saved data
+      const teacherAttendance: Record<string, boolean> = {}
+      classData.teachers.forEach(teacher => {
+        const attendanceRecord = existingAttendance.teacherAttendance.find(
+          a => a.teacher_id === teacher.teacher_id
+        )
+        // Use saved attendance status, default to false if not found
+        teacherAttendance[teacher.teacher_id] = attendanceRecord?.attendance_status === 'present'
+      })
+
+      // Update attendance records to ensure they're saved (in case they weren't already)
+      await updateSessionAttendance({
+        sessionId: classData.session_id,
+        studentAttendance,
+        teacherAttendance
+      })
+
+      // End the session with the saved attendance data
       const result = await updateSession({
         sessionId: classData.session_id,
         action: 'end',
-        studentAttendance
+        studentAttendance,
+        teacherAttendance
       })
 
       if (result.success) {
@@ -249,17 +299,17 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         toast({
           title: hasPresentStudents ? "Session Ended" : "Session Marked as Absence",
           description: hasPresentStudents
-            ? "The session has been ended. Please ensure attendance has been recorded before the session is marked as complete."
+            ? "The session has been ended successfully."
             : "The session has been marked as absence since no students were present.",
         })
         setShowSessionRemarksDialog(true)
       } else {
         throw new Error("Failed to end session")
       }
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to end session. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to end session. Please try again.",
         variant: "destructive"
       })
     } finally {
@@ -597,9 +647,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button2: {
             icon: FaRegCircleStop,
             onClick: handleEndSession,
-            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-700 bg-red-600 text-white hover:bg-red-700 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
-            title: "End Session",
-            disabled: isLoading
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${isAttendanceSaved() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
+            title: isAttendanceSaved() ? "End Session" : "End Session \n(Please save attendance first)",
+            disabled: isLoading || !isAttendanceSaved()
           },
           button3: {
             icon: LogOut,
@@ -722,7 +772,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const config = getButtonConfig()
 
   return (
-    <div>
+    <div className="inline-flex flex-col items-end">
       <div className="flex items-center gap-2 p-1 bg-muted/30 rounded-lg border">
         {/* Mark as Complete Checkbox (only for admins and moderators) */}
         {(userRole === 'admin' || userRole === 'moderator') && (
@@ -731,7 +781,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               id="mark-complete"
               checked={markCompleteChecked}
               onCheckedChange={handleMarkComplete}
-              disabled={isLoading || currentStatus === 'complete'}
+              disabled={isLoading || currentStatus === 'complete' || currentStatus === 'scheduled' || currentStatus === 'cancelled'}
               className="h-4 w-4"
             />
             <Label
@@ -844,6 +894,15 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           </>
         )}
       </div>
+
+      {/* Attendance reminder message for running sessions */}
+      {currentStatus === 'running' && !isAttendanceSaved() && (
+        <div className="mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-md text-right">
+          <p className="text-sm text-amber-800">
+            <span className="font-medium">Note:</span> Attendance for all students and teachers <span className="font-bold underline">must</span> be saved before ending the session.
+          </p>
+        </div>
+      )}
 
       {/* Cancellation Dialog (for teachers, students, and parents) */}
       <Dialog open={showCancellationDialog} onOpenChange={setShowCancellationDialog}>

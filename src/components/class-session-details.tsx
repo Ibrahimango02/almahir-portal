@@ -285,6 +285,7 @@ export function ClassSessionDetails({ classData, userRole, userId, userParentStu
                 showOnlyJoinCall={!showActions}
                 userRole={userRole}
                 userId={userId}
+                existingAttendance={attendanceData}
               />
             </div>
           </div>

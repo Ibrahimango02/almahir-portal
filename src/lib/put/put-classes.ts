@@ -452,11 +452,12 @@ export async function updateSession(params: {
     sessionId: string;
     action: string;
     studentAttendance?: Record<string, boolean>;
+    teacherAttendance?: Record<string, boolean>;
     cancellationReason?: string;
     cancelledBy?: string;
 }) {
     const supabase = createClient()
-    const { sessionId, action, studentAttendance, cancellationReason, cancelledBy } = params
+    const { sessionId, action, studentAttendance, teacherAttendance, cancellationReason, cancelledBy } = params
 
     try {
         switch (action.toLowerCase()) {
@@ -536,10 +537,11 @@ export async function updateSession(params: {
                 if (sessionError) throw sessionError
 
                 // Update attendance records if provided
-                if (studentAttendance) {
+                if (studentAttendance || teacherAttendance) {
                     const attendanceResult = await updateSessionAttendance({
                         sessionId,
-                        studentAttendance
+                        studentAttendance,
+                        teacherAttendance
                     })
 
                     if (!attendanceResult.success) {
@@ -550,52 +552,68 @@ export async function updateSession(params: {
 
                 // --- Teacher Payments Logic ---
                 // Only process payments if session is complete (not absence)
-                if (sessionStatus === 'complete') {
-                    // 1. Get session info (start_date, end_date, class_id)
-                    const { data: sessionData, error: sessionFetchError } = await supabase
-                        .from('class_sessions')
-                        .select('id, class_id, start_date, end_date')
-                        .eq('id', sessionId)
-                        .single()
-                    if (sessionFetchError) throw sessionFetchError
-                    if (!sessionData) throw new Error('Session not found')
+                // Only create payments for teachers marked as 'present'
+                if (sessionStatus === 'complete' && teacherAttendance) {
+                    // Get teachers marked as present
+                    const presentTeachers = Object.entries(teacherAttendance)
+                        .filter(([, isPresent]) => isPresent)
+                        .map(([teacherId]) => teacherId)
 
-                    // 2. Get teachers for the class
-                    const { data: classTeachers, error: teachersError } = await supabase
-                        .from('class_teachers')
-                        .select('teacher_id')
-                        .eq('class_id', sessionData.class_id)
-                    if (teachersError) throw teachersError
-                    const teacherIds = classTeachers?.map(t => t.teacher_id) || []
-                    if (teacherIds.length === 0) break // No teachers to pay
+                    if (presentTeachers.length > 0) {
+                        // 1. Get session info (start_date, end_date, class_id)
+                        const { data: sessionData, error: sessionFetchError } = await supabase
+                            .from('class_sessions')
+                            .select('id, class_id, start_date, end_date')
+                            .eq('id', sessionId)
+                            .single()
+                        if (sessionFetchError) throw sessionFetchError
+                        if (!sessionData) throw new Error('Session not found')
 
-                    // 3. Get hourly_rate and is_admin for each teacher
-                    const { data: teacherRates, error: ratesError } = await supabase
-                        .from('teachers')
-                        .select('profile_id, hourly_rate, is_admin')
-                        .in('profile_id', teacherIds)
-                    if (ratesError) throw ratesError
+                        // 2. Get hourly_rate and is_admin for each present teacher
+                        const { data: teacherRates, error: ratesError } = await supabase
+                            .from('teachers')
+                            .select('profile_id, hourly_rate, is_admin')
+                            .in('profile_id', presentTeachers)
+                        if (ratesError) throw ratesError
 
-                    // 4. Calculate intended duration in hours
-                    const start = new Date(sessionData.start_date)
-                    const end = new Date(sessionData.end_date)
-                    const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-
-                    // 5. Insert payment row for each teacher (only if is_admin === false)
-                    const paymentRows = teacherRates
-                        .filter(tr => tr.is_admin === false)
-                        .map(tr => ({
-                            teacher_id: tr.profile_id,
-                            session_id: sessionId,
-                            hours,
-                            amount: tr.hourly_rate !== null ? Number(hours) * Number(tr.hourly_rate) : 0,
-                            status: 'pending',
-                        }))
-                    if (paymentRows.length > 0) {
-                        const { error: paymentError } = await supabase
+                        // 3. Check existing payments for these teachers and this session
+                        const { data: existingPayments, error: paymentsFetchError } = await supabase
                             .from('teacher_payments')
-                            .insert(paymentRows)
-                        if (paymentError) throw paymentError
+                            .select('teacher_id')
+                            .eq('session_id', sessionId)
+                            .in('teacher_id', presentTeachers)
+
+                        if (paymentsFetchError) {
+                            console.error('Error fetching existing payments:', paymentsFetchError)
+                            // Don't throw error here, just log it and continue
+                        } else {
+                            const existingPaymentTeacherIds = new Set(
+                                existingPayments?.map(p => p.teacher_id) || []
+                            )
+
+                            // 4. Calculate intended duration in hours
+                            const start = new Date(sessionData.start_date)
+                            const end = new Date(sessionData.end_date)
+                            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+                            // 5. Insert payment row for each present teacher that doesn't have a payment yet
+                            // Only create payments for non-admin teachers
+                            const paymentRows = teacherRates
+                                .filter(tr => tr.is_admin === false && !existingPaymentTeacherIds.has(tr.profile_id))
+                                .map(tr => ({
+                                    teacher_id: tr.profile_id,
+                                    session_id: sessionId,
+                                    hours,
+                                    amount: tr.hourly_rate !== null ? Number(hours) * Number(tr.hourly_rate) : 0,
+                                    status: 'pending',
+                                }))
+                            if (paymentRows.length > 0) {
+                                const { error: paymentError } = await supabase
+                                    .from('teacher_payments')
+                                    .insert(paymentRows)
+                                if (paymentError) throw paymentError
+                            }
+                        }
                     }
                 }
                 // --- End Teacher Payments Logic ---
@@ -731,8 +749,6 @@ export async function updateSessionAttendance(params: {
             throw new Error('Student attendance data is required')
         }
 
-
-
         // Allow updating all student attendance records, regardless of current status
         // This enables teachers to modify attendance multiple times
         // For new sessions, we'll create records for all students
@@ -763,8 +779,6 @@ export async function updateSessionAttendance(params: {
 
         // Handle teacher attendance if provided
         if (teacherAttendance && Object.keys(teacherAttendance).length > 0) {
-
-
             // Allow updating all teacher attendance records, regardless of current status
             // This enables teachers to modify attendance multiple times
             // For new sessions, we'll create records for all teachers
@@ -792,6 +806,82 @@ export async function updateSessionAttendance(params: {
                     throw new Error(`Database error: ${updateTeacherError.message}`)
                 }
             }
+
+            // --- Teacher Payments Logic ---
+            // For teachers marked as present, check if payment exists and create if needed
+            const presentTeachers = Object.entries(filteredTeacherAttendance)
+                .filter(([, isPresent]) => isPresent)
+                .map(([teacherId]) => teacherId)
+
+            if (presentTeachers.length > 0) {
+                // 1. Get session info (start_date, end_date, class_id)
+                const { data: sessionData, error: sessionFetchError } = await supabase
+                    .from('class_sessions')
+                    .select('id, class_id, start_date, end_date')
+                    .eq('id', sessionId)
+                    .single()
+
+                if (sessionFetchError) {
+                    console.error('Error fetching session data for payments:', sessionFetchError)
+                    // Don't throw error here, just log it and continue
+                } else if (sessionData) {
+                    // 2. Get hourly_rate and is_admin for each present teacher
+                    const { data: teacherRates, error: ratesError } = await supabase
+                        .from('teachers')
+                        .select('profile_id, hourly_rate, is_admin')
+                        .in('profile_id', presentTeachers)
+
+                    if (ratesError) {
+                        console.error('Error fetching teacher rates:', ratesError)
+                        // Don't throw error here, just log it and continue
+                    } else if (teacherRates) {
+                        // 3. Check existing payments for these teachers and this session
+                        const { data: existingPayments, error: paymentsFetchError } = await supabase
+                            .from('teacher_payments')
+                            .select('teacher_id')
+                            .eq('session_id', sessionId)
+                            .in('teacher_id', presentTeachers)
+
+                        if (paymentsFetchError) {
+                            console.error('Error fetching existing payments:', paymentsFetchError)
+                            // Don't throw error here, just log it and continue
+                        } else {
+                            const existingPaymentTeacherIds = new Set(
+                                existingPayments?.map(p => p.teacher_id) || []
+                            )
+
+                            // 4. Calculate intended duration in hours
+                            const start = new Date(sessionData.start_date)
+                            const end = new Date(sessionData.end_date)
+                            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+
+                            // 5. Insert payment row for each teacher that doesn't have a payment yet
+                            // Only create payments for non-admin teachers
+                            const paymentRows = teacherRates
+                                .filter(tr => tr.is_admin === false && !existingPaymentTeacherIds.has(tr.profile_id))
+                                .map(tr => ({
+                                    teacher_id: tr.profile_id,
+                                    session_id: sessionId,
+                                    hours,
+                                    amount: tr.hourly_rate !== null ? Number(hours) * Number(tr.hourly_rate) : 0,
+                                    status: 'pending',
+                                }))
+
+                            if (paymentRows.length > 0) {
+                                const { error: paymentError } = await supabase
+                                    .from('teacher_payments')
+                                    .insert(paymentRows)
+
+                                if (paymentError) {
+                                    console.error('Error creating teacher payments:', paymentError)
+                                    // Don't throw error here as the attendance update was successful
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // --- End Teacher Payments Logic ---
         }
 
         return { success: true }

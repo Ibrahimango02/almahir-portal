@@ -57,10 +57,11 @@ export function AttendanceTracker({
     // Only teachers, admins, and moderators can take attendance
     const canTakeAttendance = userRole === 'admin' || userRole === 'moderator' || userRole === 'teacher'
 
-    // Admins and moderators can edit when session is running or absence, teachers only when session is running
+    // Admins and moderators can edit attendance when status is not 'scheduled' or 'cancelled'
+    // Teachers can only edit when session is running
     const canEditAttendance = canTakeAttendance && (
         (userRole === 'admin' || userRole === 'moderator')
-            ? (currentStatus === "running" || currentStatus === "absence")
+            ? (currentStatus !== 'scheduled' && currentStatus !== 'cancelled')
             : currentStatus === "running"
     )
 
@@ -253,13 +254,9 @@ export function AttendanceTracker({
 
     const isAttendanceEnabled = canEditAttendance
 
-    // Reset hasChanges when session status changes to a non-editable state
+    // Reset hasChanges when session status changes to non-running (only for teachers)
     useEffect(() => {
-        const isEditableStatus = (userRole === 'admin' || userRole === 'moderator')
-            ? (currentStatus === "running" || currentStatus === "absence")
-            : currentStatus === "running"
-
-        if (!isEditableStatus) {
+        if (currentStatus !== "running" && userRole === 'teacher') {
             setHasChanges(false)
         }
     }, [currentStatus, userRole])
