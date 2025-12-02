@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Video, Power, Play, CalendarSync, LogOut, Trash2 } from "lucide-react"
 import { FaRegCircleStop } from "react-icons/fa6";
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { updateSession } from "@/lib/put/put-classes"
@@ -21,6 +21,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { SessionRemarksForm } from "./session-remarks-form"
 
 type ClassActionButtonsProps = {
@@ -52,7 +53,7 @@ type ClassActionButtonsProps = {
   currentStatus: string
   onStatusChange: (status: string) => void
   showOnlyJoinCall?: boolean
-  userRole?: 'admin' | 'teacher' | 'student' | 'parent'
+  userRole?: 'admin' | 'moderator' | 'teacher' | 'student' | 'parent'
   userId?: string
 }
 
@@ -65,7 +66,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showSessionRemarksDialog, setShowSessionRemarksDialog] = useState(false)
+  const [markCompleteChecked, setMarkCompleteChecked] = useState(currentStatus === 'complete')
   const { toast } = useToast()
+
+  // Update checkbox state when currentStatus changes
+  useEffect(() => {
+    setMarkCompleteChecked(currentStatus === 'complete')
+  }, [currentStatus])
   const router = useRouter()
 
   // Check if initiate button should be enabled (within 5 minutes of start time and before end time)
@@ -448,6 +455,38 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     router.push(`/admin/classes/reschedule/${classData.class_id}/${classData.session_id}`)
   }
 
+  const handleMarkComplete = async (checked: boolean) => {
+    if (checked) {
+      setIsLoading(true)
+      try {
+        const result = await updateSession({
+          sessionId: classData.session_id,
+          action: 'complete'
+        })
+
+        if (result.success) {
+          setMarkCompleteChecked(true)
+          onStatusChange("complete")
+          toast({
+            title: "Session Marked as Complete",
+            description: "The session has been marked as complete",
+          })
+        } else {
+          throw new Error("Failed to mark session as complete")
+        }
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to mark session as complete. Please try again.",
+          variant: "destructive"
+        })
+        setMarkCompleteChecked(false)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+  }
+
   // Button configurations for different states
   const getButtonConfig = () => {
     const deleteButton = {
@@ -685,6 +724,24 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   return (
     <div>
       <div className="flex items-center gap-2 p-1 bg-muted/30 rounded-lg border">
+        {/* Mark as Complete Checkbox (only for admins and moderators) */}
+        {(userRole === 'admin' || userRole === 'moderator') && (
+          <div className="flex items-center gap-2 px-2">
+            <Checkbox
+              id="mark-complete"
+              checked={markCompleteChecked}
+              onCheckedChange={handleMarkComplete}
+              disabled={isLoading || currentStatus === 'complete'}
+              className="h-4 w-4"
+            />
+            <Label
+              htmlFor="mark-complete"
+              className="text-sm font-medium cursor-pointer"
+            >
+              Mark as Complete
+            </Label>
+          </div>
+        )}
         {/* Button 1 - Join Class (always shown) */}
         <div className="relative" title={config.button1.title}>
           <Button

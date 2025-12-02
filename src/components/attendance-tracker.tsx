@@ -29,7 +29,7 @@ type AttendanceTrackerProps = {
     }[]
     currentStatus: string
     onStatusChange: (status: string) => void
-    userRole: 'admin' | 'teacher' | 'student' | 'parent'
+    userRole: 'admin' | 'moderator' | 'teacher' | 'student' | 'parent'
     existingAttendance?: {
         teacherAttendance: Array<{ teacher_id: string; attendance_status: string }>
         studentAttendance: Array<{ student_id: string; attendance_status: string }>
@@ -54,8 +54,15 @@ export function AttendanceTracker({
     const [hasChanges, setHasChanges] = useState(false)
     const [activeTab, setActiveTab] = useState("teachers")
 
-    // Only teachers and admins can take attendance
-    const canTakeAttendance = userRole === 'admin' || userRole === 'teacher'
+    // Only teachers, admins, and moderators can take attendance
+    const canTakeAttendance = userRole === 'admin' || userRole === 'moderator' || userRole === 'teacher'
+
+    // Admins and moderators can edit when session is running or absence, teachers only when session is running
+    const canEditAttendance = canTakeAttendance && (
+        (userRole === 'admin' || userRole === 'moderator')
+            ? (currentStatus === "running" || currentStatus === "absence")
+            : currentStatus === "running"
+    )
 
     // Load existing attendance data when component mounts or when existingAttendance changes
     useEffect(() => {
@@ -150,7 +157,7 @@ export function AttendanceTracker({
 
     // Handle student attendance change
     const handleStudentAttendanceChange = (studentId: string, isPresent: boolean) => {
-        if (!canTakeAttendance || currentStatus !== "running") return;
+        if (!canEditAttendance) return;
         setStudentAttendance((prev) => ({
             ...prev,
             [studentId]: isPresent,
@@ -160,7 +167,7 @@ export function AttendanceTracker({
 
     // Handle teacher attendance change
     const handleTeacherAttendanceChange = (teacherId: string, isPresent: boolean) => {
-        if (!canTakeAttendance || currentStatus !== "running") return;
+        if (!canEditAttendance) return;
         setTeacherAttendance((prev) => ({
             ...prev,
             [teacherId]: isPresent,
@@ -172,7 +179,7 @@ export function AttendanceTracker({
 
     // Save attendance records
     const saveAttendance = async () => {
-        if (!canTakeAttendance || currentStatus !== "running") return;
+        if (!canEditAttendance) return;
         setSaving(true)
 
         try {
@@ -244,14 +251,18 @@ export function AttendanceTracker({
     const presentStudentCount = Object.values(studentAttendance).filter(Boolean).length
     const presentTeacherCount = Object.values(teacherAttendance).filter(Boolean).length
 
-    const isAttendanceEnabled = currentStatus === "running" && canTakeAttendance
+    const isAttendanceEnabled = canEditAttendance
 
-    // Reset hasChanges when session status changes to non-running
+    // Reset hasChanges when session status changes to a non-editable state
     useEffect(() => {
-        if (currentStatus !== "running") {
+        const isEditableStatus = (userRole === 'admin' || userRole === 'moderator')
+            ? (currentStatus === "running" || currentStatus === "absence")
+            : currentStatus === "running"
+
+        if (!isEditableStatus) {
             setHasChanges(false)
         }
-    }, [currentStatus])
+    }, [currentStatus, userRole])
 
 
     // Show message when no students or teachers are enrolled

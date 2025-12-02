@@ -78,7 +78,7 @@ interface ClassSessionDetailsProps {
       avatar_url?: string | null
     }>
   }
-  userRole: 'admin' | 'teacher' | 'parent' | 'student'
+  userRole: 'admin' | 'moderator' | 'teacher' | 'parent' | 'student'
   userId?: string
   userParentStudents?: string[] // Only needed for parent role
 }

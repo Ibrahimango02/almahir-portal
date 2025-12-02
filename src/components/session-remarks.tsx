@@ -27,7 +27,7 @@ interface SessionRemarksProps {
         last_name: string
         avatar_url?: string | null
     }>
-    userRole: 'admin' | 'teacher' | 'parent' | 'student'
+    userRole: 'admin' | 'moderator' | 'teacher' | 'parent' | 'student'
 }
 
 interface StudentNote {
@@ -46,8 +46,8 @@ export function SessionRemarks({ sessionId, sessionStatus, students, userRole }:
     const [existingRemarks, setExistingRemarks] = useState<SessionRemarksType | null>(null)
     const [existingNotes, setExistingNotes] = useState<StudentSessionNotesType[]>([])
 
-    // Check if user can edit (teachers and admins can edit when session is running, complete, or absence)
-    const canEdit = (userRole === 'teacher' || userRole === 'admin') && (sessionStatus === 'running' || sessionStatus === 'complete' || sessionStatus === 'absence')
+    // Check if user can edit (teachers, admins, and moderators can edit when session is running, complete, or absence)
+    const canEdit = (userRole === 'teacher' || userRole === 'admin' || userRole === 'moderator') && (sessionStatus === 'running' || sessionStatus === 'complete' || sessionStatus === 'absence')
 
     // Initialize student notes and load existing data
     useEffect(() => {

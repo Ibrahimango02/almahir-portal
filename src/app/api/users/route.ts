@@ -35,7 +35,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { email, password, first_name, last_name, role, phone, gender, country, language, status } = body;
+        const { email, password, first_name, last_name, role } = body;
 
         // Validate required fields
         if (!email || !password || !first_name || !last_name || !role) {
@@ -89,32 +89,6 @@ export async function POST(request: NextRequest) {
                 { error: 'Failed to create user account', details: authError.message },
                 { status: 500 }
             );
-        }
-
-        // Update profile with additional fields if provided
-        const profileUpdates: {
-            phone?: string;
-            gender?: string;
-            country?: string;
-            language?: string;
-            status?: string;
-        } = {};
-        if (phone) profileUpdates.phone = phone;
-        if (gender) profileUpdates.gender = gender;
-        if (country) profileUpdates.country = country;
-        if (language) profileUpdates.language = language;
-        if (status) profileUpdates.status = status;
-
-        if (Object.keys(profileUpdates).length > 0) {
-            const { error: updateError } = await supabaseAdmin
-                .from('profiles')
-                .update(profileUpdates)
-                .eq('id', authData.user.id);
-
-            if (updateError) {
-                console.error('Profile update error:', updateError);
-                // Don't fail the request if profile update fails, user is already created
-            }
         }
 
         console.log(`User account created successfully for ${email}`);

@@ -628,6 +628,32 @@ export async function updateSession(params: {
                 break
             }
 
+            case 'complete': {
+                const now = new Date().toISOString()
+
+                // Update class history
+                const { error: historyError } = await supabase
+                    .from('session_history')
+                    .upsert({
+                        session_id: sessionId,
+                        notes: 'session marked as complete',
+                        actual_end_time: now
+                    }, {
+                        onConflict: 'session_id'
+                    })
+
+                if (historyError) throw historyError
+
+                // Update session status to complete
+                const { error: sessionError } = await supabase
+                    .from('class_sessions')
+                    .update({ status: 'complete' })
+                    .eq('id', sessionId)
+
+                if (sessionError) throw sessionError
+                break
+            }
+
             default:
                 throw new Error(`Invalid action: ${action}`)
         }
