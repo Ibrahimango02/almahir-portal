@@ -21,6 +21,7 @@ import { format, parseISO } from "date-fns"
 import { createClient } from "@/utils/supabase/server"
 import { checkIfAdmin, getModeratorById } from "@/lib/get/get-profiles"
 import { ClassTimeDisplay } from "@/components/class-time-display"
+import { SessionTimeDisplay, SessionDateDisplay } from "@/components/session-time-display"
 
 export default async function TeacherDetailPage({ params }: { params: Promise<{ id: string }> }) {
   // Get current user ID
@@ -413,9 +414,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                             href={`/admin/classes/${session.class_id}/${session.session_id}`}
                             className="block"
                           >
-                            <div className="text-sm text-gray-900">
-                              {format(parseISO(session.start_date), "MMMM d, yyyy")}
-                            </div>
+                            <SessionDateDisplay dateString={session.start_date} />
                           </Link>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
@@ -423,14 +422,11 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                             href={`/admin/classes/${session.class_id}/${session.session_id}`}
                             className="block"
                           >
-                            <div className="text-sm text-gray-900">
-                              {format(parseISO(session.start_date), "hh:mm a")}
-                              {session.actual_start_time && (
-                                <span className="text-xs text-gray-500 ml-1">
-                                  (actual: {format(parseISO(session.actual_start_time), "hh:mm a")})
-                                </span>
-                              )}
-                            </div>
+                            <SessionTimeDisplay
+                              dateString={session.start_date}
+                              showActual={!!session.actual_start_time}
+                              actualDateString={session.actual_start_time || undefined}
+                            />
                           </Link>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
@@ -438,14 +434,11 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                             href={`/admin/classes/${session.class_id}/${session.session_id}`}
                             className="block"
                           >
-                            <div className="text-sm text-gray-900">
-                              {format(parseISO(session.end_date), "hh:mm a")}
-                              {session.actual_end_time && (
-                                <span className="text-xs text-gray-500 ml-1">
-                                  (actual: {format(parseISO(session.actual_end_time), "hh:mm a")})
-                                </span>
-                              )}
-                            </div>
+                            <SessionTimeDisplay
+                              dateString={session.end_date}
+                              showActual={!!session.actual_end_time}
+                              actualDateString={session.actual_end_time || undefined}
+                            />
                           </Link>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">
