@@ -223,19 +223,26 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   }
 
   // Check if attendance has been saved for all students and teachers
+  // Attendance is considered saved if records exist with a status other than 'expected'
   const isAttendanceSaved = () => {
     if (!existingAttendance) {
       return false
     }
 
-    // Check if all students have attendance records
+    // Check if all students have attendance records with status other than 'expected'
     const studentIds = new Set(classData.students.map(s => s.student_id))
-    const savedStudentIds = new Set(existingAttendance.studentAttendance.map(a => a.student_id))
+    const savedStudentAttendance = existingAttendance.studentAttendance.filter(
+      a => a.attendance_status !== 'expected'
+    )
+    const savedStudentIds = new Set(savedStudentAttendance.map(a => a.student_id))
     const allStudentsHaveAttendance = studentIds.size === 0 || Array.from(studentIds).every(id => savedStudentIds.has(id))
 
-    // Check if all teachers have attendance records
+    // Check if all teachers have attendance records with status other than 'expected'
     const teacherIds = new Set(classData.teachers.map(t => t.teacher_id))
-    const savedTeacherIds = new Set(existingAttendance.teacherAttendance.map(a => a.teacher_id))
+    const savedTeacherAttendance = existingAttendance.teacherAttendance.filter(
+      a => a.attendance_status !== 'expected'
+    )
+    const savedTeacherIds = new Set(savedTeacherAttendance.map(a => a.teacher_id))
     const allTeachersHaveAttendance = teacherIds.size === 0 || Array.from(teacherIds).every(id => savedTeacherIds.has(id))
 
     return allStudentsHaveAttendance && allTeachersHaveAttendance
