@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { TablePagination } from "./table-pagination"
 import { CalendarDays, Clock, Users, Calendar, Play, CheckCircle, BookX, UserX } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { ClassType, ClassSessionType, ScheduleListViewProps } from "@/types"
+import { ClassType, ScheduleListViewProps } from "@/types"
 import {
     utcToLocal,
 } from "@/lib/utils/timezone"
@@ -49,7 +49,7 @@ export function ScheduleListView({
     const router = useRouter()
     const { timezone } = useTimezone()
     const [currentPage, setCurrentPage] = useState(1)
-    const [itemsPerPage] = useState(10)
+    const [itemsPerPage, setItemsPerPage] = useState(50)
 
     // Extract all sessions from classes
     const allClassSessions = useMemo(() => {
@@ -67,9 +67,9 @@ export function ScheduleListView({
         )
     }, [classData])
 
-    // Filter sessions based on the selected week
-    const filterByWeek = (sessions: ClassSessionType[]) => {
-        if (!currentWeekStart) return sessions;
+    // First filter by week to get only sessions in the selected week
+    const weekFilteredSessions = useMemo(() => {
+        if (!currentWeekStart) return allClassSessions;
 
         const weekStart = new Date(currentWeekStart);
         weekStart.setHours(0, 0, 0, 0);
@@ -78,19 +78,19 @@ export function ScheduleListView({
         weekEnd.setDate(weekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
 
-        return sessions.filter(session => {
+        return allClassSessions.filter(session => {
             const startDateTime = utcToLocal(session.start_date, timezone);
             const sessionDate = new Date(startDateTime);
             sessionDate.setHours(0, 0, 0, 0);
             return sessionDate >= weekStart && sessionDate <= weekEnd;
         });
-    };
+    }, [allClassSessions, currentWeekStart, timezone]);
 
-    // Filter sessions by search query
-    const filterBySearch = (sessions: ClassSessionType[]) => {
-        if (!searchQuery || searchQuery.trim() === '') return sessions;
+    // Then filter by search query
+    const searchFilteredSessions = useMemo(() => {
+        if (!searchQuery || searchQuery.trim() === '') return weekFilteredSessions;
         const query = searchQuery.toLowerCase().trim();
-        return sessions.filter(session => {
+        return weekFilteredSessions.filter(session => {
             if (session.title.toLowerCase().includes(query)) return true;
             if (session.subject.toLowerCase().includes(query)) return true;
             if (session.teachers.some(teacher =>
@@ -101,12 +101,7 @@ export function ScheduleListView({
             if (session.description && session.description.toLowerCase().includes(query)) return true;
             return false;
         });
-    };
-
-    // First filter by week to get only sessions in the selected week
-    const weekFilteredSessions = filterByWeek(allClassSessions);
-    // Then filter by search query
-    const searchFilteredSessions = filterBySearch(weekFilteredSessions);
+    }, [weekFilteredSessions, searchQuery]);
 
     // Then apply additional filters based on the filter prop
     const filteredSessions = useMemo(() => {
@@ -178,9 +173,15 @@ export function ScheduleListView({
         });
     }, [filteredSessions, timezone]);
 
-    // Reset to first page when search query changes
-    // (If you want to reset on filter change too, add filter to deps)
-    // useEffect(() => { setCurrentPage(1); }, [searchQuery, filter]);
+    // Reset to first page when search query, filter, or week changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, filter, currentWeekStart]);
+
+    // Reset to first page when page size changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [itemsPerPage]);
 
     // Pagination
     const totalPages = Math.ceil(sortedSessions.length / itemsPerPage);
@@ -293,14 +294,14 @@ export function ScheduleListView({
                         })}
                     </div>
 
-                    {totalPages > 1 && (
+                    {sortedSessions.length > 0 && (
                         <TablePagination
                             currentPage={currentPage}
                             totalPages={totalPages}
                             pageSize={itemsPerPage}
                             totalItems={sortedSessions.length}
                             onPageChange={setCurrentPage}
-                            onPageSizeChange={() => { }} // No-op since we're not changing page size
+                            onPageSizeChange={setItemsPerPage}
                         />
                     )}
                 </>

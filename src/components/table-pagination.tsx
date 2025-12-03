@@ -23,7 +23,8 @@ export function TablePagination({
 }: TablePaginationProps) {
     const pageSizeOptions = [5, 10, 20, 50, 100, 500]
 
-    // Calculate the end item of results shown
+    // Calculate the range of items shown
+    const startItem = totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0
     const endItem = Math.min(currentPage * pageSize, totalItems)
 
     return (
@@ -51,7 +52,10 @@ export function TablePagination({
                     {totalItems > 0 ? (
                         <>
                             Showing
-                            <span className="font-semibold text-foreground mx-1">{endItem}</span> of{" "}
+                            <span className="font-semibold text-foreground mx-1">
+                                {startItem === endItem ? startItem : `${startItem}-${endItem}`}
+                            </span>
+                            of{" "}
                             <span className="font-semibold text-foreground mx-1">{totalItems}</span> results
                         </>
                     ) : (
