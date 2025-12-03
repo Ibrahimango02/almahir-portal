@@ -15,19 +15,19 @@ import { ClientTimeDisplay } from "./client-time-display"
 const getStatusStyles = (status: string) => {
     switch (status) {
         case "scheduled":
-            return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+            return "border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900"
         case "running":
-            return "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
+            return "border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900"
         case "pending":
-            return "border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950"
+            return "border-indigo-200 bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900"
         case "complete":
-            return "border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950"
+            return "border-purple-200 bg-purple-100 dark:border-purple-800 dark:bg-purple-900"
         case "cancelled":
-            return "border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950"
+            return "border-rose-200 bg-rose-100 dark:border-rose-800 dark:bg-rose-900"
         case "absence":
-            return "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
+            return "border-orange-200 bg-orange-100 dark:border-orange-800 dark:bg-orange-900"
         default:
-            return "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"
+            return "border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900"
     }
 }
 

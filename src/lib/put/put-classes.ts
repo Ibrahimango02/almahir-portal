@@ -643,6 +643,35 @@ export async function updateSession(params: {
                     .eq('id', sessionId)
 
                 if (sessionError) throw sessionError
+
+                // Update all student attendance records to 'cancelled'
+                const { error: studentAttendanceError } = await supabase
+                    .from('student_attendance')
+                    .update({
+                        attendance_status: 'cancelled',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('session_id', sessionId)
+
+                if (studentAttendanceError) {
+                    console.error('Error updating student attendance to cancelled:', studentAttendanceError)
+                    // Don't throw error here as the main operations were successful
+                }
+
+                // Update all teacher attendance records to 'cancelled'
+                const { error: teacherAttendanceError } = await supabase
+                    .from('teacher_attendance')
+                    .update({
+                        attendance_status: 'cancelled',
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('session_id', sessionId)
+
+                if (teacherAttendanceError) {
+                    console.error('Error updating teacher attendance to cancelled:', teacherAttendanceError)
+                    // Don't throw error here as the main operations were successful
+                }
+
                 break
             }
 
@@ -709,12 +738,21 @@ export async function rescheduleSession(params: {
             throw new Error('New session date must be in the future')
         }
 
-        // 3. Update the existing session with the new dates
+        // 3. Delete session history
+        const { error: deleteHistoryError } = await supabase
+            .from('session_history')
+            .delete()
+            .eq('session_id', sessionId)
+
+        if (deleteHistoryError) throw deleteHistoryError
+
+        // 4. Update the existing session with the new dates and reset status to 'scheduled'
         const { error: updateError } = await supabase
             .from('class_sessions')
             .update({
                 start_date: newStartDate,
                 end_date: newEndDate,
+                status: 'scheduled',
                 updated_at: new Date().toISOString()
             })
             .eq('id', sessionId)

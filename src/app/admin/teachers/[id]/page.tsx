@@ -460,7 +460,9 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
                                   ? "bg-red-100 text-red-800"
                                   : session.attendance_status === "late"
                                     ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-gray-100 text-gray-800"
+                                    : session.attendance_status === "cancelled"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
                                 }`}
                             >
                               {session.attendance_status}
@@ -509,7 +511,7 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
           </CardHeader>
           <CardContent>
             {teacherPayments && teacherPayments.length > 0 ? (
-              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+              <div className="overflow-x-auto max-h-96 overflow-y-auto pr-2">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">

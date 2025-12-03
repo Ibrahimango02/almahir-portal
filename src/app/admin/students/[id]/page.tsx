@@ -491,7 +491,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                   ? "bg-red-100 text-red-800"
                                   : session.attendance_status === "late"
                                     ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-gray-100 text-gray-800"
+                                    : session.attendance_status === "cancelled"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-gray-100 text-gray-800"
                                 }`}
                             >
                               {session.attendance_status}

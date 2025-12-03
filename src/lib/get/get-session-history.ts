@@ -92,7 +92,7 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
     const supabase = createClient()
 
     try {
-        // Get all classes this student is enrolled in
+        // Step 1: Get all classes this student is enrolled in
         const { data: studentClasses } = await supabase
             .from('class_students')
             .select('class_id')
@@ -104,50 +104,67 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
 
         const classIds = studentClasses.map(sc => sc.class_id)
 
-        // Get all sessions for these classes
-        const { data: sessions } = await supabase
+        // Step 2: Get all session_history records
+        const { data: sessionHistory, error: historyError } = await supabase
+            .from('session_history')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+        if (historyError) {
+            console.error('Error fetching session history:', historyError)
+            throw historyError
+        }
+
+        if (!sessionHistory || sessionHistory.length === 0) {
+            return []
+        }
+
+        // Step 3: Get unique session IDs from history
+        const sessionIds = [...new Set(sessionHistory.map(h => h.session_id))]
+
+        // Step 4: Get the corresponding class_sessions records
+        const { data: sessions, error: sessionsError } = await supabase
             .from('class_sessions')
             .select('*')
-            .in('class_id', classIds)
+            .in('id', sessionIds)
+
+        if (sessionsError) {
+            console.error('Error fetching sessions:', sessionsError)
+            throw sessionsError
+        }
 
         if (!sessions || sessions.length === 0) {
             return []
         }
 
-        const sessionIds = sessions.map(s => s.id)
+        // Step 5: Filter sessions to only those belonging to student's classes
+        const studentSessions = sessions.filter(session =>
+            classIds.includes(session.class_id)
+        )
 
-        // Get class details for these sessions
+        if (studentSessions.length === 0) {
+            return []
+        }
+
+        // Step 6: Get class details for these sessions
+        const studentClassIds = [...new Set(studentSessions.map(s => s.class_id))]
         const { data: classes } = await supabase
             .from('classes')
             .select('*')
-            .in('id', classIds)
+            .in('id', studentClassIds)
 
-        // Get session history for these sessions
-        const { data: sessionHistory } = await supabase
-            .from('session_history')
-            .select('*')
-            .in('session_id', sessionIds)
-
-        // Get student attendance for these sessions
+        // Step 7: Get student attendance for these sessions
+        const studentSessionIds = studentSessions.map(s => s.id)
         const { data: studentAttendance } = await supabase
             .from('student_attendance')
             .select('*')
             .eq('student_id', studentId)
-            .in('session_id', sessionIds)
+            .in('session_id', studentSessionIds)
 
-        // Filter sessions to only include those that exist in session_history
-        const sessionsWithHistory = sessions.filter(session =>
-            sessionHistory?.some(h => h.session_id === session.id)
-        )
-
-        if (sessionsWithHistory.length === 0) {
-            return []
-        }
-
-        // Combine the data for sessions that have history
-        const result = sessionsWithHistory.map(session => {
+        // Step 8: Combine the data for sessions that have history
+        const result = studentSessions.map(session => {
             const classData = classes?.find(c => c.id === session.class_id)
-            const history = sessionHistory?.find(h => h.session_id === session.id)
+            const history = sessionHistory.find(h => h.session_id === session.id)
             const attendance = studentAttendance?.find(a => a.session_id === session.id)
 
             return {
@@ -187,7 +204,7 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
     const supabase = createClient()
 
     try {
-        // Get all classes this teacher teaches
+        // Step 1: Get all classes this teacher teaches
         const { data: teacherClasses } = await supabase
             .from('class_teachers')
             .select('class_id')
@@ -199,41 +216,67 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
 
         const classIds = teacherClasses.map(tc => tc.class_id)
 
-        // Get all sessions for these classes
-        const { data: sessions } = await supabase
+        // Step 2: Get all session_history records
+        const { data: sessionHistory, error: historyError } = await supabase
+            .from('session_history')
+            .select('*')
+            .order('created_at', { ascending: false })
+
+        if (historyError) {
+            console.error('Error fetching session history:', historyError)
+            throw historyError
+        }
+
+        if (!sessionHistory || sessionHistory.length === 0) {
+            return []
+        }
+
+        // Step 3: Get unique session IDs from history
+        const sessionIds = [...new Set(sessionHistory.map(h => h.session_id))]
+
+        // Step 4: Get the corresponding class_sessions records
+        const { data: sessions, error: sessionsError } = await supabase
             .from('class_sessions')
             .select('*')
-            .in('class_id', classIds)
+            .in('id', sessionIds)
+
+        if (sessionsError) {
+            console.error('Error fetching sessions:', sessionsError)
+            throw sessionsError
+        }
 
         if (!sessions || sessions.length === 0) {
             return []
         }
 
-        const sessionIds = sessions.map(s => s.id)
+        // Step 5: Filter sessions to only those belonging to teacher's classes
+        const teacherSessions = sessions.filter(session =>
+            classIds.includes(session.class_id)
+        )
 
-        // Get class details for these sessions
+        if (teacherSessions.length === 0) {
+            return []
+        }
+
+        // Step 6: Get class details for these sessions
+        const teacherClassIds = [...new Set(teacherSessions.map(s => s.class_id))]
         const { data: classes } = await supabase
             .from('classes')
             .select('*')
-            .in('id', classIds)
+            .in('id', teacherClassIds)
 
-        // Get session history for these sessions
-        const { data: sessionHistory } = await supabase
-            .from('session_history')
-            .select('*')
-            .in('session_id', sessionIds)
-
-        // Get teacher attendance for these sessions
+        // Step 7: Get teacher attendance for these sessions
+        const teacherSessionIds = teacherSessions.map(s => s.id)
         const { data: teacherAttendance } = await supabase
             .from('teacher_attendance')
             .select('*')
             .eq('teacher_id', teacherId)
-            .in('session_id', sessionIds)
+            .in('session_id', teacherSessionIds)
 
-        // Combine the data
-        const result = sessions.map(session => {
+        // Step 8: Combine the data for sessions that have history
+        const result = teacherSessions.map(session => {
             const classData = classes?.find(c => c.id === session.class_id)
-            const history = sessionHistory?.find(h => h.session_id === session.id)
+            const history = sessionHistory.find(h => h.session_id === session.id)
             const attendance = teacherAttendance?.find(a => a.session_id === session.id)
 
             return {
@@ -250,20 +293,8 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
             }
         })
 
-        // Filter to only past sessions or those with specific notes, then sort by date (newest first)
-        const now = new Date();
-        const noteMatch = (sessionNotes: string) => {
-            if (!sessionNotes) return false;
-            const lower = sessionNotes.toLowerCase();
-            return (
-                lower.includes('session ended') ||
-                lower.includes('session cancelled') ||
-                lower.includes('session absence')
-            );
-        };
-        return result
-            .filter(session => new Date(session.end_date) < now || noteMatch(session.notes))
-            .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
+        // Sort by date (newest first) - no need to filter by date since we only want sessions with history
+        return result.sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
 
     } catch (error) {
         console.error('Error fetching teacher session history:', error)

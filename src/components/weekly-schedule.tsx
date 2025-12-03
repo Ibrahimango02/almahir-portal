@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button"
 import { List, CalendarDays, ChevronLeft, ChevronRight, Plus, Clock, Users, Calendar, Play, CheckCircle, BookX, UserX } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { StatusBadge } from "./status-badge"
-import { ClassSessionType } from "@/types"
+import { ClassSessionType, StudentAttendanceType, TeacherAttendanceType } from "@/types"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -636,19 +636,19 @@ function CalendarScheduleView({
   const getStatusContainerStyles = (status: string) => {
     switch (status) {
       case "scheduled":
-        return "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+        return "border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900"
       case "running":
-        return "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
+        return "border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900"
       case "pending":
-        return "border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950"
+        return "border-indigo-200 bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-900"
       case "complete":
-        return "border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950"
+        return "border-purple-200 bg-purple-100 dark:border-purple-800 dark:bg-purple-900"
       case "cancelled":
-        return "border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950"
+        return "border-rose-200 bg-rose-100 dark:border-rose-800 dark:bg-rose-900"
       case "absence":
-        return "border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
+        return "border-orange-200 bg-orange-100 dark:border-orange-800 dark:bg-orange-900"
       default:
-        return "border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-950"
+        return "border-gray-200 bg-gray-100 dark:border-gray-800 dark:bg-gray-900"
     }
   }
 
@@ -918,8 +918,10 @@ function MonthlyScheduleView({
         return <CheckCircle className="h-3 w-3" />
       case "absent":
         return <UserX className="h-3 w-3" />
+      case "cancelled":
+        return <BookX className="h-3 w-3" />
       default:
-        return <Clock className="h-3 w-3" />
+        return <Calendar className="h-3 w-3" />
     }
   }
 
@@ -936,25 +938,42 @@ function MonthlyScheduleView({
       const attendanceMap: Record<string, string> = {}
 
       try {
-        for (const cls of classes) {
-          let attendanceStatus = 'expected' // default status
+        // Import functions once outside the loop
+        let getAttendanceForSession: (sessionId: string, userId: string) => Promise<(StudentAttendanceType | TeacherAttendanceType)[]>
 
-          if (role === 'student') {
-            const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
-            const attendance = await getStudentAttendanceForSession(cls.session_id, id)
-            if (attendance.length > 0) {
-              attendanceStatus = attendance[0].attendance_status
+        if (role === 'student') {
+          const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
+          getAttendanceForSession = getStudentAttendanceForSession
+        } else if (role === 'teacher' || role === 'admin') {
+          const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
+          getAttendanceForSession = getTeacherAttendanceForSession
+        } else {
+          return
+        }
+
+        // Fetch all attendance data in parallel
+        const attendancePromises = classes.map(async (cls) => {
+          try {
+            const attendance = await getAttendanceForSession(cls.session_id, id)
+            return {
+              sessionId: cls.session_id,
+              status: attendance.length > 0 ? attendance[0].attendance_status : 'expected'
             }
-          } else if (role === 'teacher' || role === 'admin') {
-            const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
-            const attendance = await getTeacherAttendanceForSession(cls.session_id, id)
-            if (attendance.length > 0) {
-              attendanceStatus = attendance[0].attendance_status
+          } catch (error) {
+            console.error(`Error fetching attendance for session ${cls.session_id}:`, error)
+            return {
+              sessionId: cls.session_id,
+              status: 'expected'
             }
           }
+        })
 
-          attendanceMap[cls.session_id] = attendanceStatus
-        }
+        const results = await Promise.all(attendancePromises)
+
+        // Build attendance map from results
+        results.forEach(({ sessionId, status }) => {
+          attendanceMap[sessionId] = status
+        })
 
         setAttendanceData(attendanceMap)
       } catch (error) {
@@ -994,11 +1013,11 @@ function MonthlyScheduleView({
   // Helper to get attendance status-specific border and background colors
   const getAttendanceStatusContainerStyles = (status: string) => {
     switch (status) {
-      case "scheduled":
-        return "border-blue-200 bg-blue-100 dark:border-blue-800/60 dark:bg-blue-950/50"
       case "present":
         return "border-emerald-200 bg-emerald-100 dark:border-emerald-800/60 dark:bg-emerald-950/50"
       case "absent":
+        return "border-orange-200 bg-orange-100 dark:border-orange-800/60 dark:bg-orange-950/50"
+      case "cancelled":
         return "border-rose-200 bg-rose-100 dark:border-rose-800/60 dark:bg-rose-950/50"
       default:
         return "border-gray-200 bg-gray-100 dark:border-gray-800/60 dark:bg-gray-950/50"
@@ -1106,8 +1125,8 @@ function MonthlyScheduleView({
                                 <span className={cn(
                                   "ml-1 px-1.5 py-0.5 rounded text-xs font-medium border",
                                   (attendanceData[cls.session_id] || "scheduled") === "present" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                                  (attendanceData[cls.session_id] || "scheduled") === "absent" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
-                                  (attendanceData[cls.session_id] || "scheduled") === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                  (attendanceData[cls.session_id] || "scheduled") === "absent" && "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                                  (attendanceData[cls.session_id] || "scheduled") === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
                                 )}>
                                   {attendanceData[cls.session_id] || "scheduled"}
                                 </span>
@@ -1160,6 +1179,8 @@ function MonthlyListScheduleView({
         return <CheckCircle className="h-3 w-3" />
       case "absent":
         return <UserX className="h-3 w-3" />
+      case "cancelled":
+        return <BookX className="h-3 w-3" />
       default:
         return <Clock className="h-3 w-3" />
     }
@@ -1173,25 +1194,42 @@ function MonthlyListScheduleView({
       const attendanceMap: Record<string, string> = {}
 
       try {
-        for (const cls of classes) {
-          let attendanceStatus = 'expected' // default status
+        // Import functions once outside the loop
+        let getAttendanceForSession: (sessionId: string, userId: string) => Promise<(StudentAttendanceType | TeacherAttendanceType)[]>
 
-          if (role === 'student') {
-            const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
-            const attendance = await getStudentAttendanceForSession(cls.session_id, id)
-            if (attendance.length > 0) {
-              attendanceStatus = attendance[0].attendance_status
+        if (role === 'student') {
+          const { getStudentAttendanceForSession } = await import('@/lib/get/get-students')
+          getAttendanceForSession = getStudentAttendanceForSession
+        } else if (role === 'teacher' || role === 'admin') {
+          const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
+          getAttendanceForSession = getTeacherAttendanceForSession
+        } else {
+          return
+        }
+
+        // Fetch all attendance data in parallel
+        const attendancePromises = classes.map(async (cls) => {
+          try {
+            const attendance = await getAttendanceForSession(cls.session_id, id)
+            return {
+              sessionId: cls.session_id,
+              status: attendance.length > 0 ? attendance[0].attendance_status : 'expected'
             }
-          } else if (role === 'teacher' || role === 'admin') {
-            const { getTeacherAttendanceForSession } = await import('@/lib/get/get-teachers')
-            const attendance = await getTeacherAttendanceForSession(cls.session_id, id)
-            if (attendance.length > 0) {
-              attendanceStatus = attendance[0].attendance_status
+          } catch (error) {
+            console.error(`Error fetching attendance for session ${cls.session_id}:`, error)
+            return {
+              sessionId: cls.session_id,
+              status: 'expected'
             }
           }
+        })
 
-          attendanceMap[cls.session_id] = attendanceStatus
-        }
+        const results = await Promise.all(attendancePromises)
+
+        // Build attendance map from results
+        results.forEach(({ sessionId, status }) => {
+          attendanceMap[sessionId] = status
+        })
 
         setAttendanceData(attendanceMap)
       } catch (error) {
@@ -1292,7 +1330,8 @@ function MonthlyListScheduleView({
                         <span className={cn(
                           "flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium border",
                           (attendanceData[classItem.session_id] || "scheduled") === "present" && "border-emerald-200 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
-                          (attendanceData[classItem.session_id] || "scheduled") === "absent" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+                          (attendanceData[classItem.session_id] || "scheduled") === "absent" && "border-orange-200 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                          (attendanceData[classItem.session_id] || "scheduled") === "cancelled" && "border-rose-200 bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
                           (attendanceData[classItem.session_id] || "scheduled") === "scheduled" && "border-blue-200 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                         )}>
                           {getAttendanceStatusIcon(attendanceData[classItem.session_id] || "scheduled")}
