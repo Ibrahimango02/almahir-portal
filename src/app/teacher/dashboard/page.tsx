@@ -52,9 +52,9 @@ export default function TeacherDashboard() {
     if (loading) {
         return (
             <div className="flex flex-col gap-6">
-                <div className="w-full flex items-center bg-green-800 min-h-[110px] shadow-md" style={{ borderBottom: '4px solid #34d399' }}>
-                    <div className="flex-1 flex justify-center items-center">
-                        <div className="h-8 w-64 bg-white/20 rounded animate-pulse"></div>
+                <div className="rounded-lg bg-[#1f6749] p-6 shadow-lg">
+                    <div className="text-center">
+                        <div className="h-8 w-64 bg-white/20 rounded animate-pulse mx-auto"></div>
                     </div>
                 </div>
                 <div className="flex items-center justify-center py-20">
@@ -70,7 +70,7 @@ export default function TeacherDashboard() {
     return (
         <div className="flex flex-col gap-6">
             {/* Welcome Banner */}
-            <div className="rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 p-6 shadow-lg">
+            <div className="rounded-lg bg-[#1f6749] p-6 shadow-lg">
                 <div className="text-center">
                     <h2 className="text-2xl md:text-3xl font-bold text-white">
                         Welcome, {profile?.first_name} {profile?.last_name}!

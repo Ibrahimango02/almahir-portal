@@ -54,7 +54,7 @@ export function DashboardContent({ profile, sessionsData }: DashboardContentProp
     return (
         <div className="flex flex-col gap-6">
             {/* Welcome Banner */}
-            <div className="rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 p-6 shadow-lg">
+            <div className="rounded-lg bg-[#1f6749] p-6 shadow-lg">
                 <div className="text-center">
                     <h2 className="text-2xl md:text-3xl font-bold text-white">
                         Welcome, {welcomeName}!
