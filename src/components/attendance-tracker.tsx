@@ -10,7 +10,6 @@ import { Save, User, UserPen } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/components/ui/use-toast"
 import { updateSessionAttendance } from "@/lib/put/put-classes"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 type AttendanceTrackerProps = {
     sessionId: string
@@ -52,7 +51,6 @@ export function AttendanceTracker({
     const [teacherAttendance, setTeacherAttendance] = useState<Record<string, boolean>>({})
     const [saving, setSaving] = useState(false)
     const [hasChanges, setHasChanges] = useState(false)
-    const [activeTab, setActiveTab] = useState("teachers")
 
     // Only teachers, admins, and moderators can take attendance
     const canTakeAttendance = userRole === 'admin' || userRole === 'moderator' || userRole === 'teacher'
@@ -274,136 +272,132 @@ export function AttendanceTracker({
     }
 
     return (
-        <div className="space-y-4">
-
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="teachers" className="flex items-center gap-2">
-                        <UserPen className="h-4 w-4" />
-                        Teachers
-                    </TabsTrigger>
-                    <TabsTrigger value="students" className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        Students
-                    </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="students" className="space-y-4">
-                    {students.length > 0 ? (
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Student</TableHead>
-                                        <TableHead className="w-16 text-center">Present</TableHead>
+        <div className="space-y-6">
+            {/* Teachers Section */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                    <UserPen className="h-4 w-4" />
+                    Teachers
+                </div>
+                {teachers.length > 0 ? (
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Teacher</TableHead>
+                                    <TableHead className="w-16 text-center">Present</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {teachers.map((teacher) => (
+                                    <TableRow key={teacher.teacher_id}>
+                                        <TableCell className="flex items-center gap-2 py-2">
+                                            <Avatar className="h-6 w-6">
+                                                {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
+                                                <AvatarFallback className="text-xs bg-muted">
+                                                    {getInitials(teacher.first_name, teacher.last_name)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <Link
+                                                href={`/admin/teachers/${teacher.teacher_id}`}
+                                                className="hover:underline text-primary inline-block text-sm"
+                                            >
+                                                {teacher.first_name} {teacher.last_name}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex justify-center">
+                                                <Checkbox
+                                                    id={`teacher-attendance-${teacher.teacher_id}`}
+                                                    checked={teacherAttendance[teacher.teacher_id] || false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleTeacherAttendanceChange(teacher.teacher_id, checked === true)
+                                                    }}
+                                                    disabled={!isAttendanceEnabled}
+                                                    style={{
+                                                        backgroundColor: teacherAttendance[teacher.teacher_id] ? "#3d8f5b" : "white",
+                                                        color: "white",
+                                                        borderColor: "#3d8f5b",
+                                                        opacity: isAttendanceEnabled ? 1 : 0.5
+                                                    }}
+                                                />
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {students.map((student) => (
-                                        <TableRow key={student.student_id}>
-                                            <TableCell className="flex items-center gap-2 py-2">
-                                                <Avatar className="h-6 w-6">
-                                                    {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
-                                                    <AvatarFallback className="text-xs bg-muted">
-                                                        {getInitials(student.first_name, student.last_name)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <Link
-                                                    href={`/admin/students/${student.student_id}`}
-                                                    className="hover:underline text-primary inline-block text-sm"
-                                                >
-                                                    {student.first_name} {student.last_name}
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex justify-center">
-                                                    <Checkbox
-                                                        id={`student-attendance-${student.student_id}`}
-                                                        checked={studentAttendance[student.student_id] || false}
-                                                        onCheckedChange={(checked) => {
-                                                            handleStudentAttendanceChange(student.student_id, checked === true)
-                                                        }}
-                                                        disabled={!isAttendanceEnabled}
-                                                        style={{
-                                                            backgroundColor: studentAttendance[student.student_id] ? "#3d8f5b" : "white",
-                                                            color: "white",
-                                                            borderColor: "#3d8f5b",
-                                                            opacity: isAttendanceEnabled ? 1 : 0.5
-                                                        }}
-                                                    />
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    ) : (
-                        <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                            <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">No students enrolled</p>
-                        </div>
-                    )}
-                </TabsContent>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ) : (
+                    <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
+                        <UserPen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No teachers assigned</p>
+                    </div>
+                )}
+            </div>
 
-                <TabsContent value="teachers" className="space-y-4">
-                    {teachers.length > 0 ? (
-                        <div className="rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Teacher</TableHead>
-                                        <TableHead className="w-16 text-center">Present</TableHead>
+            {/* Students Section */}
+            <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                    <User className="h-4 w-4" />
+                    Students
+                </div>
+                {students.length > 0 ? (
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Student</TableHead>
+                                    <TableHead className="w-16 text-center">Present</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {students.map((student) => (
+                                    <TableRow key={student.student_id}>
+                                        <TableCell className="flex items-center gap-2 py-2">
+                                            <Avatar className="h-6 w-6">
+                                                {student.avatar_url && <AvatarImage src={student.avatar_url} alt={student.first_name} />}
+                                                <AvatarFallback className="text-xs bg-muted">
+                                                    {getInitials(student.first_name, student.last_name)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <Link
+                                                href={`/admin/students/${student.student_id}`}
+                                                className="hover:underline text-primary inline-block text-sm"
+                                            >
+                                                {student.first_name} {student.last_name}
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex justify-center">
+                                                <Checkbox
+                                                    id={`student-attendance-${student.student_id}`}
+                                                    checked={studentAttendance[student.student_id] || false}
+                                                    onCheckedChange={(checked) => {
+                                                        handleStudentAttendanceChange(student.student_id, checked === true)
+                                                    }}
+                                                    disabled={!isAttendanceEnabled}
+                                                    style={{
+                                                        backgroundColor: studentAttendance[student.student_id] ? "#3d8f5b" : "white",
+                                                        color: "white",
+                                                        borderColor: "#3d8f5b",
+                                                        opacity: isAttendanceEnabled ? 1 : 0.5
+                                                    }}
+                                                />
+                                            </div>
+                                        </TableCell>
                                     </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {teachers.map((teacher) => (
-                                        <TableRow key={teacher.teacher_id}>
-                                            <TableCell className="flex items-center gap-2 py-2">
-                                                <Avatar className="h-6 w-6">
-                                                    {teacher.avatar_url && <AvatarImage src={teacher.avatar_url} alt={teacher.first_name} />}
-                                                    <AvatarFallback className="text-xs bg-muted">
-                                                        {getInitials(teacher.first_name, teacher.last_name)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <Link
-                                                    href={`/admin/teachers/${teacher.teacher_id}`}
-                                                    className="hover:underline text-primary inline-block text-sm"
-                                                >
-                                                    {teacher.first_name} {teacher.last_name}
-                                                </Link>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex justify-center">
-                                                    <Checkbox
-                                                        id={`teacher-attendance-${teacher.teacher_id}`}
-                                                        checked={teacherAttendance[teacher.teacher_id] || false}
-                                                        onCheckedChange={(checked) => {
-                                                            handleTeacherAttendanceChange(teacher.teacher_id, checked === true)
-                                                        }}
-                                                        disabled={!isAttendanceEnabled}
-                                                        style={{
-                                                            backgroundColor: teacherAttendance[teacher.teacher_id] ? "#3d8f5b" : "white",
-                                                            color: "white",
-                                                            borderColor: "#3d8f5b",
-                                                            opacity: isAttendanceEnabled ? 1 : 0.5
-                                                        }}
-                                                    />
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    ) : (
-                        <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
-                            <UserPen className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">No teachers assigned</p>
-                        </div>
-                    )}
-                </TabsContent>
-            </Tabs>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                ) : (
+                    <div className="p-6 text-center border-2 border-dashed border-muted rounded-lg">
+                        <User className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No students enrolled</p>
+                    </div>
+                )}
+            </div>
 
             {/* Bottom section with save button and attendance summary */}
             {isAttendanceEnabled && (
