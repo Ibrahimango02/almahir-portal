@@ -114,6 +114,14 @@ export async function checkTeacherScheduleConflicts(
                 }
 
                 const sessionDate = new Date(session.start_date)
+                const sessionEndDate = new Date(session.end_date)
+                const now = new Date()
+
+                // Skip past sessions - only check future sessions
+                if (sessionEndDate < now) {
+                    continue
+                }
+
                 const sessionDay = getDayFromDate(sessionDate)
 
                 // Only check sessions that fall within the class date range
@@ -365,6 +373,14 @@ export async function checkStudentScheduleConflicts(
                 }
 
                 const sessionDate = new Date(session.start_date)
+                const sessionEndDate = new Date(session.end_date)
+                const now = new Date()
+
+                // Skip past sessions - only check future sessions
+                if (sessionEndDate < now) {
+                    continue
+                }
+
                 const sessionDay = getDayFromDate(sessionDate)
 
                 // Only check sessions that fall within the class date range
