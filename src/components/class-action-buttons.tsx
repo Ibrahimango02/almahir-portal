@@ -1,13 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CalendarSync, LogOut, Trash2 } from "lucide-react"
+import { Video, Power, Play, CalendarSync, LogOut } from "lucide-react"
 import { FaRegCircleStop } from "react-icons/fa6";
 import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
 import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
-import { deleteSession } from "@/lib/delete/delete-classes"
 import { createRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { getUserTimezone, localToUtc } from "@/lib/utils/timezone"
 import {
@@ -67,8 +66,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [showRescheduleDialog, setShowRescheduleDialog] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [rescheduleDate, setRescheduleDate] = useState("")
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [showSessionRemarksDialog, setShowSessionRemarksDialog] = useState(false)
   const [markCompleteChecked, setMarkCompleteChecked] = useState(currentStatus === 'complete')
   const { toast } = useToast()
@@ -131,6 +128,11 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     const twoHoursBefore = new Date(startTime.getTime() - 2 * 60 * 60 * 1000) // 2 hours before start time
 
     return now <= twoHoursBefore
+  }
+
+  // Check if admin can cancel session (enabled for scheduled, pending, or running statuses)
+  const canAdminCancelSession = () => {
+    return currentStatus === 'scheduled' || currentStatus === 'pending' || currentStatus === 'running'
   }
 
   // Helper function to check if a session has ended, considering midnight-crossing sessions
@@ -338,6 +340,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
+  const handleAdminCancelSession = () => {
+    // Show cancellation dialog for admins
+    if (userRole === 'admin' || userRole === 'moderator') {
+      setShowCancellationDialog(true)
+    }
+  }
+
   const handleLeaveSession = async () => {
     // For admins only, proceed with normal cancellation
     await handleRescheduleOrCancellation()
@@ -482,32 +491,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     await handleCancelSessionSubmit(cancellationReason.trim())
   }
 
-  const handleDeleteSession = async () => {
-    setIsDeleting(true)
-    try {
-      const result = await deleteSession(classData.session_id)
-      if (result.success) {
-        toast({
-          title: "Session Deleted",
-          description: "The session has been deleted successfully.",
-        })
-        setShowDeleteDialog(false)
-        // Redirect to class page
-        router.push(`/admin/classes/${classData.class_id}`)
-      } else {
-        throw new Error(result.error || "Failed to delete session")
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete session",
-        variant: "destructive"
-      })
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
   const handleRescheduleSession = () => {
     router.push(`/admin/classes/reschedule/${classData.class_id}/${classData.session_id}`)
   }
@@ -546,13 +529,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
 
   // Button configurations for different states
   const getButtonConfig = () => {
-    const deleteButton = {
-      icon: Trash2,
-      onClick: () => setShowDeleteDialog(true),
-      className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-500 bg-white text-red-600 hover:bg-red-100 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
-      title: currentStatus === 'scheduled' ? "Delete Session" : "Delete Session (Disabled)",
-      disabled: isLoading || currentStatus !== 'scheduled',
-    }
     switch (currentStatus) {
       case "scheduled":
         return {
@@ -584,17 +560,19 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             title: currentStatus === 'scheduled' ? "Reschedule Session" : "Reschedule Session (Disabled)",
             disabled: isLoading || currentStatus !== 'scheduled'
           },
-          button5: {
-            ...deleteButton,
-            disabled: isLoading || currentStatus !== 'scheduled',
-            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-red-500 ${currentStatus === 'scheduled' ? 'bg-white text-red-600 hover:bg-red-100' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`
-          },
           button6: {
             icon: CalendarSync,
             onClick: handleRequestReschedule,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
             title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
+          },
+          button7: {
+            icon: LogOut,
+            onClick: handleAdminCancelSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canAdminCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canAdminCancelSession() ? "Cancel Session" : "Cancel Session \n(Disabled)",
+            disabled: isLoading || !canAdminCancelSession()
           }
         }
 
@@ -628,17 +606,19 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             title: "Reschedule Class \n(Disabled)",
             disabled: true
           },
-          button5: {
-            ...deleteButton,
-            disabled: true,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
-          },
           button6: {
             icon: CalendarSync,
             onClick: handleRequestReschedule,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
             title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
+          },
+          button7: {
+            icon: LogOut,
+            onClick: handleAdminCancelSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canAdminCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canAdminCancelSession() ? "Cancel Session" : "Cancel Session \n(Disabled)",
+            disabled: isLoading || !canAdminCancelSession()
           }
         }
 
@@ -672,17 +652,19 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             title: "Reschedule Session \n(Disabled)",
             disabled: true
           },
-          button5: {
-            ...deleteButton,
-            disabled: true,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
-          },
           button6: {
             icon: CalendarSync,
             onClick: handleRequestReschedule,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
             title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
+          },
+          button7: {
+            icon: LogOut,
+            onClick: handleAdminCancelSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 ${canAdminCancelSession() ? 'border-red-700 bg-red-600 text-white hover:bg-red-700' : 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: canAdminCancelSession() ? "Cancel Session" : "Cancel Session \n(Disabled)",
+            disabled: isLoading || !canAdminCancelSession()
           }
         }
 
@@ -716,17 +698,19 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             title: "Reschedule Session",
             disabled: isLoading
           },
-          button5: {
-            ...deleteButton,
-            disabled: true,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
-          },
           button6: {
             icon: CalendarSync,
             onClick: handleRequestReschedule,
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 bg-white text-gray-700 hover:bg-gray-200 hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
             title: "Request Reschedule",
             disabled: isLoading
+          },
+          button7: {
+            icon: LogOut,
+            onClick: handleAdminCancelSession,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
+            title: "Cancel Session \n(Disabled)",
+            disabled: true
           }
         }
 
@@ -755,15 +739,10 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           },
           button4: {
             icon: CalendarSync,
-            onClick: () => { },
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
-            title: "Reschedule Session \n(Disabled)",
-            disabled: true
-          },
-          button5: {
-            ...deleteButton,
-            disabled: true,
-            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50"
+            onClick: handleRescheduleSession,
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${currentStatus === 'absence' ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0 ${isLoading ? 'opacity-70' : ''}`,
+            title: currentStatus === 'absence' ? "Reschedule Session" : "Reschedule Session \n(Disabled)",
+            disabled: isLoading || currentStatus !== 'absence'
           },
           button6: {
             icon: CalendarSync,
@@ -771,6 +750,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${canCancelSession() ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
             title: canCancelSession() ? "Request Reschedule" : "Request Reschedule \n(Only available 2 hours before start time)",
             disabled: isLoading || !canCancelSession()
+          },
+          button7: {
+            icon: LogOut,
+            onClick: handleAdminCancelSession,
+            className: "flex items-center justify-center h-10 w-10 rounded-lg bg-gray-400 text-gray-600 cursor-not-allowed border-2 border-gray-400 opacity-50",
+            title: "Cancel Session \n(Disabled)",
+            disabled: true
           }
         }
     }
@@ -850,8 +836,8 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               </div>
             )}
 
-            {/* Button 4 - Reschedule (only for admins) */}
-            {userRole === 'admin' && (
+            {/* Button 4 - Reschedule (for admins and moderators) */}
+            {(userRole === 'admin' || userRole === 'moderator') && (
               <>
                 <div className="relative" title={config.button4.title}>
                   <Button
@@ -862,16 +848,18 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                     <config.button4.icon className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* Button 5 - Delete Session (only for admins) */}
-                <div className="relative" title={config.button5.title}>
-                  <Button
-                    onClick={config.button5.onClick}
-                    className={config.button5.className}
-                    disabled={config.button5.disabled}
-                  >
-                    <config.button5.icon className="h-4 w-4" />
-                  </Button>
-                </div>
+                {/* Button 7 - Cancel Session (for admins and moderators) */}
+                {(userRole === 'admin' || userRole === 'moderator') && (
+                  <div className="relative" title={config.button7.title}>
+                    <Button
+                      onClick={config.button7.onClick}
+                      className={config.button7.className}
+                      disabled={config.button7.disabled}
+                    >
+                      <config.button7.icon className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </>
             )}
           </>
@@ -911,7 +899,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
         </div>
       )}
 
-      {/* Cancellation Dialog (for teachers, students, and parents) */}
+      {/* Cancellation Dialog (for teachers, students, parents, admins, and moderators) */}
       <Dialog open={showCancellationDialog} onOpenChange={setShowCancellationDialog}>
         <DialogContent>
           <DialogHeader>
@@ -1024,44 +1012,6 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               style={{ backgroundColor: "#3d8f5b", color: "white" }}
             >
               {isLoading ? "Submitting..." : "Submit Request"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Session</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this session? This action cannot be undone and will permanently remove the session and its records from the database.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleDeleteSession}
-              disabled={isDeleting}
-              className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
-            >
-              {isDeleting ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent mr-2" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Session
-                </>
-              )}
             </Button>
           </DialogFooter>
         </DialogContent>

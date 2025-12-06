@@ -738,29 +738,103 @@ export async function rescheduleSession(params: {
             throw new Error('New session date must be in the future')
         }
 
-        // 3. Delete session history
-        const { error: deleteHistoryError } = await supabase
-            .from('session_history')
-            .delete()
-            .eq('session_id', sessionId)
+        // 3. Check session status and handle accordingly
+        const currentStatus = currentSession.status
 
-        if (deleteHistoryError) throw deleteHistoryError
+        if (currentStatus === 'absence') {
+            // Create a new session instead of updating the existing one
+            const { data: newSession, error: createError } = await supabase
+                .from('class_sessions')
+                .insert({
+                    class_id: currentSession.class_id,
+                    start_date: newStartDate,
+                    end_date: newEndDate,
+                    status: 'scheduled'
+                })
+                .select('id')
+                .single()
 
-        // 4. Update the existing session with the new dates and reset status to 'scheduled'
-        const { error: updateError } = await supabase
-            .from('class_sessions')
-            .update({
-                start_date: newStartDate,
-                end_date: newEndDate,
-                status: 'scheduled',
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', sessionId)
+            if (createError) throw createError
+            if (!newSession) throw new Error('Failed to create new session')
 
-        if (updateError) throw updateError
+            // Get current teacher and student assignments for attendance records
+            const { data: currentTeachers } = await supabase
+                .from('class_teachers')
+                .select('teacher_id')
+                .eq('class_id', currentSession.class_id)
 
-        // Note: Attendance records remain linked to the same session ID,
-        // so no need to recreate them. They will automatically reflect the updated session.
+            const { data: currentStudents } = await supabase
+                .from('class_students')
+                .select('student_id')
+                .eq('class_id', currentSession.class_id)
+
+            // Create attendance records for the new session
+            const teacherAttendanceRecords = []
+            const studentAttendanceRecords = []
+
+            if (currentTeachers && currentTeachers.length > 0) {
+                for (const teacher of currentTeachers) {
+                    teacherAttendanceRecords.push({
+                        session_id: newSession.id,
+                        teacher_id: teacher.teacher_id,
+                        attendance_status: 'expected'
+                    })
+                }
+            }
+
+            if (currentStudents && currentStudents.length > 0) {
+                for (const student of currentStudents) {
+                    studentAttendanceRecords.push({
+                        session_id: newSession.id,
+                        student_id: student.student_id,
+                        attendance_status: 'expected'
+                    })
+                }
+            }
+
+            // Insert teacher attendance records
+            if (teacherAttendanceRecords.length > 0) {
+                const { error: teacherAttendanceError } = await supabase
+                    .from('teacher_attendance')
+                    .insert(teacherAttendanceRecords)
+
+                if (teacherAttendanceError) {
+                    console.error('Error creating teacher attendance records:', teacherAttendanceError)
+                    // Don't throw error here as the main operations were successful
+                }
+            }
+
+            // Insert student attendance records
+            if (studentAttendanceRecords.length > 0) {
+                const { error: studentAttendanceError } = await supabase
+                    .from('student_attendance')
+                    .insert(studentAttendanceRecords)
+
+                if (studentAttendanceError) {
+                    console.error('Error creating student attendance records:', studentAttendanceError)
+                    // Don't throw error here as the main operations were successful
+                }
+            }
+        } else if (currentStatus === 'scheduled' || currentStatus === 'cancelled') {
+            // Update the existing session with the new dates
+            const { error: updateError } = await supabase
+                .from('class_sessions')
+                .update({
+                    start_date: newStartDate,
+                    end_date: newEndDate,
+                    status: 'scheduled',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', sessionId)
+
+            if (updateError) throw updateError
+
+            // Note: Attendance records remain linked to the same session ID,
+            // so no need to recreate them. They will automatically reflect the updated session.
+        } else {
+            // For other statuses (pending, running, complete), don't allow rescheduling
+            throw new Error(`Cannot reschedule session with status: ${currentStatus}`)
+        }
 
         return { success: true }
     } catch (error) {
