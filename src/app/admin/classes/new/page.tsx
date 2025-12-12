@@ -347,7 +347,8 @@ export default function CreateClassPage() {
             }, {} as Record<string, { start: string; end: string }>);
 
             // Transform form data to match ClassData type with new object structure
-            // Convert times to UTC and store in HH:MM format for days_repeated
+            // Store LOCAL times in HH:MM format for days_repeated (not UTC)
+            // The timezone is stored separately and will be used when creating sessions
             const daysRepeatedWithTimes: {
                 monday?: { start: string; end: string }
                 tuesday?: { start: string; end: string }
@@ -365,25 +366,11 @@ export default function CreateClassPage() {
                     const durationMinutes = parseInt(timeSlot.duration)
                     const endTime = calculateEndTime(timeSlot.start, durationMinutes)
 
-                    // Convert local times to UTC and extract HH:MM format
-                    const startUtc = combineDateTimeToUtc(
-                        format(values.startDate, 'yyyy-MM-dd'),
-                        timeSlot.start + ':00',
-                        timezone
-                    )
-                    const endUtc = combineDateTimeToUtc(
-                        format(values.startDate, 'yyyy-MM-dd'),
-                        endTime + ':00',
-                        timezone
-                    )
-
-                    // Format as HH:MM in UTC
-                    const startTimeUtc = `${String(startUtc.getUTCHours()).padStart(2, '0')}:${String(startUtc.getUTCMinutes()).padStart(2, '0')}`
-                    const endTimeUtc = `${String(endUtc.getUTCHours()).padStart(2, '0')}:${String(endUtc.getUTCMinutes()).padStart(2, '0')}`
-
+                    // Store local times directly (HH:MM format)
+                    // These will be converted to UTC when creating sessions using the stored timezone
                     daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
-                        start: startTimeUtc,
-                        end: endTimeUtc
+                        start: timeSlot.start,
+                        end: endTime
                     }
                 }
             })
@@ -406,6 +393,7 @@ export default function CreateClassPage() {
                 days_repeated: daysRepeatedWithTimes,
                 status: "active",
                 class_link: finalClassLink,
+                timezone: timezone || 'America/New_York', // Use user's local timezone
                 times: timesWithUtc,
                 teacher_id: values.teacherIds,
                 student_ids: values.studentIds || []

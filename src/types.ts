@@ -177,6 +177,7 @@ export type ClassType = {
     days_repeated: DaysRepeated
     sessions: SessionType[]
     class_link: string | null
+    timezone?: string // IANA timezone identifier (e.g., 'America/New_York')
     teachers: TeacherType[]
     students: StudentType[]
     times?: Record<string, { start: string; end: string }>

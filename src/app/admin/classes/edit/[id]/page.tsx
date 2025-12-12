@@ -26,7 +26,6 @@ import { getClassById } from "@/lib/get/get-classes"
 import { updateClass, updateClassAssignments } from "@/lib/put/put-classes"
 import { TeacherType, StudentType, ClassType } from "@/types"
 import { localToUtc, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
-import { toZonedTime } from "date-fns-tz"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { useToast } from "@/hooks/use-toast"
 import { Separator } from "@/components/ui/separator"
@@ -311,37 +310,22 @@ export default function EditClassPage() {
                     const lowercaseDays: string[] = []
                     const times: Record<string, { start: string; duration: string }> = {}
 
-                    // Helper function to convert UTC HH:MM to local HH:MM
-                    const convertUtcTimeToLocal = (utcTime: string): string => {
-                        try {
-                            const [hours, minutes] = utcTime.split(':').map(Number)
-                            const today = new Date()
-                            const utcDate = new Date(Date.UTC(
-                                today.getUTCFullYear(),
-                                today.getUTCMonth(),
-                                today.getUTCDate(),
-                                hours,
-                                minutes
-                            ))
-                            const localDate = toZonedTime(utcDate, timezone)
-                            return `${String(localDate.getHours()).padStart(2, '0')}:${String(localDate.getMinutes()).padStart(2, '0')}`
-                        } catch (error) {
-                            console.error('Error converting UTC time to local:', error)
-                            return utcTime
-                        }
-                    }
+                    // Get the class timezone (or use current user timezone as fallback)
+                    const classTimezone = classDataResult.timezone || timezone || 'America/New_York'
 
                     // Process the new object structure
-                    // Convert UTC HH:MM times back to local HH:MM for display
-                    // Calculate duration from start and end times
+                    // Times in days_repeated are now stored as LOCAL times (not UTC)
+                    // So we can use them directly
                     if (classDataResult.days_repeated && typeof classDataResult.days_repeated === 'object') {
                         Object.entries(classDataResult.days_repeated).forEach(([day, timeSlot]) => {
                             if (timeSlot && typeof timeSlot === 'object' && 'start' in timeSlot && 'end' in timeSlot) {
                                 // Normalize day key to lowercase to match form expectations
                                 const dayKey = day.toLowerCase()
                                 lowercaseDays.push(dayKey)
-                                const localStart = convertUtcTimeToLocal(timeSlot.start)
-                                const localEnd = convertUtcTimeToLocal(timeSlot.end)
+
+                                // Times are already in local format, use them directly
+                                const localStart = timeSlot.start
+                                const localEnd = timeSlot.end
                                 const durationMinutes = calculateDuration(localStart, localEnd)
 
                                 // Find the closest duration option
@@ -361,8 +345,8 @@ export default function EditClassPage() {
                         title: classDataResult.title,
                         subject: classDataResult.subject,
                         description: classDataResult.description || "",
-                        startDate: utcToLocal(classDataResult.start_date, timezone),
-                        endDate: utcToLocal(classDataResult.end_date, timezone),
+                        startDate: utcToLocal(classDataResult.start_date, classTimezone),
+                        endDate: utcToLocal(classDataResult.end_date, classTimezone),
                         daysRepeated: lowercaseDays,
                         times: times,
                         classLink: classDataResult.class_link || "",
@@ -435,8 +419,8 @@ export default function EditClassPage() {
                 return acc;
             }, {} as Record<string, { start: string; end: string }>);
 
-            // Transform form data to match new object structure
-            // Convert times to UTC and store in HH:MM format for days_repeated
+            // Store LOCAL times in HH:MM format for days_repeated (not UTC)
+            // The timezone is stored separately and will be used when creating sessions
             const daysRepeatedWithTimes: {
                 monday?: { start: string; end: string }
                 tuesday?: { start: string; end: string }
@@ -454,25 +438,11 @@ export default function EditClassPage() {
                     const durationMinutes = parseInt(timeSlot.duration)
                     const endTime = calculateEndTime(timeSlot.start, durationMinutes)
 
-                    // Convert local times to UTC and extract HH:MM format
-                    const startUtc = combineDateTimeToUtc(
-                        format(values.startDate, 'yyyy-MM-dd'),
-                        timeSlot.start + ':00',
-                        timezone
-                    )
-                    const endUtc = combineDateTimeToUtc(
-                        format(values.startDate, 'yyyy-MM-dd'),
-                        endTime + ':00',
-                        timezone
-                    )
-
-                    // Format as HH:MM in UTC
-                    const startTimeUtc = `${String(startUtc.getUTCHours()).padStart(2, '0')}:${String(startUtc.getUTCMinutes()).padStart(2, '0')}`
-                    const endTimeUtc = `${String(endUtc.getUTCHours()).padStart(2, '0')}:${String(endUtc.getUTCMinutes()).padStart(2, '0')}`
-
+                    // Store local times directly (HH:MM format)
+                    // These will be converted to UTC when creating sessions using the stored timezone
                     daysRepeatedWithTimes[day as keyof typeof daysRepeatedWithTimes] = {
-                        start: startTimeUtc,
-                        end: endTimeUtc
+                        start: timeSlot.start,
+                        end: endTime
                     }
                 }
             })
@@ -487,6 +457,7 @@ export default function EditClassPage() {
             }
 
             // Prepare update data for basic class information (excluding teacher and student assignments)
+            // Use the user's local timezone (from context) for the class timezone
             const updateData = {
                 classId: classId,
                 title: values.title,
@@ -496,6 +467,7 @@ export default function EditClassPage() {
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
                 days_repeated: daysRepeatedWithTimes,
                 class_link: finalClassLink,
+                timezone: timezone || 'America/New_York', // Use user's local timezone
                 times: timesWithUtc,
             }
 
@@ -1043,7 +1015,7 @@ export default function EditClassPage() {
 
                     <CardFooter className="flex justify-between px-8 py-6 bg-gray-50/50 border-t">
                         <Button variant="outline" asChild className="h-11 px-6 border-gray-200 hover:border-gray-300">
-                            <Link href="/admin/classes">Cancel</Link>
+                            <Link href={`/admin/classes/${classId}`}>Cancel</Link>
                         </Button>
                         <Button
                             type="submit"

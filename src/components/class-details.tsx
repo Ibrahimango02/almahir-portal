@@ -10,9 +10,10 @@ import { getSessions } from "@/lib/get/get-classes"
 import { useEffect, useState } from "react"
 import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
-import { formatDateTime, utcToLocal } from "@/lib/utils/timezone"
+import { formatDateTime, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
 import { toZonedTime } from "date-fns-tz"
+import { format } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
 import React from "react"
@@ -53,6 +54,7 @@ type ClassDetailsProps = {
       sunday?: { start: string; end: string }
     }
     class_link: string | null
+    timezone?: string // IANA timezone identifier (e.g., 'America/New_York')
     teachers: {
       teacher_id: string
       first_name: string
@@ -144,27 +146,43 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   const enrolledStudents = classData.students || []
   const daysRepeated = classData.days_repeated || {}
 
-  // Helper function to convert UTC HH:MM to local HH:MM in 12-hour format
-  const convertUtcTimeToLocal = (utcTime: string): string => {
+  // Get the class timezone (default to America/New_York if not set)
+  const classTimezone = classData.timezone || 'America/New_York'
+
+  // Helper function to convert time from class timezone to user timezone and format
+  // Times in days_repeated are stored as local times in the class timezone
+  // We need to convert them to the user's timezone for display
+  const convertAndFormatTime = (timeInClassTz: string): string => {
     try {
-      const [hours, minutes] = utcTime.split(':').map(Number)
+      // Use today's date as a reference point
       const today = new Date()
-      const utcDate = new Date(Date.UTC(
-        today.getUTCFullYear(),
-        today.getUTCMonth(),
-        today.getUTCDate(),
-        hours,
-        minutes
-      ))
-      const localDate = toZonedTime(utcDate, timezone)
-      const localHours = localDate.getHours()
-      const localMinutes = localDate.getMinutes()
-      const hour12 = localHours === 0 ? 12 : localHours > 12 ? localHours - 12 : localHours
-      const ampm = localHours >= 12 ? 'PM' : 'AM'
-      return `${hour12}:${String(localMinutes).padStart(2, '0')} ${ampm}`
+      const dateStr = format(today, 'yyyy-MM-dd')
+
+      // Convert the time from class timezone to UTC first
+      // combineDateTimeToUtc creates a UTC date from a local time in a specific timezone
+      const utcDate = combineDateTimeToUtc(
+        dateStr,
+        `${timeInClassTz}:00`,
+        classTimezone
+      )
+
+      // Now convert from UTC to user's timezone
+      const userTzDate = toZonedTime(utcDate, timezone)
+
+      // Format as 12-hour time
+      const userHours = userTzDate.getHours()
+      const userMinutes = userTzDate.getMinutes()
+      const hour12 = userHours === 0 ? 12 : userHours > 12 ? userHours - 12 : userHours
+      const ampm = userHours >= 12 ? 'PM' : 'AM'
+
+      return `${hour12}:${String(userMinutes).padStart(2, '0')} ${ampm}`
     } catch (error) {
-      console.error('Error converting UTC time to local:', error)
-      return utcTime
+      console.error('Error converting and formatting time:', error)
+      // Fallback: just format the original time
+      const [hours, minutes] = timeInClassTz.split(':').map(Number)
+      const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+      const ampm = hours >= 12 ? 'PM' : 'AM'
+      return `${hour12}:${String(minutes).padStart(2, '0')} ${ampm}`
     }
   }
 
@@ -220,16 +238,16 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     {Object.keys(daysRepeated).length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {Object.entries(daysRepeated).map(([day, timeSlot]) => {
-                          // Convert UTC times to local timezone for display
-                          const localStartTime = timeSlot?.start ? convertUtcTimeToLocal(timeSlot.start) : ''
-                          const localEndTime = timeSlot?.end ? convertUtcTimeToLocal(timeSlot.end) : ''
+                          // Convert times from class timezone to user timezone and format for display
+                          const formattedStartTime = timeSlot?.start ? convertAndFormatTime(timeSlot.start) : ''
+                          const formattedEndTime = timeSlot?.end ? convertAndFormatTime(timeSlot.end) : ''
                           return (
                             <span
                               key={day}
                               className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
                             >
                               <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
-                              {day.charAt(0).toUpperCase() + day.slice(1)} {localStartTime} - {localEndTime}
+                              {day.charAt(0).toUpperCase() + day.slice(1)} {formattedStartTime} - {formattedEndTime}
                             </span>
                           )
                         })}

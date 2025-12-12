@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 import { addDays, format } from 'date-fns'
+import { combineDateTimeToUtc } from "@/lib/utils/timezone"
 
 type ClassData = {
     title: string
@@ -18,6 +19,7 @@ type ClassData = {
     }
     status: string
     class_link: string | null
+    timezone?: string // IANA timezone identifier (e.g., 'America/New_York')
     times: Record<string, { start: string; end: string }>
     teacher_id: string[]
     student_ids?: string[]
@@ -41,7 +43,8 @@ export async function createClass(classData: ClassData) {
                 end_date: classData.end_date,
                 days_repeated: classData.days_repeated,
                 status: 'active',
-                class_link: classData.class_link
+                class_link: classData.class_link,
+                timezone: classData.timezone || 'America/Toronto'
             })
             .select()
             .single()
@@ -145,52 +148,30 @@ export async function createClass(classData: ClassData) {
             const daySchedule = classData.days_repeated[lowercaseDayName as keyof typeof classData.days_repeated]
             if (daySchedule) {
                 try {
-                    // Parse HH:MM format from days_repeated (times are in UTC)
+                    // Parse HH:MM format from days_repeated (times are now stored as LOCAL times)
                     const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                     const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                    // The times in days_repeated are UTC times that represent local times on specific days.
-                    // For example, Monday 12:00AM EST = Monday 5:00AM UTC.
-                    // We need to create the session on the correct day (Monday in this case).
-                    // 
-                    // Strategy: Use the local date components to determine the day of week,
-                    // then get the UTC date components for that local date, and apply the UTC time.
+                    // Get the class timezone (default to America/New_York if not set)
+                    const classTimezone = classData.timezone || 'America/New_York'
 
-                    // Get UTC date components for this local date
-                    // This ensures we're working with the correct UTC date that corresponds to the local date
-                    const utcYear = currentLocalDate.getUTCFullYear()
-                    const utcMonth = currentLocalDate.getUTCMonth()
-                    const utcDay = currentLocalDate.getUTCDate()
+                    // Convert local time to UTC using the session date and class timezone
+                    // This properly handles DST and timezone offsets
+                    const sessionDateStr = format(currentLocalDate, 'yyyy-MM-dd')
+                    const startUtc = combineDateTimeToUtc(
+                        sessionDateStr,
+                        `${String(startHours).padStart(2, '0')}:${String(startMinutes).padStart(2, '0')}:00`,
+                        classTimezone
+                    )
+                    const endUtc = combineDateTimeToUtc(
+                        sessionDateStr,
+                        `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}:00`,
+                        classTimezone
+                    )
 
-                    // Create the start datetime in UTC using the UTC date components
-                    // The UTC time from days_repeated is already the correct UTC time for this day
-                    const sessionStartDate = new Date(Date.UTC(
-                        utcYear,
-                        utcMonth,
-                        utcDay,
-                        startHours,
-                        startMinutes,
-                        0,
-                        0
-                    ))
-
-                    // Check if end time is earlier than start time (spans midnight in UTC)
-                    const endTimeMinutes = endHours * 60 + endMinutes
-                    const startTimeMinutes = startHours * 60 + startMinutes
-                    const spansMidnight = endTimeMinutes <= startTimeMinutes
-
-                    // Calculate end date: if it spans midnight, end is on the day after start
-                    const endDateOffset = spansMidnight ? 1 : 0
-
-                    const sessionEndDate = new Date(Date.UTC(
-                        utcYear,
-                        utcMonth,
-                        utcDay + endDateOffset,
-                        endHours,
-                        endMinutes,
-                        0,
-                        0
-                    ))
+                    // Use the UTC datetimes directly - combineDateTimeToUtc handles all the complexity
+                    const sessionStartDate = startUtc
+                    const sessionEndDate = endUtc
 
                     sessions.push({
                         class_id: classRecord.id,
