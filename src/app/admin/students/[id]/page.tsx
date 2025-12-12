@@ -346,17 +346,17 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
                               let durationText = ''
                               if (durationHours > 0 && durationMinutes > 0) {
-                                durationText = `(${durationHours}h ${durationMinutes}m)`
+                                durationText = `(${durationHours} hr ${durationMinutes} min)`
                               } else if (durationHours > 0) {
-                                durationText = `(${durationHours}h)`
+                                durationText = `(${durationHours} hr)`
                               } else if (durationMinutes > 0) {
-                                durationText = `(${durationMinutes}m)`
+                                durationText = `(${durationMinutes} min)`
                               }
 
                               return (
                                 <div key={day} className="text-xs">
                                   {dayName}: <span className="text-muted-foreground">
-                                    <ClassTimeDisplay utcTime={timeSlot.start} /> - <ClassTimeDisplay utcTime={timeSlot.end} /> {durationText}
+                                    <ClassTimeDisplay localTime={timeSlot.start} classTimezone={classInfo.timezone || 'America/New_York'} /> - <ClassTimeDisplay localTime={timeSlot.end} classTimezone={classInfo.timezone || 'America/New_York'} /> {durationText}
                                   </span>
                                 </div>
                               )
