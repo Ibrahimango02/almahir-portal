@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Users, Edit, BookOpen, Clock, Plus, CreditCard, DollarSign, Contact, LibraryBig, History } from "lucide-react"
+import { Mail, Phone, Users, Edit, BookOpen, Clock, Plus, CreditCard, DollarSign, Contact, LibraryBig, History } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
@@ -159,7 +159,11 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                 <div className="space-y-3 pl-6">
                   <div className="flex items-start">
                     <Mail className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm break-all">{student.email}</span>
+                    <span className="text-sm break-all">{student.email || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <Phone className="h-4 w-4 text-muted-foreground mr-2 mt-0.5 flex-shrink-0" />
+                    <span className="text-sm">{student.phone || 'None'}</span>
                   </div>
                 </div>
               </div>
@@ -209,19 +213,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
 
               <Separator />
 
-              {/* Notes */}
-              {student.notes && (
-                <div>
-                  <h3 className="text-base font-semibold flex items-center mb-3">
-                    <BookOpen className="h-4 w-4 mr-2 text-primary" />
-                    Notes
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed pl-6">{student.notes}</p>
-                </div>
-              )}
-
               {/* Billing Information */}
-              <Separator />
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
                   <CreditCard className="h-4 w-4 mr-2 text-primary" />
@@ -242,6 +234,19 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                   </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Notes */}
+              {student.notes && (
+                <div>
+                  <h3 className="text-base font-semibold flex items-center mb-3">
+                    <BookOpen className="h-4 w-4 mr-2 text-primary" />
+                    Notes
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed pl-6">{student.notes}</p>
+                </div>
+              )}
 
               <Separator />
 
@@ -482,11 +487,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
                                 ? "bg-green-100 text-green-800"
                                 : session.attendance_status === "absent"
                                   ? "bg-red-100 text-red-800"
-                                  : session.attendance_status === "late"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : session.attendance_status === "cancelled"
-                                      ? "bg-red-100 text-red-800"
-                                      : "bg-gray-100 text-gray-800"
+                                  : session.attendance_status === "cancelled"
+                                    ? "bg-gray-100 text-gray-800"
+                                    : "bg-gray-100 text-gray-800"
                                 }`}
                             >
                               {session.attendance_status}

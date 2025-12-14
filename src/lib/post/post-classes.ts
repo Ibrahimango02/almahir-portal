@@ -275,3 +275,102 @@ export async function createClass(classData: ClassData) {
         throw error
     }
 }
+
+export async function createSession(params: {
+    classId: string
+    date: Date // Local date in user's timezone
+    startTime: string // HH:MM format in user's timezone
+    endTime: string // HH:MM format in user's timezone
+    classTimezone: string // IANA timezone identifier for the class
+}): Promise<{ success: boolean; error?: { message: string }; sessionId?: string }> {
+    const supabase = createClient()
+    const { classId, date, startTime, endTime, classTimezone } = params
+
+    try {
+        // Get class teachers and students
+        const { data: teachers, error: teachersError } = await supabase
+            .from('class_teachers')
+            .select('teacher_id')
+            .eq('class_id', classId)
+
+        if (teachersError) {
+            throw new Error(`Failed to fetch teachers: ${teachersError.message}`)
+        }
+
+        const { data: students, error: studentsError } = await supabase
+            .from('class_students')
+            .select('student_id')
+            .eq('class_id', classId)
+
+        if (studentsError) {
+            throw new Error(`Failed to fetch students: ${studentsError.message}`)
+        }
+
+        // Format date as YYYY-MM-DD
+        const dateStr = format(date, 'yyyy-MM-dd')
+
+        // Convert start and end times from class timezone to UTC
+        const startUtc = combineDateTimeToUtc(dateStr, `${startTime}:00`, classTimezone)
+        const endUtc = combineDateTimeToUtc(dateStr, `${endTime}:00`, classTimezone)
+
+        // Create the session
+        const { data: session, error: sessionError } = await supabase
+            .from('class_sessions')
+            .insert({
+                class_id: classId,
+                start_date: startUtc.toISOString(),
+                end_date: endUtc.toISOString(),
+                status: 'scheduled'
+            })
+            .select('id')
+            .single()
+
+        if (sessionError) {
+            throw new Error(`Failed to create session: ${sessionError.message}`)
+        }
+
+        // Create attendance records for teachers
+        if (teachers && teachers.length > 0) {
+            const teacherAttendanceRecords = teachers.map(teacher => ({
+                session_id: session.id,
+                teacher_id: teacher.teacher_id,
+                attendance_status: 'expected'
+            }))
+
+            const { error: teacherAttendanceError } = await supabase
+                .from('teacher_attendance')
+                .insert(teacherAttendanceRecords)
+
+            if (teacherAttendanceError) {
+                console.error('Error creating teacher attendance records:', teacherAttendanceError)
+                // Don't throw error here as the main operation was successful
+            }
+        }
+
+        // Create attendance records for students
+        if (students && students.length > 0) {
+            const studentAttendanceRecords = students.map(student => ({
+                session_id: session.id,
+                student_id: student.student_id,
+                attendance_status: 'expected'
+            }))
+
+            const { error: studentAttendanceError } = await supabase
+                .from('student_attendance')
+                .insert(studentAttendanceRecords)
+
+            if (studentAttendanceError) {
+                console.error('Error creating student attendance records:', studentAttendanceError)
+                // Don't throw error here as the main operation was successful
+            }
+        }
+
+        return { success: true, sessionId: session.id }
+    } catch (error) {
+        console.error('Error in createSession:', error)
+        return {
+            success: false,
+            error: { message: error instanceof Error ? error.message : String(error) }
+        }
+    }
+}

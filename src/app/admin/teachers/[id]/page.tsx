@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Edit, Contact, UserPen, Users, BookOpen, DollarSign, History, LibraryBig } from "lucide-react"
+import { Mail, Phone, Calendar, Edit, Contact, UserPen, Users, BookOpen, DollarSign, History, LibraryBig, CreditCard, Clock } from "lucide-react"
 import Link from "next/link"
 import { BackButton } from "@/components/back-button"
 import { getTeacherById } from "@/lib/get/get-teachers"
@@ -184,6 +184,26 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
 
               <Separator />
 
+              {/* Payment Information */}
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <CreditCard className="h-4 w-4 mr-2 text-primary" />
+                  Payment Information
+                </h3>
+                <div className="space-y-3 pl-6">
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Payment Method:</span>
+                    <span className="text-sm text-muted-foreground">{teacher.payment_method || 'None'}</span>
+                  </div>
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium mr-2">Payment Account:</span>
+                    <span className="text-sm text-muted-foreground">{teacher.payment_account || 'None'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Availability */}
               <div>
                 <h3 className="text-base font-semibold flex items-center mb-3">
@@ -217,6 +237,17 @@ export default async function TeacherDetailPage({ params }: { params: Promise<{ 
               )}
 
               <Separator />
+
+              {/* Enrollment Date - Styled like Notes section */}
+              <div>
+                <h3 className="text-base font-semibold flex items-center mb-3">
+                  <Clock className="h-4 w-4 mr-2 text-primary" />
+                  Enrollment Date
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed pl-6">
+                  {format(parseISO(teacher.created_at), "MMMM d, yyyy")}
+                </p>
+              </div>
 
               {/* Edit Button - Only for admin */}
               {isAdmin && (

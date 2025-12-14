@@ -43,6 +43,8 @@ export async function getTeachers(): Promise<TeacherType[]> {
             is_admin: teacher?.is_admin ?? false,
             moderator_id: teacher?.moderator_id || null,
             class_link: teacher?.class_link || null,
+            payment_method: teacher?.payment_method || null,
+            payment_account: teacher?.payment_account || null,
             created_at: teacherProfile.created_at,
             updated_at: teacherProfile.updated_at || null,
         }
@@ -93,6 +95,8 @@ export async function getTeacherById(id: string): Promise<TeacherType | null> {
         is_admin: teacher?.is_admin ?? false,
         moderator_id: teacher?.moderator_id || null,
         class_link: teacher?.class_link || null,
+        payment_method: teacher?.payment_method || null,
+        payment_account: teacher?.payment_account || null,
         created_at: profile.created_at,
         updated_at: profile.updated_at || null
     }
@@ -328,6 +332,8 @@ export async function getTeachersByModeratorId(moderatorId: string): Promise<Tea
             is_admin: teacher?.is_admin ?? false,
             moderator_id: teacher?.moderator_id || null,
             class_link: teacher?.class_link || null,
+            payment_method: teacher?.payment_method || null,
+            payment_account: teacher?.payment_account || null,
             created_at: profile.created_at,
             updated_at: profile.updated_at || null
         }

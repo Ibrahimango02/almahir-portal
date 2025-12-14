@@ -35,6 +35,8 @@ export default function EditTeacherPage() {
         moderator_id: "",
         class_link: "",
         status: "",
+        payment_method: "",
+        payment_account: "",
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -58,6 +60,8 @@ export default function EditTeacherPage() {
                         moderator_id: teacherData.moderator_id || "none",
                         class_link: teacherData.class_link || "",
                         status: teacherData.status,
+                        payment_method: teacherData.payment_method || "none",
+                        payment_account: teacherData.payment_account || "",
                     })
                 }
             } catch (error) {
@@ -96,10 +100,11 @@ export default function EditTeacherPage() {
         setIsSubmitting(true)
 
         try {
-            // Convert "none" moderator_id back to empty string for the API
+            // Convert "none" values back to empty string for the API
             const submitData = {
                 ...formData,
-                moderator_id: formData.moderator_id === "none" ? "" : formData.moderator_id
+                moderator_id: formData.moderator_id === "none" ? "" : formData.moderator_id,
+                payment_method: formData.payment_method === "none" ? "" : formData.payment_method
             }
 
             await updateTeacher(teacher.teacher_id, submitData)
@@ -255,6 +260,38 @@ export default function EditTeacherPage() {
                                 className="resize-none"
                                 placeholder="Add any additional notes about the teacher..."
                             />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="payment_method">Payment Method</Label>
+                                <Select
+                                    value={formData.payment_method || "none"}
+                                    onValueChange={(value) => handleSelectChange("payment_method", value)}
+                                >
+                                    <SelectTrigger id="payment_method">
+                                        <SelectValue placeholder="Select payment method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        <SelectItem value="Vodafone Cash">Vodafone Cash</SelectItem>
+                                        <SelectItem value="Instapay">Instapay</SelectItem>
+                                        <SelectItem value="PayPal">PayPal</SelectItem>
+                                        <SelectItem value="Cash">Cash</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="payment_account">Payment Account</Label>
+                                <Input
+                                    id="payment_account"
+                                    name="payment_account"
+                                    value={formData.payment_account}
+                                    onChange={handleChange}
+                                    placeholder="e.g., account number, email, etc."
+                                />
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-4">

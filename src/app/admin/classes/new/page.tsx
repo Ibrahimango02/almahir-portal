@@ -545,6 +545,9 @@ export default function CreateClassPage() {
                                                                 onSelect={field.onChange}
                                                                 disabled={(date) => startOfDay(date) < startOfDay(new Date())}
                                                                 initialFocus
+                                                                classNames={{
+                                                                    day_selected: "bg-[#3d8f5b] text-white hover:bg-[#2d7a4b] hover:text-white focus:bg-[#3d8f5b] focus:text-white",
+                                                                }}
                                                             />
                                                         </PopoverContent>
                                                     </Popover>
@@ -583,6 +586,9 @@ export default function CreateClassPage() {
                                                                     return startOfDay(date) < startOfDay(new Date()) || (startDate && startOfDay(date) < startOfDay(startDate))
                                                                 }}
                                                                 initialFocus
+                                                                classNames={{
+                                                                    day_selected: "bg-[#3d8f5b] text-white hover:bg-[#2d7a4b] hover:text-white focus:bg-[#3d8f5b] focus:text-white",
+                                                                }}
                                                             />
                                                         </PopoverContent>
                                                     </Popover>

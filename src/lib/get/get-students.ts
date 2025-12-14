@@ -463,6 +463,8 @@ export async function getStudentTeachers(id: string): Promise<TeacherType[]> {
             is_admin: teacher?.is_admin ?? false,
             moderator_id: teacher?.moderator_id || null,
             class_link: teacher?.class_link || null,
+            payment_method: teacher?.payment_method || null,
+            payment_account: teacher?.payment_account || null,
         }
     })
 

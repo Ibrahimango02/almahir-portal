@@ -344,6 +344,8 @@ export async function getClasses(): Promise<ClassType[]> {
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Find students for this class
@@ -529,6 +531,8 @@ export async function getClassesToday(): Promise<ClassType[]> {
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Find students for this class
@@ -706,6 +710,8 @@ export async function getSessionsToday(): Promise<ClassSessionType[]> {
                     is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                     moderator_id: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.moderator_id || null,
                     class_link: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.class_link || null,
+                    payment_method: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_method || null,
+                    payment_account: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_account || null,
                 }
             }) || []).filter(Boolean);
 
@@ -851,6 +857,8 @@ export async function getActiveClasses(): Promise<ClassType[]> {
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Find students for this class
@@ -1023,6 +1031,8 @@ export async function getArchivedClasses(): Promise<ClassType[]> {
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Find students for this class
@@ -1139,6 +1149,8 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
         moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
         class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+        payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+        payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
     })) || [];
 
     // Get students for this class
@@ -1374,6 +1386,8 @@ export async function getClassesByTeacherId(teacherId: string): Promise<ClassTyp
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Students for this class
@@ -1550,6 +1564,8 @@ export async function getClassesByStudentId(studentId: string): Promise<ClassTyp
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Students for this class
@@ -1684,6 +1700,8 @@ export async function getSessionById(sessionId: string): Promise<ClassSessionTyp
         is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
         moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
         class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+        payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+        payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
     })) || []
 
     // Get students for this class
@@ -1792,6 +1810,8 @@ export async function getSessions(classId: string): Promise<ClassSessionType[]> 
         is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
         moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
         class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+        payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+        payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
     })) || [];
 
     // Get students for this class
@@ -1986,6 +2006,8 @@ export async function getSessionsByTeacherId(teacherId: string): Promise<ClassSe
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Get students for this class
@@ -2142,6 +2164,8 @@ export async function getTeacherSessionsToday(teacherId: string): Promise<ClassS
                     is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                     moderator_id: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.moderator_id || null,
                     class_link: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.class_link || null,
+                    payment_method: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_method || null,
+                    payment_account: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_account || null,
                 }
             }) || []).filter(Boolean);
 
@@ -2299,6 +2323,8 @@ export async function getStudentSessionsToday(studentId: string): Promise<ClassS
                     is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                     moderator_id: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.moderator_id || null,
                     class_link: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.class_link || null,
+                    payment_method: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_method || null,
+                    payment_account: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_account || null,
                 }
             }) || []).filter(Boolean);
 
@@ -2448,6 +2474,8 @@ export async function getSessionsByStudentId(studentId: string): Promise<ClassSe
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Get students for this class
@@ -2722,6 +2750,8 @@ export async function getParentStudentsSessionsToday(parentId: string): Promise<
                     is_admin: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.is_admin ?? false,
                     moderator_id: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.moderator_id || null,
                     class_link: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.class_link || null,
+                    payment_method: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_method || null,
+                    payment_account: teacherData?.find(t => t.profile_id === teacherProfile?.id)?.payment_account || null,
                 }
             }) || []).filter(Boolean)
 
@@ -2878,6 +2908,8 @@ export async function getClassesByParentId(parentId: string): Promise<ClassType[
                 is_admin: teacherData?.find(t => t.profile_id === teacher.id)?.is_admin ?? false,
                 moderator_id: teacherData?.find(t => t.profile_id === teacher.id)?.moderator_id || null,
                 class_link: teacherData?.find(t => t.profile_id === teacher.id)?.class_link || null,
+                payment_method: teacherData?.find(t => t.profile_id === teacher.id)?.payment_method || null,
+                payment_account: teacherData?.find(t => t.profile_id === teacher.id)?.payment_account || null,
             })) || []
 
         // Students for this class

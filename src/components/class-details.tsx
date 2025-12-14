@@ -5,9 +5,9 @@ import { StatusBadge } from "@/components/status-badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import Link from "next/link"
-import { CalendarDays, User, UserPen, Clock, Edit } from "lucide-react"
+import { CalendarDays, User, UserPen, Clock, Edit, Plus } from "lucide-react"
 import { getSessions } from "@/lib/get/get-classes"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
 import { formatDateTime, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
@@ -16,6 +16,7 @@ import { toZonedTime } from "date-fns-tz"
 import { format } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
+import { AddSessionDialog } from "./add-session-dialog"
 import React from "react"
 
 // Custom scrollbar styles
@@ -76,6 +77,7 @@ type ClassDetailsProps = {
 export function ClassDetails({ classData, userRole, userParentStudents = [] }: ClassDetailsProps) {
   const [sessions, setSessions] = useState<ClassSessionType[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isAddSessionDialogOpen, setIsAddSessionDialogOpen] = useState(false)
   const router = useRouter()
   const { timezone } = useTimezone()
 
@@ -85,20 +87,23 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
   // Determine if links should be enabled based on user role
   const enableLinks = userRole === 'admin' || userRole === 'teacher' || userRole === 'parent'
 
-  useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const sessionsData = await getSessions(classData.class_id)
-        setSessions(sessionsData)
-      } catch (error) {
-        console.error("Error fetching sessions:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const fetchSessions = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setIsLoading(true)
     }
-
-    fetchSessions()
+    try {
+      const sessionsData = await getSessions(classData.class_id)
+      setSessions(sessionsData)
+    } catch (error) {
+      console.error("Error fetching sessions:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }, [classData.class_id])
+
+  useEffect(() => {
+    fetchSessions(true)
+  }, [fetchSessions])
 
   const getRedirectPath = (action: 'list' | 'edit') => {
     const basePath = `/${userRole}`
@@ -207,6 +212,15 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
               <StatusBadge status={convertStatusToPrefixedFormat(classData.status, 'class')} />
               {showActions && (
                 <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    className="h-9 w-9 text-white border-[#3d8f5b] hover:border-[#3d8f5b] hover:bg-[#2d7a4b]"
+                    style={{ backgroundColor: "#3d8f5b" }}
+                    aria-label="Add session"
+                    onClick={() => setIsAddSessionDialogOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                   <Button
                     size="icon"
                     className="h-9 w-9 bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600"
@@ -420,6 +434,13 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
           </div>
         </CardContent>
       </Card>
+      <AddSessionDialog
+        open={isAddSessionDialogOpen}
+        onOpenChange={setIsAddSessionDialogOpen}
+        classId={classData.class_id}
+        classTimezone={classTimezone}
+        onSessionCreated={fetchSessions}
+      />
     </>
   )
 } 

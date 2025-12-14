@@ -36,6 +36,7 @@ export default function AdminDashboard() {
   const [sessionsData, setSessionsData] = useState<ClassSessionType[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -99,6 +100,11 @@ export default function AdminDashboard() {
 
     return () => clearInterval(interval)
   }, [])
+
+  // Filter sessions based on selected status
+  const filteredSessions = selectedStatus
+    ? sessionsData.filter(session => session.status === selectedStatus)
+    : sessionsData
 
   // Function to update pending reschedule count (will be called by RescheduleRequestsTable)
   const updatePendingRescheduleCount = async () => {
@@ -195,7 +201,11 @@ export default function AdminDashboard() {
         )}
       </div>
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-        <Card className="border-l-4 border-l-blue-400/70">
+        <Card
+          className={`border-l-4 border-l-blue-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "scheduled" ? "ring-2 ring-blue-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "scheduled" ? null : "scheduled")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
             <Calendar className="h-4 w-4 text-blue-500/80" />
@@ -205,7 +215,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-400/70">
+        <Card
+          className={`border-l-4 border-l-emerald-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "running" ? "ring-2 ring-emerald-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "running" ? null : "running")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Running</CardTitle>
             <Play className="h-4 w-4 text-emerald-500/80" />
@@ -215,7 +229,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-400/70">
+        <Card
+          className={`border-l-4 border-l-indigo-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "pending" ? "ring-2 ring-indigo-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "pending" ? null : "pending")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
             <Clock className="h-4 w-4 text-indigo-500/80" />
@@ -225,7 +243,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-400/70">
+        <Card
+          className={`border-l-4 border-l-purple-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "complete" ? "ring-2 ring-purple-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "complete" ? null : "complete")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Complete</CardTitle>
             <CheckCircle className="h-4 w-4 text-purple-500/80" />
@@ -235,7 +257,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-400/70">
+        <Card
+          className={`border-l-4 border-l-orange-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "absence" ? "ring-2 ring-orange-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "absence" ? null : "absence")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Absence</CardTitle>
             <UserX className="h-4 w-4 text-orange-500/80" />
@@ -245,7 +271,11 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-400/70">
+        <Card
+          className={`border-l-4 border-l-rose-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "cancelled" ? "ring-2 ring-rose-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "cancelled" ? null : "cancelled")}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
             <BookX className="h-4 w-4 text-rose-500/80" />
@@ -269,15 +299,45 @@ export default function AdminDashboard() {
               <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             </TabsList>
             <TabsContent value="upcoming" className="space-y-4">
+              {selectedStatus && (
+                <div className="mb-4 flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    Filtered by: {selectedStatus}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedStatus(null)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Clear filter
+                  </Button>
+                </div>
+              )}
               <UpcomingClasses
-                sessions={sessionsData}
+                sessions={filteredSessions}
                 isLoading={false}
                 userType="admin"
               />
             </TabsContent>
             <TabsContent value="recent" className="space-y-4">
+              {selectedStatus && (
+                <div className="mb-4 flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    Filtered by: {selectedStatus}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedStatus(null)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    Clear filter
+                  </Button>
+                </div>
+              )}
               <RecentClasses
-                sessions={sessionsData}
+                sessions={filteredSessions}
                 isLoading={false}
                 userType="admin"
               />

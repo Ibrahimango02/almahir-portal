@@ -123,6 +123,8 @@ export type TeacherType = {
     is_admin: boolean
     moderator_id: string | null
     class_link: string | null
+    payment_method: string | null
+    payment_account: string | null
     created_at: string
     updated_at: string | null
 }
