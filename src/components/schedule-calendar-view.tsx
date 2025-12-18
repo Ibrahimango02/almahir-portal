@@ -16,6 +16,8 @@ const getStatusStyles = (status: string) => {
     switch (status) {
         case "scheduled":
             return "border-blue-200 bg-blue-100 dark:border-blue-800 dark:bg-blue-900"
+        case "rescheduled":
+            return "border-amber-200 bg-amber-100 dark:border-amber-800 dark:bg-amber-900"
         case "running":
             return "border-emerald-200 bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-900"
         case "pending":

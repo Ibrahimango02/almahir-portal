@@ -16,6 +16,7 @@ import {
   User,
   X,
   LibraryBig,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -59,9 +60,15 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Invoices",
+    label: "Accounting",
     icon: DollarSign,
     href: "/parent/invoices",
+    color: "text-green-600",
+  },
+  {
+    label: "Reports",
+    icon: ScrollText,
+    href: "/parent/reports",
     color: "text-green-600",
   },
   {

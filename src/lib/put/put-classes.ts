@@ -730,7 +730,7 @@ export async function rescheduleSession(params: {
                     class_id: currentSession.class_id,
                     start_date: newStartDate,
                     end_date: newEndDate,
-                    status: 'scheduled'
+                    status: 'rescheduled'
                 })
                 .select('id')
                 .single()
@@ -803,7 +803,7 @@ export async function rescheduleSession(params: {
                 .update({
                     start_date: newStartDate,
                     end_date: newEndDate,
-                    status: 'scheduled',
+                    status: 'rescheduled',
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', sessionId)

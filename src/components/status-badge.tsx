@@ -8,6 +8,7 @@ import {
   XCircle,
   AlertCircle,
   Calendar,
+  CalendarSync,
   Play,
   BookX,
   UserX,
@@ -22,6 +23,7 @@ type StatusType =
   | "class-active"
   | "class-archived"
   | "session-scheduled"
+  | "session-rescheduled"
   | "session-running"
   | "session-pending"
   | "session-complete"
@@ -64,6 +66,8 @@ export function StatusBadge({ status, className, iconOnly = false }: StatusBadge
     // Session statuses
     "session-scheduled":
       "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/50 dark:text-blue-400 dark:border-blue-800/60",
+    "session-rescheduled":
+      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60",
     "session-running":
       "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-400 dark:border-emerald-800/60",
     "session-pending":
@@ -116,6 +120,8 @@ export function StatusBadge({ status, className, iconOnly = false }: StatusBadge
       // Session status icons
       case "session-scheduled":
         return <Calendar className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
+      case "session-rescheduled":
+        return <CalendarSync className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-running":
         return <Play className={cn(iconOnly ? "h-2.5 w-2.5" : "h-3.5 w-3.5", !iconOnly && "mr-1")} />
       case "session-pending":

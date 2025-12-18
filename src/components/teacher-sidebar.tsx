@@ -64,7 +64,7 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Payments",
+    label: "Accounting",
     icon: DollarSign,
     href: "/teacher/payments",
     color: "text-green-600",

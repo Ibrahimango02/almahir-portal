@@ -6,7 +6,8 @@ import {
   CheckCircle,
   Clock,
   Play,
-  UserX
+  UserX,
+  CalendarSync,
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
   const [profile, setProfile] = useState<{ id: string; first_name: string; last_name: string } | null>(null)
   const [todaysClasses, setTodaysClasses] = useState({
     scheduled: 0,
+    rescheduled: 0,
     running: 0,
     pending: 0,
     complete: 0,
@@ -57,6 +59,7 @@ export default function AdminDashboard() {
         // Fetch all dashboard data
         const [
           scheduledCount,
+          rescheduledCount,
           runningCount,
           pendingCount,
           completeCount,
@@ -66,6 +69,7 @@ export default function AdminDashboard() {
           sessionsDataData
         ] = await Promise.all([
           getSessionsCountByStatus("scheduled"),
+          getSessionsCountByStatus("rescheduled"),
           getSessionsCountByStatus("running"),
           getSessionsCountByStatus("pending"),
           getSessionsCountByStatus("complete"),
@@ -77,6 +81,7 @@ export default function AdminDashboard() {
 
         setTodaysClasses({
           scheduled: scheduledCount || 0,
+          rescheduled: rescheduledCount || 0,
           running: runningCount || 0,
           pending: pendingCount || 0,
           complete: completeCount || 0,
@@ -166,6 +171,7 @@ export default function AdminDashboard() {
             onClick={async () => {
               const [
                 scheduledCount,
+                rescheduledCount,
                 runningCount,
                 pendingCount,
                 completeCount,
@@ -173,6 +179,7 @@ export default function AdminDashboard() {
                 absenceCount,
               ] = await Promise.all([
                 getSessionsCountByStatus("scheduled"),
+                getSessionsCountByStatus("rescheduled"),
                 getSessionsCountByStatus("running"),
                 getSessionsCountByStatus("pending"),
                 getSessionsCountByStatus("complete"),
@@ -182,6 +189,7 @@ export default function AdminDashboard() {
 
               setTodaysClasses({
                 scheduled: scheduledCount || 0,
+                rescheduled: rescheduledCount || 0,
                 running: runningCount || 0,
                 pending: pendingCount || 0,
                 complete: completeCount || 0,
@@ -200,7 +208,7 @@ export default function AdminDashboard() {
           </p>
         )}
       </div>
-      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
         <Card
           className={`border-l-4 border-l-blue-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "scheduled" ? "ring-2 ring-blue-500 shadow-md" : ""
             }`}
@@ -268,6 +276,20 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{todaysClasses.absence}</div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`border-l-4 border-l-amber-400/70 cursor-pointer transition-all hover:shadow-md ${selectedStatus === "rescheduled" ? "ring-2 ring-amber-500 shadow-md" : ""
+            }`}
+          onClick={() => setSelectedStatus(selectedStatus === "rescheduled" ? null : "rescheduled")}
+        >
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Rescheduled</CardTitle>
+            <CalendarSync className="h-4 w-4 text-amber-500/80" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todaysClasses.rescheduled}</div>
           </CardContent>
         </Card>
 

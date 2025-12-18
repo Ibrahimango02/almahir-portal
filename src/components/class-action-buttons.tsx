@@ -116,10 +116,10 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     return now >= fiveMinutesBefore && now <= endTime
   }
 
-  // Check if cancel button should be enabled (only if current time is 2 hours before start time and status is scheduled)
+  // Check if cancel button should be enabled (only if current time is 2 hours before start time and status is scheduled or rescheduled)
   const canCancelSession = () => {
-    // Only allow cancellation if status is 'scheduled'
-    if (currentStatus !== 'scheduled') {
+    // Only allow cancellation if status is 'scheduled' or 'rescheduled'
+    if (currentStatus !== 'scheduled' && currentStatus !== 'rescheduled') {
       return false
     }
 
@@ -132,7 +132,12 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
 
   // Check if admin can cancel session (enabled for scheduled, pending, or running statuses)
   const canAdminCancelSession = () => {
-    return currentStatus === 'scheduled' || currentStatus === 'pending' || currentStatus === 'running'
+    return (
+      currentStatus === 'scheduled' ||
+      currentStatus === 'rescheduled' ||
+      currentStatus === 'pending' ||
+      currentStatus === 'running'
+    )
   }
 
   // Helper function to check if a session has ended, considering midnight-crossing sessions
@@ -531,6 +536,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const getButtonConfig = () => {
     switch (currentStatus) {
       case "scheduled":
+      case "rescheduled":
         return {
           button1: {
             icon: Video,
@@ -556,9 +562,9 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
           button4: {
             icon: CalendarSync,
             onClick: handleRescheduleSession,
-            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${currentStatus === 'scheduled' ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
-            title: currentStatus === 'scheduled' ? "Reschedule Session" : "Reschedule Session (Disabled)",
-            disabled: isLoading || currentStatus !== 'scheduled'
+            className: `flex items-center justify-center h-10 w-10 rounded-lg border-2 border-gray-400 ${currentStatus === 'scheduled' || currentStatus === 'rescheduled' ? 'bg-white text-gray-700 hover:bg-gray-200' : 'bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'} hover:shadow-md transition-all duration-200 p-0`,
+            title: currentStatus === 'scheduled' || currentStatus === 'rescheduled' ? "Reschedule Session" : "Reschedule Session (Disabled)",
+            disabled: isLoading || (currentStatus !== 'scheduled' && currentStatus !== 'rescheduled')
           },
           button6: {
             icon: CalendarSync,
@@ -774,7 +780,13 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               id="mark-complete"
               checked={markCompleteChecked}
               onCheckedChange={handleMarkComplete}
-              disabled={isLoading || currentStatus === 'complete' || currentStatus === 'scheduled' || currentStatus === 'cancelled'}
+              disabled={
+                isLoading ||
+                currentStatus === 'complete' ||
+                currentStatus === 'scheduled' ||
+                currentStatus === 'rescheduled' ||
+                currentStatus === 'cancelled'
+              }
               className="h-4 w-4"
             />
             <Label

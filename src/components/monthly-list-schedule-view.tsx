@@ -11,7 +11,7 @@ import {
     endOfDay
 } from "date-fns"
 import { useRouter } from "next/navigation"
-import { Calendar, CheckCircle, UserX, Clock, Play, CalendarDays, BookX, Users } from "lucide-react"
+import { Calendar, CheckCircle, UserX, Clock, Play, CalendarDays, BookX, Users, CalendarSync } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { ClassType } from "@/types"
@@ -185,7 +185,7 @@ export function MonthlyListScheduleView({
                                                     {session.status === "running" && <Play className="h-3 w-3" />}
                                                     {session.status === "complete" && <CheckCircle className="h-3 w-3" />}
                                                     {session.status === "pending" && <Clock className="h-3 w-3" />}
-                                                    {session.status === "rescheduled" && <CalendarDays className="h-3 w-3" />}
+                                                    {session.status === "rescheduled" && <CalendarSync className="h-3 w-3" />}
                                                     {session.status === "cancelled" && <BookX className="h-3 w-3" />}
                                                     {session.status === "absence" && <UserX className="h-3 w-3" />}
                                                     {session.status}

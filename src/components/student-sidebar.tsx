@@ -16,6 +16,7 @@ import {
   User,
   X,
   Bookmark,
+  ScrollText,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -51,9 +52,15 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Invoices",
+    label: "Accounting",
     icon: DollarSign,
     href: "/student/invoices",
+    color: "text-green-600",
+  },
+  {
+    label: "Reports",
+    icon: ScrollText,
+    href: "/student/reports",
     color: "text-green-600",
   },
   {

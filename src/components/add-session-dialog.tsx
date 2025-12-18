@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -93,7 +94,20 @@ export function AddSessionDialog({
   const [startTime, setStartTime] = useState<string>("")
   const [duration, setDuration] = useState<string>("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isTouchDevice, setIsTouchDevice] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hasTouch =
+        "ontouchstart" in window ||
+        (navigator.maxTouchPoints ?? 0) > 0 ||
+        ("msMaxTouchPoints" in navigator &&
+          (navigator as Navigator & { msMaxTouchPoints?: number }).msMaxTouchPoints !== undefined &&
+          (navigator as Navigator & { msMaxTouchPoints?: number }).msMaxTouchPoints! > 0)
+      setIsTouchDevice(hasTouch)
+    }
+  }, [])
 
   const endTime = startTime && duration ? calculateEndTime(startTime, parseInt(duration)) : ""
   const endTimeLabel = endTime ? (() => {
@@ -178,32 +192,52 @@ export function AddSessionDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="date">Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal border-gray-200 hover:border-[#3d8f5b] focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  disabled={(date) => startOfDay(date) < startOfDay(new Date())}
-                  initialFocus
-                  classNames={{
-                    day_selected: "bg-[#3d8f5b] text-white hover:bg-[#2d7a4b] hover:text-white focus:bg-[#3d8f5b] focus:text-white",
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
+            {isTouchDevice ? (
+              <Input
+                id="date"
+                type="date"
+                value={date ? format(date, "yyyy-MM-dd") : ""}
+                min={format(new Date(), "yyyy-MM-dd")}
+                onChange={(e) => {
+                  const value = e.target.value
+                  if (!value) {
+                    setDate(undefined)
+                    return
+                  }
+                  // Create a Date at local midnight for the selected day
+                  const [year, month, day] = value.split("-").map(Number)
+                  setDate(new Date(year, (month || 1) - 1, day || 1))
+                }}
+                className="w-full border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+              />
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal border-gray-200 hover:border-[#3d8f5b] focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    disabled={(date) => startOfDay(date) < startOfDay(new Date())}
+                    initialFocus
+                    classNames={{
+                      day_selected: "bg-[#3d8f5b] text-white hover:bg-[#2d7a4b] hover:text-white focus:bg-[#3d8f5b] focus:text-white",
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

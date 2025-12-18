@@ -12,7 +12,7 @@ import {
     isToday
 } from "date-fns"
 import { useRouter } from "next/navigation"
-import { Calendar, CheckCircle, UserX, Clock, Play, CalendarDays, BookX } from "lucide-react"
+import { Calendar, CheckCircle, UserX, Clock, Play, BookX, CalendarSync } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ClientTimeDisplay } from "./client-time-display"
@@ -47,7 +47,7 @@ const getSessionStatusIcon = (status: string) => {
         case "pending":
             return <Clock className="h-3 w-3" />
         case "rescheduled":
-            return <CalendarDays className="h-3 w-3" />
+            return <CalendarSync className="h-3 w-3" />
         case "cancelled":
             return <BookX className="h-3 w-3" />
         case "absence":
