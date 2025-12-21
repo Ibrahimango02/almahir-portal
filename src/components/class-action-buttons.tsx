@@ -1,12 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Video, Power, Play, CalendarSync, LogOut } from "lucide-react"
+import { Video, Power, Play, CalendarSync, LogOut, RotateCcw } from "lucide-react"
 import { FaRegCircleStop } from "react-icons/fa6";
 import { useState, useEffect } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter } from "next/navigation"
-import { updateSession, updateSessionAttendance } from "@/lib/put/put-classes"
+import { updateSession, updateSessionAttendance, resetSession } from "@/lib/put/put-classes"
 import { createRescheduleRequest } from "@/lib/post/post-reschedule-requests"
 import { getUserTimezone, localToUtc } from "@/lib/utils/timezone"
 import {
@@ -67,6 +67,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
   const [cancellationReason, setCancellationReason] = useState("")
   const [rescheduleDate, setRescheduleDate] = useState("")
   const [showSessionRemarksDialog, setShowSessionRemarksDialog] = useState(false)
+  const [showResetDialog, setShowResetDialog] = useState(false)
   const [markCompleteChecked, setMarkCompleteChecked] = useState(currentStatus === 'complete')
   const { toast } = useToast()
 
@@ -532,6 +533,34 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
     }
   }
 
+  const handleResetSession = async () => {
+    setIsLoading(true)
+    try {
+      const result = await resetSession(classData.session_id)
+
+      if (result.success) {
+        onStatusChange("scheduled")
+        setShowResetDialog(false)
+        toast({
+          title: "Session Reset",
+          description: "The session has been reset to scheduled status. All attendance, reports, and payments have been cleared.",
+        })
+        // Refresh the page to update attendance data
+        router.refresh()
+      } else {
+        throw new Error(result.error?.message || "Failed to reset session")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to reset session. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Button configurations for different states
   const getButtonConfig = () => {
     switch (currentStatus) {
@@ -784,8 +813,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
                 isLoading ||
                 currentStatus === 'complete' ||
                 currentStatus === 'scheduled' ||
-                currentStatus === 'rescheduled' ||
-                currentStatus === 'cancelled'
+                currentStatus === 'rescheduled'
               }
               className="h-4 w-4"
             />
@@ -899,6 +927,22 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               </Button>
             </div>
           </>
+        )}
+
+        {/* Reset Button (only for admins and moderators) - positioned at the very right */}
+        {(userRole === 'admin' || userRole === 'moderator') && (
+          <div className="relative" title="Reset Session">
+            <Button
+              onClick={() => setShowResetDialog(true)}
+              className={`flex items-center justify-center h-10 w-10 rounded-lg border-2 transition-all duration-200 p-0 ${isLoading || currentStatus === 'scheduled' || currentStatus === 'rescheduled'
+                ? 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'
+                : 'border-red-800 bg-red-700 text-white hover:bg-red-800 hover:shadow-md'
+                }`}
+              disabled={isLoading || currentStatus === 'scheduled' || currentStatus === 'rescheduled'}
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -1044,6 +1088,34 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             students={classData.students}
             onClose={() => setShowSessionRemarksDialog(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Session Confirmation Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Session</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reset this session?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowResetDialog(false)}
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleResetSession}
+              disabled={isLoading}
+              className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700"
+            >
+              {isLoading ? "Resetting..." : "Confirm Reset"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

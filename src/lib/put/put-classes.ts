@@ -1204,3 +1204,94 @@ export async function updateClassAssignments(params: {
         return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
     }
 }
+
+export async function resetSession(sessionId: string): Promise<{ success: boolean; error?: { message: string } }> {
+    const supabase = createClient()
+
+    try {
+        // 1. Reset session status to 'scheduled'
+        const { error: sessionError } = await supabase
+            .from('class_sessions')
+            .update({ status: 'scheduled' })
+            .eq('id', sessionId)
+
+        if (sessionError) throw sessionError
+
+        // 2. Reset teacher attendance to 'expected'
+        const { error: teacherAttendanceError } = await supabase
+            .from('teacher_attendance')
+            .update({
+                attendance_status: 'expected',
+                updated_at: new Date().toISOString()
+            })
+            .eq('session_id', sessionId)
+
+        if (teacherAttendanceError) {
+            console.error('Error resetting teacher attendance:', teacherAttendanceError)
+            // Don't throw error here, continue with other operations
+        }
+
+        // 3. Reset student attendance to 'expected'
+        const { error: studentAttendanceError } = await supabase
+            .from('student_attendance')
+            .update({
+                attendance_status: 'expected',
+                updated_at: new Date().toISOString()
+            })
+            .eq('session_id', sessionId)
+
+        if (studentAttendanceError) {
+            console.error('Error resetting student attendance:', studentAttendanceError)
+            // Don't throw error here, continue with other operations
+        }
+
+        // 4. Delete session_history records
+        const { error: historyError } = await supabase
+            .from('session_history')
+            .delete()
+            .eq('session_id', sessionId)
+
+        if (historyError) {
+            console.error('Error deleting session history:', historyError)
+            // Don't throw error here, continue with other operations
+        }
+
+        // 5. Delete teacher_payments records
+        const { error: paymentsError } = await supabase
+            .from('teacher_payments')
+            .delete()
+            .eq('session_id', sessionId)
+
+        if (paymentsError) {
+            console.error('Error deleting teacher payments:', paymentsError)
+            // Don't throw error here, continue with other operations
+        }
+
+        // 6. Delete session_remarks records
+        const { error: remarksError } = await supabase
+            .from('session_remarks')
+            .delete()
+            .eq('session_id', sessionId)
+
+        if (remarksError) {
+            console.error('Error deleting session remarks:', remarksError)
+            // Don't throw error here, continue with other operations
+        }
+
+        // 7. Delete student_session_notes records
+        const { error: notesError } = await supabase
+            .from('student_session_notes')
+            .delete()
+            .eq('session_id', sessionId)
+
+        if (notesError) {
+            console.error('Error deleting student session notes:', notesError)
+            // Don't throw error here, continue with other operations
+        }
+
+        return { success: true }
+    } catch (error) {
+        console.error('Error resetting session:', error)
+        return { success: false, error: { message: error instanceof Error ? error.message : String(error) } }
+    }
+}

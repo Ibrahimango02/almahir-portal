@@ -38,11 +38,13 @@ const parseClassDateTime = (
 export function MonthlyListScheduleView({
     classes,
     monthStart,
-    currentUserRole
+    currentUserRole,
+    searchQuery
 }: {
     classes: ClassType[],
     monthStart: Date,
-    currentUserRole: string | null
+    currentUserRole: string | null,
+    searchQuery?: string
 }) {
     const router = useRouter()
     const [currentPage, setCurrentPage] = useState(1)
@@ -83,7 +85,7 @@ export function MonthlyListScheduleView({
         })
 
         // Then filter by the selected month
-        return sorted.filter(cls => {
+        const monthFiltered = sorted.filter(cls => {
             const startDateTime = parseClassDateTime(cls, "start_date")
             const endDateTime = parseClassDateTime(cls, "end_date")
             if (!startDateTime || !endDateTime) return false
@@ -95,7 +97,22 @@ export function MonthlyListScheduleView({
                 end: endOfDay(monthEnd),
             })
         })
-    }, [allSessions, monthStart])
+
+        // Then filter by search query
+        if (!searchQuery || searchQuery.trim() === '') return monthFiltered;
+        const query = searchQuery.toLowerCase().trim();
+        return monthFiltered.filter(session => {
+            if (session.title.toLowerCase().includes(query)) return true;
+            if (session.subject.toLowerCase().includes(query)) return true;
+            if (session.teachers.some(teacher =>
+                `${teacher.first_name} ${teacher.last_name}`.toLowerCase().includes(query) ||
+                teacher.first_name.toLowerCase().includes(query) ||
+                teacher.last_name.toLowerCase().includes(query)
+            )) return true;
+            if (session.description && session.description.toLowerCase().includes(query)) return true;
+            return false;
+        });
+    }, [allSessions, monthStart, searchQuery])
 
     // Reset to first page when month changes
     useEffect(() => {

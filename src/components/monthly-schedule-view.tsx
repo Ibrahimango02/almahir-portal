@@ -60,11 +60,13 @@ const getSessionStatusIcon = (status: string) => {
 export function MonthlyScheduleView({
     classes,
     monthStart,
-    currentUserRole
+    currentUserRole,
+    searchQuery
 }: {
     classes: ClassType[],
     monthStart: Date,
-    currentUserRole: string | null
+    currentUserRole: string | null,
+    searchQuery?: string
 }) {
     const router = useRouter()
 
@@ -117,6 +119,23 @@ export function MonthlyScheduleView({
         )
     }, [classes])
 
+    // Filter sessions by search query
+    const filteredSessions = useMemo(() => {
+        if (!searchQuery || searchQuery.trim() === '') return allSessions;
+        const query = searchQuery.toLowerCase().trim();
+        return allSessions.filter(session => {
+            if (session.title.toLowerCase().includes(query)) return true;
+            if (session.subject.toLowerCase().includes(query)) return true;
+            if (session.teachers.some(teacher =>
+                `${teacher.first_name} ${teacher.last_name}`.toLowerCase().includes(query) ||
+                teacher.first_name.toLowerCase().includes(query) ||
+                teacher.last_name.toLowerCase().includes(query)
+            )) return true;
+            if (session.description && session.description.toLowerCase().includes(query)) return true;
+            return false;
+        });
+    }, [allSessions, searchQuery])
+
     // Generate calendar days for the month
     const calendarDays = useMemo(() => {
         const monthEnd = endOfMonth(monthStart)
@@ -137,7 +156,7 @@ export function MonthlyScheduleView({
 
     // Get classes for a specific day
     const getClassesForDay = (day: Date) => {
-        return allSessions.filter((session) => {
+        return filteredSessions.filter((session) => {
             const classDate = parseClassDateTime(session, "start_date")
             return classDate && isSameDay(classDate, day)
         })
