@@ -164,7 +164,7 @@ export default function ReschedulePage() {
     async function fetchClassData() {
       try {
         const data = await getSessionById(sessionId)
-        if (!data || (data.status !== "scheduled" && data.status !== "cancelled" && data.status !== "absence")) {
+        if (!data || (data.status !== "scheduled" && data.status !== "rescheduled" && data.status !== "cancelled" && data.status !== "absence")) {
           notFound()
         }
         setClassData(data)

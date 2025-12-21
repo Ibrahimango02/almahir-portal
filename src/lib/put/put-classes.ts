@@ -796,7 +796,7 @@ export async function rescheduleSession(params: {
                     // Don't throw error here as the main operations were successful
                 }
             }
-        } else if (currentStatus === 'scheduled' || currentStatus === 'cancelled') {
+        } else if (currentStatus === 'scheduled' || currentStatus === 'cancelled' || currentStatus === 'rescheduled') {
             // Update the existing session with the new dates
             const { error: updateError } = await supabase
                 .from('class_sessions')
