@@ -472,6 +472,7 @@ export default function RegisterPage() {
                                             <SelectItem value="arabic">Arabic</SelectItem>
                                             <SelectItem value="islamic-studies">Islamic Studies</SelectItem>
                                             <SelectItem value="special-courses">Special Courses</SelectItem>
+                                            <SelectItem value="al-fatihah">Al-Fatihah Hifz (FREE)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -493,7 +494,7 @@ export default function RegisterPage() {
                                             <SelectItem value="30-min">30 min</SelectItem>
                                             <SelectItem value="45-min">45 min</SelectItem>
                                             <SelectItem value="1-hr">1 hr</SelectItem>
-                                            <SelectItem value="1-hr-30-min">1 hr and a half</SelectItem>
+                                            <SelectItem value="1-hr-30-min">1 hr 30 min</SelectItem>
                                             <SelectItem value="2-hr">2 hr</SelectItem>
                                         </SelectContent>
                                     </Select>
