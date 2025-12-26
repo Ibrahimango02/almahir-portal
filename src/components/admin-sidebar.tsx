@@ -59,15 +59,15 @@ const routes = [
     color: "text-green-600",
   },
   {
-    label: "Accounting",
-    icon: DollarSign,
-    href: "/admin/accounting",
-    color: "text-green-600",
-  },
-  {
     label: "Reports",
     icon: ScrollText,
     href: "/admin/reports",
+    color: "text-green-600",
+  },
+  {
+    label: "Accounting",
+    icon: DollarSign,
+    href: "/admin/accounting",
     color: "text-green-600",
   },
   {

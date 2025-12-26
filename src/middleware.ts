@@ -21,7 +21,12 @@ export async function middleware(request: NextRequest) {
     // If no session, redirect to login
     if (!user) {
         const redirectUrl = new URL('/', request.url);
-        return NextResponse.redirect(redirectUrl);
+        const redirectResponse = NextResponse.redirect(redirectUrl);
+        // Copy cookies from supabaseResponse to preserve session state
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie.name, cookie.value);
+        });
+        return redirectResponse;
     }
 
     // Get user profile with role
@@ -51,14 +56,24 @@ export async function middleware(request: NextRequest) {
     const pathStartsWithAnyRolePrefix = allRolePrefixes.some((prefix: string) => path.startsWith(prefix));
 
     if (pathStartsWithAnyRolePrefix && !pathStartsWithAllowedPrefix) {
-        return NextResponse.redirect(new URL('/error', request.url));
+        const redirectResponse = NextResponse.redirect(new URL('/error', request.url));
+        // Copy cookies from supabaseResponse to preserve session state
+        supabaseResponse.cookies.getAll().forEach((cookie) => {
+            redirectResponse.cookies.set(cookie.name, cookie.value);
+        });
+        return redirectResponse;
     }
 
     // Additional restrictions for moderator role
     if (role === 'moderator') {
         // Moderators cannot access admins and accounting pages
         if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting') || path.startsWith('/admin/invite')) {
-            return NextResponse.redirect(new URL('/error', request.url));
+            const redirectResponse = NextResponse.redirect(new URL('/error', request.url));
+            // Copy cookies from supabaseResponse to preserve session state
+            supabaseResponse.cookies.getAll().forEach((cookie) => {
+                redirectResponse.cookies.set(cookie.name, cookie.value);
+            });
+            return redirectResponse;
         }
     }
 

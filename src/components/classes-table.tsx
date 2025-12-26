@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ClassType } from "@/types"
 import { formatDateTime } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
+import { parseISO, isValid } from "date-fns"
+import { useMemo } from "react"
 
 interface ClassesTableProps {
     classes: ClassType[]
@@ -27,17 +29,37 @@ export default function ClassesTable({
     const router = useRouter()
     const { timezone } = useTimezone()
 
-    // Function to check if a class is expiring within a week
-    const isClassExpiringSoon = (classItem: ClassType): boolean => {
-        if (classItem.status.toLowerCase() !== 'active') return false
+    // Memoized function to check if a class is expiring within a week
+    // Using parseISO for better Safari compatibility
+    const isClassExpiringSoon = useMemo(() => {
+        const cache = new Map<string, boolean>()
+        return (classItem: ClassType): boolean => {
+            // Cache results to avoid recalculating
+            if (cache.has(classItem.class_id)) {
+                return cache.get(classItem.class_id)!
+            }
 
-        const endDate = new Date(classItem.end_date)
-        const currentDate = new Date()
-        const oneWeekFromNow = new Date()
-        oneWeekFromNow.setDate(currentDate.getDate() + 7)
+            if (classItem.status.toLowerCase() !== 'active') {
+                cache.set(classItem.class_id, false)
+                return false
+            }
 
-        return endDate <= oneWeekFromNow && endDate > currentDate
-    }
+            // Use parseISO instead of new Date() for better Safari compatibility
+            const endDateParsed = parseISO(classItem.end_date)
+            if (!isValid(endDateParsed)) {
+                cache.set(classItem.class_id, false)
+                return false
+            }
+
+            const currentDate = new Date()
+            const oneWeekFromNow = new Date()
+            oneWeekFromNow.setDate(currentDate.getDate() + 7)
+
+            const result = endDateParsed <= oneWeekFromNow && endDateParsed > currentDate
+            cache.set(classItem.class_id, result)
+            return result
+        }
+    }, [])
 
     const getNavigationPath = (classId: string) => {
         switch (userType) {

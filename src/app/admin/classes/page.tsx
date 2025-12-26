@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Plus, BookOpen, Clock, Search, Archive, AlertTriangle } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -9,35 +9,44 @@ import { Input } from "@/components/ui/input"
 import { getActiveClasses, getArchivedClasses } from "@/lib/get/get-classes"
 import { ClassType } from "@/types"
 import ClassesTable from "@/components/classes-table"
+import { parseISO, isValid } from "date-fns"
 
 export default function ClassesPage() {
     const [activeClasses, setActiveClasses] = useState<ClassType[]>([])
     const [archivedClasses, setArchivedClasses] = useState<ClassType[]>([])
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
-    const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
     const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived" | "expires-soon">("all")
 
-    // Function to check if a class is expiring within a week
-    const isClassExpiringSoon = (classItem: ClassType): boolean => {
+    // Memoized function to check if a class is expiring within a week
+    // Using parseISO for better Safari compatibility
+    const isClassExpiringSoon = useCallback((classItem: ClassType): boolean => {
         if (classItem.status.toLowerCase() !== 'active') return false
 
-        const endDate = new Date(classItem.end_date)
+        // Use parseISO instead of new Date() for better Safari compatibility
+        const endDateParsed = parseISO(classItem.end_date)
+        if (!isValid(endDateParsed)) return false
+
         const currentDate = new Date()
         const oneWeekFromNow = new Date()
         oneWeekFromNow.setDate(currentDate.getDate() + 7)
 
-        return endDate <= oneWeekFromNow && endDate > currentDate
-    }
+        return endDateParsed <= oneWeekFromNow && endDateParsed > currentDate
+    }, [])
+
+    // Memoize expiring classes to avoid recalculating
+    const expiringClasses = useMemo(() => {
+        return activeClasses.filter(isClassExpiringSoon)
+    }, [activeClasses, isClassExpiringSoon])
 
     // Get count of expiring classes
-    const getExpiringClassesCount = (): number => {
-        return activeClasses.filter(isClassExpiringSoon).length
-    }
+    const expiringClassesCount = useMemo(() => {
+        return expiringClasses.length
+    }, [expiringClasses])
 
-    // Get filtered classes based on status filter
-    const getFilteredClasses = useCallback((): ClassType[] => {
-        let filtered = [...activeClasses, ...archivedClasses]
+    // Get filtered classes based on status filter - memoized for performance
+    const filteredClasses = useMemo((): ClassType[] => {
+        let filtered: ClassType[] = []
 
         // Apply status filter
         switch (statusFilter) {
@@ -48,7 +57,7 @@ export default function ClassesPage() {
                 filtered = archivedClasses
                 break
             case "expires-soon":
-                filtered = activeClasses.filter(isClassExpiringSoon)
+                filtered = expiringClasses
                 break
             case "all":
             default:
@@ -58,8 +67,8 @@ export default function ClassesPage() {
 
         // Apply search filter
         if (searchQuery.trim()) {
+            const searchLower = searchQuery.toLowerCase()
             filtered = filtered.filter((classItem) => {
-                const searchLower = searchQuery.toLowerCase()
                 return (
                     classItem.title.toLowerCase().includes(searchLower) ||
                     classItem.subject.toLowerCase().includes(searchLower) ||
@@ -86,7 +95,7 @@ export default function ClassesPage() {
             // Then sort alphabetically by title within each status group
             return a.title.localeCompare(b.title)
         })
-    }, [activeClasses, archivedClasses, statusFilter, searchQuery])
+    }, [activeClasses, archivedClasses, statusFilter, searchQuery, expiringClasses])
 
     useEffect(() => {
         const fetchClasses = async () => {
@@ -107,12 +116,7 @@ export default function ClassesPage() {
         fetchClasses()
     }, [])
 
-    useEffect(() => {
-        setFilteredClasses(getFilteredClasses())
-    }, [searchQuery, statusFilter, activeClasses, archivedClasses, getFilteredClasses])
-
     const totalClasses = activeClasses.length + archivedClasses.length
-    const expiringClassesCount = getExpiringClassesCount()
 
     return (
         <div className="flex flex-col gap-6">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { Search } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,6 @@ export default function StudentClassesPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoading, setIsLoading] = useState(true)
     const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-    const [filteredClasses, setFilteredClasses] = useState<ClassType[]>([])
 
     useEffect(() => {
         const getCurrentUser = async () => {
@@ -43,7 +42,6 @@ export default function StudentClassesPage() {
 
                 const data = await getClassesByStudentId(studentId)
                 setClasses(data)
-                setFilteredClasses(data)
             } catch (error) {
                 console.error("Error fetching classes:", error)
             } finally {
@@ -54,8 +52,9 @@ export default function StudentClassesPage() {
         fetchClasses()
     }, [currentUserId])
 
-    useEffect(() => {
-        const filtered = classes.filter((classItem) => {
+    // Memoize filtered classes for better Safari performance
+    const filteredClasses = useMemo(() => {
+        return classes.filter((classItem) => {
             const searchLower = searchQuery.toLowerCase()
             return (
                 classItem.title.toLowerCase().includes(searchLower) ||
@@ -79,7 +78,6 @@ export default function StudentClassesPage() {
             // Then sort alphabetically by title within each status group
             return a.title.localeCompare(b.title)
         })
-        setFilteredClasses(filtered)
     }, [searchQuery, classes])
 
     return (
