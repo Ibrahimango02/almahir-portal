@@ -67,7 +67,7 @@ export async function middleware(request: NextRequest) {
     // Additional restrictions for moderator role
     if (role === 'moderator') {
         // Moderators cannot access admins and accounting pages
-        if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting') || path.startsWith('/admin/invite')) {
+        if (path.startsWith('/admin/admins') || path.startsWith('/admin/accounting') || path.startsWith('/admin/invite') || path.startsWith('/admin/add-user')) {
             const redirectResponse = NextResponse.redirect(new URL('/error', request.url));
             // Copy cookies from supabaseResponse to preserve session state
             supabaseResponse.cookies.getAll().forEach((cookie) => {

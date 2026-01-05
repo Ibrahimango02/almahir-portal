@@ -8,6 +8,7 @@ export async function updateParents(parentId: string, data: {
     payment_method?: string | null;
     billing_name?: string | null;
     billing_email?: string | null;
+    phone?: string | null;
 }) {
     const supabase = createClient()
 
@@ -17,13 +18,18 @@ export async function updateParents(parentId: string, data: {
     }
 
     try {
-        // Always update the profile status first
+        // Always update the profile status and phone first
+        const profileUpdateData: { status: string; updated_at: string; phone?: string | null } = {
+            status: data.status,
+            updated_at: new Date().toISOString()
+        }
+        if (data.phone !== undefined) {
+            profileUpdateData.phone = data.phone || null
+        }
+
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({
-                status: data.status,
-                updated_at: new Date().toISOString()
-            })
+            .update(profileUpdateData)
             .eq('id', parentId)
 
         if (profileError) {

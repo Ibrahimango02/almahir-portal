@@ -36,6 +36,7 @@ export default function EditParentPage() {
     payment_method: "",
     billing_name: "",
     billing_email: "",
+    phone: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -84,6 +85,7 @@ export default function EditParentPage() {
             payment_method: parentData.payment_method || "",
             billing_name: parentData.billing_name || "",
             billing_email: parentData.billing_email || "",
+            phone: parentData.phone || "",
           })
         }
       } catch (error) {
@@ -200,6 +202,7 @@ export default function EditParentPage() {
         payment_method: formData.payment_method || null,
         billing_name: formData.billing_name || null,
         billing_email: formData.billing_email || null,
+        phone: formData.phone || null,
         student_id: [...formData.students.map(student => student.student_id), ...newlyCreatedStudentIds]
       })
 
@@ -252,19 +255,18 @@ export default function EditParentPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  name="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                  rows={4}
-                  className="resize-none"
-                  placeholder="Add any additional notes about the parent..."
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                  placeholder="Enter phone number"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="billing_name">Billing Name</Label>
                   <Input
@@ -287,9 +289,7 @@ export default function EditParentPage() {
                     placeholder="Enter billing email"
                   />
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="payment_method">Payment Method</Label>
                   <Select value={formData.payment_method} onValueChange={(value) => setFormData((prev) => ({ ...prev, payment_method: value }))}>
@@ -304,6 +304,19 @@ export default function EditParentPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Add any additional notes about the parent..."
+                />
               </div>
 
               <div className="space-y-4">
