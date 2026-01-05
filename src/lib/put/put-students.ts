@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/client"
 
-export async function updateStudent(studentId: string, data: { notes?: string; status: string; birth_date?: string | null; payment_method?: string | null; billing_name?: string | null; billing_email?: string | null }) {
+export async function updateStudent(studentId: string, data: { notes?: string; status: string; birth_date?: string | null; payment_method?: string | null; billing_name?: string | null; billing_email?: string | null; phone?: string | null }) {
     const supabase = createClient()
 
     // First, check if this is a dependent or independent student
@@ -46,13 +46,18 @@ export async function updateStudent(studentId: string, data: { notes?: string; s
             throw new Error(`Failed to update child profile: ${childProfileError.message}`)
         }
     } else if (student.student_type === 'independent' && student.profile_id) {
-        // For independent students, update status in profiles
+        // For independent students, update status and phone in profiles
+        const profileUpdateData: { status: string; updated_at: string; phone?: string | null } = {
+            status: data.status,
+            updated_at: new Date().toISOString()
+        }
+        if (data.phone !== undefined) {
+            profileUpdateData.phone = data.phone || null
+        }
+        
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({
-                status: data.status,
-                updated_at: new Date().toISOString()
-            })
+            .update(profileUpdateData)
             .eq('id', student.profile_id)
 
         if (profileError) {

@@ -33,6 +33,7 @@ export default function EditStudentPage() {
     payment_method: "",
     billing_name: "",
     billing_email: "",
+    phone: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -49,6 +50,7 @@ export default function EditStudentPage() {
             payment_method: student.payment_method || "",
             billing_name: student.billing_name || "",
             billing_email: student.billing_email || "",
+            phone: student.phone || "",
           })
         }
       } catch (error) {
@@ -87,13 +89,29 @@ export default function EditStudentPage() {
     setIsSubmitting(true)
 
     try {
-      await updateStudent(student.student_id, {
-        ...formData,
+      const updateData: {
+        status: string
+        notes: string
+        birth_date: string | null
+        payment_method?: string | null
+        billing_name?: string | null
+        billing_email?: string | null
+        phone?: string | null
+      } = {
+        status: formData.status,
+        notes: formData.notes,
         birth_date: formData.birth_date || null,
-        payment_method: formData.payment_method || null,
-        billing_name: formData.billing_name || null,
-        billing_email: formData.billing_email || null,
-      })
+      }
+
+      // Only include billing fields and phone for independent students
+      if (student.student_type === 'independent') {
+        updateData.payment_method = formData.payment_method || null
+        updateData.billing_name = formData.billing_name || null
+        updateData.billing_email = formData.billing_email || null
+        updateData.phone = formData.phone || null
+      }
+
+      await updateStudent(student.student_id, updateData)
 
       toast({
         title: "Student information updated",
@@ -129,18 +147,7 @@ export default function EditStudentPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="birth_date">Birth Date</Label>
-                <Input
-                  id="birth_date"
-                  name="birth_date"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={handleChange}
-                />
-              </div>
-
+            <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => handleSelectChange("status", value)}>
@@ -156,59 +163,85 @@ export default function EditStudentPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="billing_name">Billing Name</Label>
+                <Label htmlFor="birth_date">Birth Date</Label>
                 <Input
-                  id="billing_name"
-                  name="billing_name"
-                  value={formData.billing_name}
+                  id="birth_date"
+                  name="birth_date"
+                  type="date"
+                  value={formData.birth_date}
                   onChange={handleChange}
-                  placeholder="Enter billing name"
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="billing_email">Billing Email</Label>
-                <Input
-                  id="billing_email"
-                  name="billing_email"
-                  type="email"
-                  value={formData.billing_email}
-                  onChange={handleChange}
-                  placeholder="Enter billing email"
-                />
-              </div>
-            </div>
+              {student.student_type === 'independent' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="billing_name">Billing Name</Label>
+                      <Input
+                        id="billing_name"
+                        name="billing_name"
+                        value={formData.billing_name}
+                        onChange={handleChange}
+                        placeholder="Enter billing name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="billing_email">Billing Email</Label>
+                      <Input
+                        id="billing_email"
+                        name="billing_email"
+                        type="email"
+                        value={formData.billing_email}
+                        onChange={handleChange}
+                        placeholder="Enter billing email"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="payment_method">Payment Method</Label>
+                      <Select value={formData.payment_method} onValueChange={(value) => handleSelectChange("payment_method", value)}>
+                        <SelectTrigger id="payment_method">
+                          <SelectValue placeholder="Select payment method" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Stripe">Stripe</SelectItem>
+                          <SelectItem value="PayPal">PayPal</SelectItem>
+                          <SelectItem value="Bank">Bank</SelectItem>
+                          <SelectItem value="Cash">Cash</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="payment_method">Payment Method</Label>
-                <Select value={formData.payment_method} onValueChange={(value) => handleSelectChange("payment_method", value)}>
-                  <SelectTrigger id="payment_method">
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Stripe">Stripe</SelectItem>
-                    <SelectItem value="PayPal">PayPal</SelectItem>
-                    <SelectItem value="Bank">Bank</SelectItem>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  rows={4}
+                  className="resize-none"
+                  placeholder="Add any additional notes about the student..."
+                />
               </div>
             </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 import { ProfileType } from "@/types"
@@ -10,7 +11,7 @@ import AvatarIcon from "@/components/avatar"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { TablePagination } from "./table-pagination"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
-import { Mail, Phone, MapPin, MoreHorizontal, Lock } from "lucide-react"
+import { Mail, Phone, MapPin, MoreHorizontal, Lock, Edit } from "lucide-react"
 import { EmptyTableState } from "./empty-table-state"
 import { ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -263,6 +264,12 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                                             <DropdownMenuContent align="end" className="w-48">
                                                                 <DropdownMenuLabel className="font-semibold text-xs">Actions</DropdownMenuLabel>
                                                                 <DropdownMenuSeparator />
+                                                                <DropdownMenuItem asChild className="cursor-pointer text-sm">
+                                                                    <Link href={`/admin/moderators/edit/${moderator.id}`} className="flex items-center">
+                                                                        <Edit className="mr-2 h-4 w-4" />
+                                                                        Edit Moderator
+                                                                    </Link>
+                                                                </DropdownMenuItem>
                                                                 <DropdownMenuItem
                                                                     className="cursor-pointer text-sm"
                                                                     onClick={(e) => {

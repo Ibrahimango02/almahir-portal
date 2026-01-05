@@ -249,19 +249,6 @@ export default function EditTeacherPage() {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="notes">Notes</Label>
-                            <Textarea
-                                id="notes"
-                                name="notes"
-                                value={formData.notes}
-                                onChange={handleChange}
-                                rows={4}
-                                className="resize-none"
-                                placeholder="Add any additional notes about the teacher..."
-                            />
-                        </div>
-
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <Label htmlFor="payment_method">Payment Method</Label>
@@ -292,6 +279,19 @@ export default function EditTeacherPage() {
                                     placeholder="e.g., account number, email, etc."
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="notes">Notes</Label>
+                            <Textarea
+                                id="notes"
+                                name="notes"
+                                value={formData.notes}
+                                onChange={handleChange}
+                                rows={4}
+                                className="resize-none"
+                                placeholder="Add any additional notes about the teacher..."
+                            />
                         </div>
 
                         <div className="flex justify-end gap-4">

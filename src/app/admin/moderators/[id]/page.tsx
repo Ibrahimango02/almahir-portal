@@ -1,17 +1,26 @@
 import { notFound } from "next/navigation"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Mail, Phone, Calendar, Contact, UserPen } from "lucide-react"
+import { Mail, Phone, Calendar, Contact, UserPen, Edit } from "lucide-react"
 import Link from "next/link"
 import { format, parseISO } from "date-fns"
 import { BackButton } from "@/components/back-button"
-import { getModeratorById } from "@/lib/get/get-profiles"
+import { getModeratorById, checkIfAdmin } from "@/lib/get/get-profiles"
 import { getTeachersByModeratorId } from "@/lib/get/get-teachers"
 import AvatarIcon from "@/components/avatar"
+import { createClient } from "@/utils/supabase/server"
 
 export default async function ModeratorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    // Get current user ID
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    // Check if admin
+    const isAdmin = userId ? await checkIfAdmin(userId) : false;
+
     const { id } = await params
     const moderator = await getModeratorById(id)
     const assignedTeachers = await getTeachersByModeratorId(id) ?? []
@@ -165,6 +174,20 @@ export default async function ModeratorDetailPage({ params }: { params: Promise<
                                 </p>
                             </div>
                         </div>
+
+                        {/* Edit Button - Only for admin */}
+                        {isAdmin && (
+                            <Button
+                                asChild
+                                className="mt-6 shadow-sm transition-all hover:shadow-md"
+                                style={{ backgroundColor: "#3d8f5b", color: "white" }}
+                            >
+                                <Link href={`/admin/moderators/edit/${moderator.id}`} className="flex items-center justify-center gap-2">
+                                    <Edit className="h-4 w-4" />
+                                    Edit Moderator Information
+                                </Link>
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
             </div>
