@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
 import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User, BookOpen, Search, X, ChevronDown } from "lucide-react"
 import { getResourcesWithClassInfo } from "@/lib/get/get-resources"
 import { createResource } from "@/lib/post/post-resources"
@@ -352,18 +351,14 @@ export default function ResourcesPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="file">File (PDF)</Label>
+                                <Label htmlFor="file">File (PDF or Image)</Label>
                                 <Input
                                     id="file"
                                     name="file"
                                     type="file"
-                                    accept=".pdf"
+                                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.svg"
                                     required
                                 />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="isPublic" name="isPublic" value="true" />
-                                <Label htmlFor="isPublic">Make this resource public</Label>
                             </div>
                             <Button
                                 type="submit"

@@ -31,7 +31,7 @@ export default function TeacherPaymentsPage() {
         <div className="flex flex-col gap-6">
             <h1 className="text-3xl font-bold tracking-tight">Payments</h1>
             <div className="p-6">
-                <TeacherPaymentsTable payments={payments} onStatusUpdate={() => { }} />
+                <TeacherPaymentsTable payments={payments} />
             </div>
         </div>
     )

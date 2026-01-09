@@ -57,15 +57,6 @@ export default function AdminAccountingPage() {
     }
   }
 
-  const handlePaymentsUpdate = async () => {
-    try {
-      const updatedPayments = await getTeacherPayments()
-      setTeacherPayments(updatedPayments)
-    } catch (err) {
-      console.error('Error refreshing payments:', err)
-    }
-  }
-
   const clearFilters = () => {
     setSearch("")
     setStartDate(undefined)
@@ -364,7 +355,6 @@ export default function AdminAccountingPage() {
             ) : (
               <TeacherPaymentsTable
                 payments={filteredTeacherPayments}
-                onStatusUpdate={handlePaymentsUpdate}
               />
             )}
           </div>

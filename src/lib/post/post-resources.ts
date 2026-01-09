@@ -24,7 +24,6 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
     const file = formData.get('file') as File
     const title = formData.get('title') as string
     const description = formData.get('description') as string
-    const isPublic = formData.get('isPublic') === 'true'
     const classId = formData.get('classId') as string
 
     if (!file) {
@@ -61,7 +60,6 @@ export async function createResource(formData: FormData): Promise<ResourceType> 
             file_size: file.size,
             file_type: file.type,
             uploaded_by: user.id,
-            is_public: isPublic,
             class_id: classId || null
         })
         .select()

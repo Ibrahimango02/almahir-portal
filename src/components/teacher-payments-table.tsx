@@ -10,7 +10,6 @@ import { DollarSign } from "lucide-react"
 
 interface TeacherPaymentsTableProps {
     payments: TeacherPaymentType[]
-    onStatusUpdate: () => void
 }
 
 type SortDirection = 'asc' | 'desc' | 'none'
@@ -28,7 +27,7 @@ type TeacherAggregate = {
     total_pending_amount: number
 }
 
-export function TeacherPaymentsTable({ payments, onStatusUpdate }: TeacherPaymentsTableProps) {
+export function TeacherPaymentsTable({ payments }: TeacherPaymentsTableProps) {
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'teacher', direction: 'none' })
 
     // Aggregate payments by teacher - only count pending payments for hours and amount

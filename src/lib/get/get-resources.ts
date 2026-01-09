@@ -44,11 +44,11 @@ export async function getResourcesByStudentTeachers(studentId: string): Promise<
     const classIds = studentClasses?.map(sc => sc.class_id) || []
     if (classIds.length === 0) return []
 
-    // Get resources for these classes (including public resources)
+    // Get resources for these classes
     const { data, error } = await supabase
         .from('resources')
         .select('*')
-        .or(`class_id.in.(${classIds.join(',')}),is_public.eq.true`)
+        .in('class_id', classIds)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -79,11 +79,11 @@ export async function getResourcesByParentStudentsTeachers(parentId: string): Pr
     const classIds = studentClasses?.map(sc => sc.class_id) || []
     if (classIds.length === 0) return []
 
-    // Get resources for these classes (including public resources)
+    // Get resources for these classes
     const { data, error } = await supabase
         .from('resources')
         .select('*')
-        .or(`class_id.in.(${classIds.join(',')}),is_public.eq.true`)
+        .in('class_id', classIds)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -173,6 +173,62 @@ export async function getResourcesByUserWithClassInfo(userId: string): Promise<(
     return data || []
 }
 
+export async function getResourcesByTeacherWithClassInfo(teacherId: string): Promise<(ResourceType & { class?: { title: string; subject?: string } })[]> {
+    const supabase = createClient()
+
+    // First, get all classes for this teacher
+    const { data: teacherClasses } = await supabase
+        .from('class_teachers')
+        .select('class_id')
+        .eq('teacher_id', teacherId)
+
+    const classIds = teacherClasses?.map(tc => tc.class_id) || []
+
+    // Fetch resources uploaded by teacher
+    const { data: uploadedResources, error: uploadedError } = await supabase
+        .from('resources')
+        .select(`
+            *,
+            class:classes(title, subject)
+        `)
+        .eq('uploaded_by', teacherId)
+        .order('created_at', { ascending: false })
+
+    if (uploadedError) {
+        throw new Error(`Failed to fetch uploaded resources: ${uploadedError.message}`)
+    }
+
+    // Fetch resources from teacher's classes (if teacher has classes)
+    let classResources: (ResourceType & { class?: { title: string; subject?: string } })[] = []
+    if (classIds.length > 0) {
+        const { data: classResourcesData, error: classError } = await supabase
+            .from('resources')
+            .select(`
+                *,
+                class:classes(title, subject)
+            `)
+            .in('class_id', classIds)
+            .order('created_at', { ascending: false })
+
+        if (classError) {
+            throw new Error(`Failed to fetch class resources: ${classError.message}`)
+        }
+
+        classResources = classResourcesData || []
+    }
+
+    // Combine both sets and remove duplicates
+    const allResources = [...(uploadedResources || []), ...classResources]
+    const uniqueResources = Array.from(
+        new Map(allResources.map(resource => [resource.resource_id, resource])).values()
+    )
+
+    // Sort by created_at descending
+    uniqueResources.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+    return uniqueResources
+}
+
 export async function getResourcesByStudentTeachersWithClassInfo(studentId: string): Promise<(ResourceType & { class?: { title: string; subject?: string } })[]> {
     const supabase = createClient()
 
@@ -185,14 +241,14 @@ export async function getResourcesByStudentTeachersWithClassInfo(studentId: stri
     const classIds = studentClasses?.map(sc => sc.class_id) || []
     if (classIds.length === 0) return []
 
-    // Get resources for these classes (including public resources) with class info
+    // Get resources for these classes with class info
     const { data, error } = await supabase
         .from('resources')
         .select(`
             *,
             class:classes(title, subject)
         `)
-        .or(`class_id.in.(${classIds.join(',')}),is_public.eq.true`)
+        .in('class_id', classIds)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -223,14 +279,14 @@ export async function getResourcesByParentStudentsTeachersWithClassInfo(parentId
     const classIds = studentClasses?.map(sc => sc.class_id) || []
     if (classIds.length === 0) return []
 
-    // Get resources for these classes (including public resources) with class info
+    // Get resources for these classes with class info
     const { data, error } = await supabase
         .from('resources')
         .select(`
             *,
             class:classes(title, subject)
         `)
-        .or(`class_id.in.(${classIds.join(',')}),is_public.eq.true`)
+        .in('class_id', classIds)
         .order('created_at', { ascending: false })
 
     if (error) {
@@ -252,14 +308,14 @@ export async function getResourcesByStudentId(studentId: string): Promise<(Resou
     const classIds = studentClasses?.map(sc => sc.class_id) || []
     if (classIds.length === 0) return []
 
-    // Get resources for these classes (including public resources) with class info
+    // Get resources for these classes with class info
     const { data, error } = await supabase
         .from('resources')
         .select(`
             *,
             class:classes(title, subject)
         `)
-        .or(`class_id.in.(${classIds.join(',')}),is_public.eq.true`)
+        .in('class_id', classIds)
         .order('created_at', { ascending: false })
 
     if (error) {

@@ -7,9 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/dialog"
-import { Checkbox } from "@/components/ui/checkbox"
 import { FileText, Download, Plus, Upload, Calendar, HardDrive, Trash2, User, BookOpen } from "lucide-react"
-import { getResourcesByUserWithClassInfo, getClassesForTeacherResourceUpload } from "@/lib/get/get-resources"
+import { getResourcesByTeacherWithClassInfo, getClassesForTeacherResourceUpload } from "@/lib/get/get-resources"
 import { createResource } from "@/lib/post/post-resources"
 import { deleteResource } from "@/lib/delete/delete-resources"
 import { getProfileById } from "@/lib/get/get-profiles"
@@ -46,7 +45,7 @@ export default function TeacherResourcesPage() {
         if (!currentUserId) return
 
         try {
-            const data = await getResourcesByUserWithClassInfo(currentUserId)
+            const data = await getResourcesByTeacherWithClassInfo(currentUserId)
 
             // Fetch uploader information for each resource
             const resourcesWithUploaders = await Promise.all(
@@ -245,18 +244,14 @@ export default function TeacherResourcesPage() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="file">File (PDF)</Label>
+                                <Label htmlFor="file">File (PDF or Image)</Label>
                                 <Input
                                     id="file"
                                     name="file"
                                     type="file"
-                                    accept=".pdf"
+                                    accept=".pdf,.jpg,.jpeg,.png"
                                     required
                                 />
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="isPublic" name="isPublic" value="true" />
-                                <Label htmlFor="isPublic">Make this resource public</Label>
                             </div>
                             <Button
                                 type="submit"
