@@ -344,6 +344,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             .from('class_sessions')
             .select('id, class_id, start_date, end_date, status')
             .in('id', sessionIds)
+            .in('status', ['complete', 'absence'])
 
         if (sessionsError) {
             console.error('Error fetching sessions:', sessionsError)

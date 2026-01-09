@@ -10,10 +10,10 @@ export function DevelopmentBanner() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const pathname = usePathname()
 
-   // Hide banner on registration page and error pages
+  // Hide banner on registration page and error pages
   if (pathname === "/" || pathname === "/register" || pathname === "/signup" || pathname === "/error" || pathname.startsWith("/error") || pathname.includes("/error")) {
     return <TicketSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
-  } 
+  }
 
   return (
     <>
@@ -22,7 +22,7 @@ export function DevelopmentBanner() {
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              This system is still under development. If you have any issues or suggestions, please submit them{" "}
+              This system is under development. For issues or suggestions,  click{" "}
               <Button
                 variant="link"
                 className="h-auto p-0 text-amber-900 dark:text-amber-100 underline font-semibold"

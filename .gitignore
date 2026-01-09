@@ -40,9 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Chat-related files and components
-src/components/chat-widget.tsx
-src/components/chat-client-wrapper.tsx
-src/contexts/ChatContext.tsx
-src/lib/utils/chat-room-utils.ts
 src/app/api/chat/

@@ -71,14 +71,22 @@ export default function EditInvoicePage({ params }: { params: Promise<{ id: stri
 
         setSaving(true)
         try {
+            // Determine paid_date based on status
+            let paidDate: string | null | undefined = undefined
+            if (formData.status === 'paid') {
+                // If status is paid, set paid_date to current date
+                paidDate = new Date().toISOString()
+            } else if (invoice.status === 'paid' && formData.status !== 'paid') {
+                // If changing from paid to something else, clear the paid_date
+                paidDate = null
+            }
+            // Otherwise, don't update paid_date (leave it as is)
+
             await updateStudentInvoice({
                 id: invoice.invoice_id,
-                student_subscription: invoice.student_subscription,
-                months: invoice.months,
-                issue_date: invoice.issue_date,
-                due_date: formData.due_date ? formData.due_date.toISOString() : "",
-                paid_date: invoice.paid_date,
-                status: formData.status
+                due_date: formData.due_date ? formData.due_date.toISOString() : undefined,
+                status: formData.status,
+                paid_date: paidDate
             })
 
             toast({

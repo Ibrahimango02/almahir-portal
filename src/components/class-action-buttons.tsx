@@ -811,9 +811,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               onCheckedChange={handleMarkComplete}
               disabled={
                 isLoading ||
-                currentStatus === 'complete' ||
-                currentStatus === 'scheduled' ||
-                currentStatus === 'rescheduled'
+                currentStatus === 'complete'
               }
               className="h-4 w-4"
             />

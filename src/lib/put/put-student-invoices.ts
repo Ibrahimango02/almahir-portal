@@ -2,33 +2,32 @@ import { createClient } from "@/utils/supabase/client"
 
 type UpdateStudentInvoiceData = {
     id: string
-    student_subscription: string
-    months: string
-    issue_date: string
-    due_date: string
+    due_date?: string
     paid_date?: string | null
-    status: string
+    status?: string
 }
 
 export async function updateStudentInvoice(invoiceData: UpdateStudentInvoiceData) {
     const supabase = createClient()
 
     const invoiceToUpdate: {
-        student_subscription: string;
-        months: string;
-        issue_date: string;
-        due_date: string;
-        paid_date: string | null;
-        status: string;
+        due_date?: string;
+        paid_date?: string | null;
+        status?: string;
         updated_at: string;
     } = {
-        student_subscription: invoiceData.student_subscription,
-        months: invoiceData.months,
-        issue_date: invoiceData.issue_date,
-        due_date: invoiceData.due_date,
-        paid_date: invoiceData.paid_date ?? null,
-        status: invoiceData.status,
         updated_at: new Date().toISOString()
+    }
+
+    // Only include fields that are provided
+    if (invoiceData.due_date !== undefined) {
+        invoiceToUpdate.due_date = invoiceData.due_date
+    }
+    if (invoiceData.paid_date !== undefined) {
+        invoiceToUpdate.paid_date = invoiceData.paid_date ?? null
+    }
+    if (invoiceData.status !== undefined) {
+        invoiceToUpdate.status = invoiceData.status
     }
 
     const { data, error } = await supabase

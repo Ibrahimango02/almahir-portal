@@ -59,7 +59,7 @@ export function AttendanceTracker({
     // Teachers can only edit when session is running
     const canEditAttendance = canTakeAttendance && (
         (userRole === 'admin' || userRole === 'moderator')
-            ? (currentStatus !== 'scheduled' && currentStatus !== 'cancelled')
+            ? (currentStatus !== 'cancelled')
             : currentStatus === "running"
     )
 

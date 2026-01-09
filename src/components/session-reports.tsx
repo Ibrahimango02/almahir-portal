@@ -307,10 +307,10 @@ export function SessionReports({ fetchSessions, basePath, requiresUserId = false
                                                 </td>
                                                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                     <div className="max-w-xs">
-                                                        {session.student_names.slice(0, 2).join(', ')}
-                                                        {session.student_names.length > 2 && (
+                                                        {session.student_names.slice(0, 1).join(', ')}
+                                                        {session.student_names.length > 1 && (
                                                             <span className="text-xs text-gray-500">
-                                                                +{session.student_names.length - 2} more
+                                                                +{session.student_names.length - 1} more
                                                             </span>
                                                         )}
                                                     </div>
@@ -341,8 +341,8 @@ export function SessionReports({ fetchSessions, basePath, requiresUserId = false
                                                 <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                                                     {session.session_summary ? (
                                                         <span title={session.session_summary}>
-                                                            {session.session_summary.length > 50
-                                                                ? session.session_summary.slice(0, 50) + "..."
+                                                            {session.session_summary.length > 200
+                                                                ? session.session_summary.slice(0, 200) + "..."
                                                                 : session.session_summary}
                                                         </span>
                                                     ) : (
