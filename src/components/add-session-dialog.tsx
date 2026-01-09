@@ -26,8 +26,6 @@ type TimeOption = {
   label: string
 }
 
-const TIME_INCREMENT_MINUTES = 15
-
 const formatTimeLabel = (hours: number, minutes: number) => {
   const period = hours >= 12 ? "PM" : "AM"
   const displayHour = hours % 12 === 0 ? 12 : hours % 12
@@ -35,24 +33,25 @@ const formatTimeLabel = (hours: number, minutes: number) => {
   return `${displayHour}:${minuteString} ${period}`
 }
 
-const TIME_OPTIONS: TimeOption[] = Array.from(
-  { length: (24 * 60) / TIME_INCREMENT_MINUTES },
-  (_, index) => {
-    const totalMinutes = index * TIME_INCREMENT_MINUTES
-    const hours = Math.floor(totalMinutes / 60)
-    const minutes = totalMinutes % 60
-    const value = `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
-    return {
+// Generate time options with :00, :15, :20, :30, :40, :45 for each hour
+const TIME_OPTIONS: TimeOption[] = []
+const minuteOptions = [0, 15, 20, 30, 40, 45]
+
+for (let hour = 0; hour < 24; hour++) {
+  for (const minute of minuteOptions) {
+    const value = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`
+    TIME_OPTIONS.push({
       value,
-      label: formatTimeLabel(hours, minutes),
-    }
+      label: formatTimeLabel(hour, minute),
+    })
   }
-)
+}
 
 // Duration options in minutes
 const DURATION_OPTIONS = [
   { value: "15", label: "15 mins" },
   { value: "30", label: "30 mins" },
+  { value: "40", label: "40 mins" },
   { value: "45", label: "45 mins" },
   { value: "60", label: "1 hr" },
   { value: "90", label: "1.5 hrs" },
@@ -152,15 +151,15 @@ export function AddSessionDialog({
           title: "Session created successfully",
           description: "The session has been added to the class.",
         })
-        
+
         // Reset form
         setDate(undefined)
         setStartTime("")
         setDuration("")
-        
+
         // Close dialog
         onOpenChange(false)
-        
+
         // Callback to refresh sessions list
         if (onSessionCreated) {
           onSessionCreated()
@@ -293,8 +292,8 @@ export function AddSessionDialog({
             >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting}
               className="text-white border-[#3d8f5b] hover:border-[#3d8f5b] hover:bg-[#2d7a4b] disabled:opacity-50"
               style={{ backgroundColor: "#3d8f5b" }}
