@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import { sendRegistrationEmail, sendRegistrationConfirmationEmail } from '@/lib/utils/email'
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
     try {
@@ -24,15 +30,16 @@ export async function POST(request: NextRequest) {
         } = await request.json()
 
         // Validate required fields
-        if (!name || !email || !country || !whatsapp || !phone || !gender || !ageCategory || !age || !firstLanguage || !program || !classDuration || !hearAboutUs) {
+        if (!name || !email || !country || !whatsapp || !phone || !gender || !age || !firstLanguage || !program || !classDuration || !hearAboutUs) {
             return NextResponse.json(
                 { error: 'All required fields must be filled' },
                 { status: 400 }
             )
         }
 
-        // Validate age category specific fields
-        if (ageCategory === 'less-than-18' && (!parentGuardianName || !relationToApplicant)) {
+        // Validate age category specific fields (check age value instead of ageCategory)
+        const ageNumber = parseInt(age, 10)
+        if (!isNaN(ageNumber) && ageNumber < 18 && (!parentGuardianName || !relationToApplicant)) {
             return NextResponse.json(
                 { error: 'Parent/guardian information is required for applicants under 18' },
                 { status: 400 }
@@ -78,36 +85,80 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Comments are too long' }, { status: 400 })
         }
 
+        // Save registration to database
+        const { data: registration, error: dbError } = await supabase
+            .from('registrations')
+            .insert({
+                name: name.trim(),
+                email: email.trim().toLowerCase(),
+                country: country.trim(),
+                whatsapp: whatsapp.trim(),
+                phone: phone.trim(),
+                gender,
+                age: age.trim(),
+                parent_guardian_name: parentGuardianName?.trim() || null,
+                relation_to_applicant: relationToApplicant?.trim() || null,
+                first_language: firstLanguage,
+                program,
+                class_duration: classDuration,
+                availability: availability || [],
+                hear_about_us: hearAboutUs,
+                friend_name: friendName?.trim() || null,
+                comments: comments?.trim() || null,
+                status: 'pending'
+            })
+            .select()
+            .single()
+
+        if (dbError) {
+            console.error('Database error:', dbError)
+            return NextResponse.json(
+                { error: 'Failed to save registration. Please try again.' },
+                { status: 500 }
+            )
+        }
+
         // Send confirmation email to user
-        await sendRegistrationConfirmationEmail(
-            name.trim(),
-            email.trim().toLowerCase()
-        )
+        try {
+            await sendRegistrationConfirmationEmail(
+                name.trim(),
+                email.trim().toLowerCase()
+            )
+        } catch (emailError) {
+            console.error('Error sending confirmation email:', emailError)
+            // Don't fail the request if email fails, registration is already saved
+        }
 
         // Send registration notification email to admin (with all form data)
-        await sendRegistrationEmail(
-            name.trim(),
-            email.trim().toLowerCase(),
-            country.trim(),
-            whatsapp.trim(),
-            phone.trim(),
-            gender,
-            ageCategory,
-            age,
-            parentGuardianName?.trim() || '',
-            relationToApplicant?.trim() || '',
-            firstLanguage,
-            program,
-            classDuration,
-            availability,
-            hearAboutUs,
-            friendName?.trim() || '',
-            comments?.trim() || ''
-        )
+        try {
+            await sendRegistrationEmail(
+                name.trim(),
+                email.trim().toLowerCase(),
+                country.trim(),
+                whatsapp.trim(),
+                phone.trim(),
+                gender,
+                ageCategory,
+                age,
+                parentGuardianName?.trim() || '',
+                relationToApplicant?.trim() || '',
+                firstLanguage,
+                program,
+                classDuration,
+                availability,
+                hearAboutUs,
+                friendName?.trim() || '',
+                comments?.trim() || ''
+            )
+        } catch (emailError) {
+            console.error('Error sending admin notification email:', emailError)
+            // Don't fail the request if email fails, registration is already saved
+        }
 
         return NextResponse.json({
             success: true,
             message: 'Registration submitted successfully',
+            registrationId: registration?.id
         })
     } catch (error) {
         console.error('Error submitting registration:', error)

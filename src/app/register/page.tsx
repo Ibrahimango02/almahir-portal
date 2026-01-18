@@ -473,6 +473,7 @@ export default function RegisterPage() {
                                             <SelectItem value="islamic-studies">Islamic Studies</SelectItem>
                                             <SelectItem value="special-courses">Special Courses</SelectItem>
                                             <SelectItem value="al-fatihah">Al-Fatihah Hifz (FREE)</SelectItem>
+                                            <SelectItem value="al-isra-al-miraj">Al-Isra & Al-Mi'raj (FREE)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
