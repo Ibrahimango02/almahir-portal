@@ -934,7 +934,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
               onClick={() => setShowResetDialog(true)}
               className={`flex items-center justify-center h-10 w-10 rounded-lg border-2 transition-all duration-200 p-0 ${isLoading || currentStatus === 'scheduled' || currentStatus === 'rescheduled'
                 ? 'border-gray-400 bg-gray-400 text-gray-600 cursor-not-allowed opacity-50'
-                : 'border-red-800 bg-red-700 text-white hover:bg-red-800 hover:shadow-md'
+                : 'border-red-900 bg-red-800 text-white hover:bg-red-900 hover:shadow-md'
                 }`}
               disabled={isLoading || currentStatus === 'scheduled' || currentStatus === 'rescheduled'}
             >
@@ -1109,7 +1109,7 @@ export function ClassActionButtons({ classData, currentStatus, onStatusChange, s
             <Button
               onClick={handleResetSession}
               disabled={isLoading}
-              className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700"
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600 hover:border-red-700"
             >
               {isLoading ? "Resetting..." : "Confirm Reset"}
             </Button>

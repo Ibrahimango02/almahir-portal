@@ -392,7 +392,7 @@ export default function CreateClassPage() {
                 days_repeated: daysRepeatedWithTimes,
                 status: "active",
                 class_link: finalClassLink,
-                timezone: timezone || 'America/New_York', // Use user's local timezone
+                timezone: timezone || 'America/Toronto', // Use user's local timezone
                 times: timesWithUtc,
                 teacher_id: values.teacherIds,
                 student_ids: values.studentIds || []

@@ -310,7 +310,7 @@ export default function EditClassPage() {
                     const times: Record<string, { start: string; duration: string }> = {}
 
                     // Get the class timezone (or use current user timezone as fallback)
-                    const classTimezone = classDataResult.timezone || timezone || 'America/New_York'
+                    const classTimezone = classDataResult.timezone || timezone || 'America/Toronto'
 
                     // Process the new object structure
                     // Times in days_repeated are now stored as LOCAL times (not UTC)
@@ -466,7 +466,7 @@ export default function EditClassPage() {
                 end_date: localToUtc(values.endDate, timezone).toISOString(),
                 days_repeated: daysRepeatedWithTimes,
                 class_link: finalClassLink,
-                timezone: timezone || 'America/New_York', // Use user's local timezone
+                timezone: timezone || 'America/Toronto', // Use user's local timezone
                 times: timesWithUtc,
             }
 

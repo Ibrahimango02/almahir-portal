@@ -220,6 +220,19 @@ export default function ReschedulePage() {
       const durationMinutes = parseInt(data.duration)
       const endTime = calculateEndTime(data.start_time, durationMinutes)
 
+      // Determine if end time is on the next day (when end time is earlier than or equal to start time)
+      const [startHour, startMinute] = data.start_time.split(':').map(Number)
+      const [endHour, endMinute] = endTime.split(':').map(Number)
+      const startTotalMinutes = startHour * 60 + startMinute
+      const endTotalMinutes = endHour * 60 + endMinute
+      const isNextDay = endTotalMinutes <= startTotalMinutes
+
+      // Calculate end date - add one day if end time crosses midnight
+      const endDate = new Date(data.date)
+      if (isNextDay) {
+        endDate.setDate(endDate.getDate() + 1)
+      }
+
       // Convert local date and times to UTC before saving
       const startUtc = combineDateTimeToUtc(
         format(data.date, 'yyyy-MM-dd'),
@@ -227,7 +240,7 @@ export default function ReschedulePage() {
         timezone
       );
       const endUtc = combineDateTimeToUtc(
-        format(data.date, 'yyyy-MM-dd'),
+        format(endDate, 'yyyy-MM-dd'),
         endTime + ':00',
         timezone
       );

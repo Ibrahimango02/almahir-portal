@@ -152,8 +152,8 @@ export async function createClass(classData: ClassData) {
                     const [startHours, startMinutes] = daySchedule.start.split(':').map(Number)
                     const [endHours, endMinutes] = daySchedule.end.split(':').map(Number)
 
-                    // Get the class timezone (default to America/New_York if not set)
-                    const classTimezone = classData.timezone || 'America/New_York'
+                    // Get the class timezone (default to America/Toronto if not set)
+                    const classTimezone = classData.timezone || 'America/Toronto'
 
                     // Convert local time to UTC using the session date and class timezone
                     // This properly handles DST and timezone offsets
