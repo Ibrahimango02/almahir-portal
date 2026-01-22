@@ -36,6 +36,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { SubjectsCombobox } from "@/components/subjects-combobox"
 import { TeachersCombobox } from "@/components/teachers-combobox"
 import { StudentsCombobox } from "@/components/students-combobox"
+import { TimezoneSelect } from "@/components/timezone-select"
 
 // Form schema for editing class
 const formSchema = z.object({
@@ -52,6 +53,7 @@ const formSchema = z.object({
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
+    timezone: z.string().min(1, { message: "Please select a timezone" }),
 }).refine(
     (data) => {
         if (!data.startDate || !data.endDate) return true
@@ -172,6 +174,7 @@ export default function EditClassPage() {
             classLink: "",
             teacherIds: [],
             studentIds: [],
+            timezone: timezone || 'America/Toronto',
         },
     })
 
@@ -215,6 +218,9 @@ export default function EditClassPage() {
                 return
             }
 
+            // Use the form's timezone value for conflict checking (or user timezone if not set)
+            const classTimezone = form.getValues("timezone") || timezone || 'America/Toronto'
+
             // Check teacher conflicts
             const teacherConflictsResult = selectedTeacherIds.length > 0
                 ? await checkMultipleTeacherConflicts(
@@ -222,7 +228,7 @@ export default function EditClassPage() {
                     classTimes,
                     startDate,
                     endDate,
-                    timezone,
+                    classTimezone,
                     classId
                 )
                 : {}
@@ -234,7 +240,7 @@ export default function EditClassPage() {
                     classTimes,
                     startDate,
                     endDate,
-                    timezone,
+                    classTimezone,
                     classId
                 )
                 : {}
@@ -351,6 +357,7 @@ export default function EditClassPage() {
                         classLink: classDataResult.class_link || "",
                         teacherIds: classDataResult.teachers.map(t => t.teacher_id),
                         studentIds: classDataResult.students.map(s => s.student_id),
+                        timezone: classTimezone,
                     })
                 }
             } catch (error) {
@@ -396,16 +403,17 @@ export default function EditClassPage() {
                 const durationMinutes = parseInt(time.duration)
                 const endTime = calculateEndTime(time.start, durationMinutes)
 
-                // For each day, convert the local time to UTC
+                // For each day, convert the local time to UTC using the form's timezone
+                const classTimezone = values.timezone || timezone || 'America/Toronto'
                 const startUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
                     time.start + ':00',
-                    timezone
+                    classTimezone
                 );
                 const endUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
                     endTime + ':00',
-                    timezone
+                    classTimezone
                 );
 
                 // Convert day key to capital first letter to match session creation logic
@@ -456,17 +464,18 @@ export default function EditClassPage() {
             }
 
             // Prepare update data for basic class information (excluding teacher and student assignments)
-            // Use the user's local timezone (from context) for the class timezone
+            // Use the form's timezone value
+            const classTimezone = values.timezone || timezone || 'America/Toronto'
             const updateData = {
                 classId: classId,
                 title: values.title,
                 subject: values.subject,
                 description: values.description || null,
-                start_date: localToUtc(values.startDate, timezone).toISOString(),
-                end_date: localToUtc(values.endDate, timezone).toISOString(),
+                start_date: localToUtc(values.startDate, classTimezone).toISOString(),
+                end_date: localToUtc(values.endDate, classTimezone).toISOString(),
                 days_repeated: daysRepeatedWithTimes,
                 class_link: finalClassLink,
-                timezone: timezone || 'America/Toronto', // Use user's local timezone
+                timezone: classTimezone,
                 times: timesWithUtc,
             }
 
@@ -848,6 +857,25 @@ export default function EditClassPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    <FormField
+                                        control={form.control}
+                                        name="timezone"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Timezone</FormLabel>
+                                                <FormControl>
+                                                    <TimezoneSelect
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        placeholder="Select timezone"
+                                                        className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
 
                                 <Separator className="my-8" />

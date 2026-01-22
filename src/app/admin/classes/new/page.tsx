@@ -36,6 +36,7 @@ import { SubjectsCombobox } from "@/components/subjects-combobox"
 import { TeachersCombobox } from "@/components/teachers-combobox"
 import { StudentsCombobox } from "@/components/students-combobox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TimezoneSelect } from "@/components/timezone-select"
 
 // Update the form schema to include teacher and student selection
 const formSchema = z.object({
@@ -52,6 +53,7 @@ const formSchema = z.object({
     classLink: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
     teacherIds: z.array(z.string()).min(1, { message: "Please select at least one teacher" }),
     studentIds: z.array(z.string()).optional(),
+    timezone: z.string().min(1, { message: "Please select a timezone" }),
 }).refine(
     (data) => {
         if (!data.startDate || !data.endDate) return true
@@ -173,6 +175,7 @@ export default function CreateClassPage() {
             classLink: "",
             teacherIds: [],
             studentIds: [],
+            timezone: timezone || 'America/Toronto',
         },
     })
 
@@ -318,6 +321,7 @@ export default function CreateClassPage() {
             }
 
             // Convert local times to UTC before saving
+            const classTimezone = values.timezone || timezone || 'America/Toronto'
             const timesWithUtc = Object.entries(values.times).reduce((acc, [day, time]) => {
                 // Calculate end time from start time and duration
                 const durationMinutes = parseInt(time.duration)
@@ -327,12 +331,12 @@ export default function CreateClassPage() {
                 const startUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
                     time.start + ':00',
-                    timezone
+                    classTimezone
                 );
                 const endUtc = combineDateTimeToUtc(
                     format(values.startDate, 'yyyy-MM-dd'),
                     endTime + ':00',
-                    timezone
+                    classTimezone
                 );
 
                 // Convert day key to capital first letter to match session creation logic
@@ -387,12 +391,12 @@ export default function CreateClassPage() {
                 title: values.title,
                 subject: values.subject,
                 description: values.description || null,
-                start_date: localToUtc(values.startDate, timezone).toISOString(),
-                end_date: localToUtc(values.endDate, timezone).toISOString(),
+                start_date: localToUtc(values.startDate, classTimezone).toISOString(),
+                end_date: localToUtc(values.endDate, classTimezone).toISOString(),
                 days_repeated: daysRepeatedWithTimes,
                 status: "active",
                 class_link: finalClassLink,
-                timezone: timezone || 'America/Toronto', // Use user's local timezone
+                timezone: classTimezone, // Use selected timezone from form
                 times: timesWithUtc,
                 teacher_id: values.teacherIds,
                 student_ids: values.studentIds || []
@@ -739,6 +743,25 @@ export default function CreateClassPage() {
                                             </div>
                                         </div>
                                     )}
+
+                                    <FormField
+                                        control={form.control}
+                                        name="timezone"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="text-sm font-medium text-gray-700">Timezone</FormLabel>
+                                                <FormControl>
+                                                    <TimezoneSelect
+                                                        value={field.value}
+                                                        onValueChange={field.onChange}
+                                                        placeholder="Select timezone"
+                                                        className="h-11 border-gray-200 focus:border-[#3d8f5b] focus:ring-[#3d8f5b]/20"
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
                                 </div>
 
                                 <Separator className="my-8" />

@@ -285,8 +285,8 @@ export default function ReschedulePage() {
   const startDateTime = utcToLocal(classData.start_date, timezone)
   const endDateTime = utcToLocal(classData.end_date, timezone)
   const formattedDate = formatDateTime(startDateTime, "MMMM d, yyyy", timezone)
-  const formattedStartTime = format(startDateTime, "HH:mm")
-  const formattedEndTime = format(endDateTime, "HH:mm")
+  const formattedStartTime = format(startDateTime, "h:mm a")
+  const formattedEndTime = format(endDateTime, "h:mm a")
 
   return (
     <div className="flex flex-col gap-6">
@@ -297,14 +297,14 @@ export default function ReschedulePage() {
       <Card>
         <CardHeader>
           <CardTitle>Reschedule Session</CardTitle>
-          <CardDescription>Update the schedule for {classData.title}</CardDescription>
+          <CardDescription>{classData.title}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-6 p-4 bg-muted/50 rounded-md">
             <h3 className="font-medium mb-2">Current Schedule</h3>
             <p className="text-sm">Date: {formattedDate}</p>
             <p className="text-sm">
-              Time: {formattedStartTime} - {formattedEndTime} (24-hour format)
+              Time: {formattedStartTime} - {formattedEndTime}
             </p>
             <p className="text-sm">
               Teacher: {classData.teachers[0]?.first_name} {classData.teachers[0]?.last_name}

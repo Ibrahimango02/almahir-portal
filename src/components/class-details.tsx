@@ -12,7 +12,7 @@ import { ClassSessionType } from "@/types"
 import { useRouter } from "next/navigation"
 import { formatDateTime, utcToLocal, combineDateTimeToUtc } from "@/lib/utils/timezone"
 import { useTimezone } from "@/contexts/TimezoneContext"
-import { toZonedTime } from "date-fns-tz"
+import { toZonedTime, formatInTimeZone } from "date-fns-tz"
 import { format } from "date-fns"
 import { convertStatusToPrefixedFormat } from "@/lib/utils"
 import { ClientTimeDisplay } from "./client-time-display"
@@ -191,6 +191,88 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
     }
   }
 
+  // Helper function to convert day name and time from class timezone to user timezone
+  // Returns both the converted day name and formatted time
+  const convertDayAndTime = (dayName: string, timeSlot: { start: string; end: string }): { day: string; startTime: string; endTime: string } => {
+    try {
+      // Map day names to day indices (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
+      const dayMap: { [key: string]: number } = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6
+      }
+
+      const dayIndex = dayMap[dayName.toLowerCase()]
+      if (dayIndex === undefined) {
+        throw new Error(`Invalid day name: ${dayName}`)
+      }
+
+      // Find the next occurrence of this day (or use a reference date)
+      const today = new Date()
+      const currentDay = today.getDay()
+      let daysUntilTargetDay = dayIndex - currentDay
+      if (daysUntilTargetDay < 0) {
+        daysUntilTargetDay += 7 // Next week
+      }
+      const targetDate = new Date(today)
+      targetDate.setDate(today.getDate() + daysUntilTargetDay)
+      const dateStr = format(targetDate, 'yyyy-MM-dd')
+
+      // Convert start time from class timezone to UTC, then to user timezone
+      const startUtcDate = combineDateTimeToUtc(
+        dateStr,
+        `${timeSlot.start}:00`,
+        classTimezone
+      )
+      const startUserTzDate = toZonedTime(startUtcDate, timezone)
+
+      // Convert end time from class timezone to UTC, then to user timezone
+      const endUtcDate = combineDateTimeToUtc(
+        dateStr,
+        `${timeSlot.end}:00`,
+        classTimezone
+      )
+      const endUserTzDate = toZonedTime(endUtcDate, timezone)
+
+      // Get the day name in user's timezone (the day might have changed due to timezone conversion)
+      // Use formatInTimeZone with the UTC date to get the day in the user's timezone
+      const convertedDayName = formatInTimeZone(startUtcDate, timezone, 'EEEE').toLowerCase()
+
+      // Format times as 12-hour format
+      const startHours = startUserTzDate.getHours()
+      const startMinutes = startUserTzDate.getMinutes()
+      const startHour12 = startHours === 0 ? 12 : startHours > 12 ? startHours - 12 : startHours
+      const startAmpm = startHours >= 12 ? 'PM' : 'AM'
+      const formattedStartTime = `${startHour12}:${String(startMinutes).padStart(2, '0')} ${startAmpm}`
+
+      const endHours = endUserTzDate.getHours()
+      const endMinutes = endUserTzDate.getMinutes()
+      const endHour12 = endHours === 0 ? 12 : endHours > 12 ? endHours - 12 : endHours
+      const endAmpm = endHours >= 12 ? 'PM' : 'AM'
+      const formattedEndTime = `${endHour12}:${String(endMinutes).padStart(2, '0')} ${endAmpm}`
+
+      return {
+        day: convertedDayName,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime
+      }
+    } catch (error) {
+      console.error('Error converting day and time:', error)
+      // Fallback: use original day and convert time only
+      const formattedStartTime = timeSlot.start ? convertAndFormatTime(timeSlot.start) : ''
+      const formattedEndTime = timeSlot.end ? convertAndFormatTime(timeSlot.end) : ''
+      return {
+        day: dayName,
+        startTime: formattedStartTime,
+        endTime: formattedEndTime
+      }
+    }
+  }
+
   return (
     <>
       <style>{scrollbarStyles}</style>
@@ -252,16 +334,16 @@ export function ClassDetails({ classData, userRole, userParentStudents = [] }: C
                     {Object.keys(daysRepeated).length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
                         {Object.entries(daysRepeated).map(([day, timeSlot]) => {
-                          // Convert times from class timezone to user timezone and format for display
-                          const formattedStartTime = timeSlot?.start ? convertAndFormatTime(timeSlot.start) : ''
-                          const formattedEndTime = timeSlot?.end ? convertAndFormatTime(timeSlot.end) : ''
+                          // Convert day and times from class timezone to user timezone
+                          const converted = timeSlot ? convertDayAndTime(day, timeSlot) : null
+                          if (!converted) return null
                           return (
                             <span
                               key={day}
                               className="inline-flex items-center px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full border border-blue-200 shadow-sm"
                             >
                               <CalendarDays className="h-3 w-3 mr-1 text-blue-400" />
-                              {day.charAt(0).toUpperCase() + day.slice(1)} {formattedStartTime} - {formattedEndTime}
+                              {converted.day.charAt(0).toUpperCase() + converted.day.slice(1)} {converted.startTime} - {converted.endTime}
                             </span>
                           )
                         })}

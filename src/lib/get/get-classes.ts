@@ -1265,6 +1265,7 @@ export async function getClassById(classId: string): Promise<ClassType | null> {
         days_repeated: daysRepeated,
         sessions: sessions,
         class_link: classData.class_link || null,
+        timezone: classData.timezone || null,
         teachers: teachers,
         students: enrolledStudents,
         times: times,
