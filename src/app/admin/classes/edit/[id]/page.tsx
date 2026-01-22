@@ -542,7 +542,7 @@ export default function EditClassPage() {
 
     return (
         <div className="min-h-screen py-8">
-            <BackButton href="/admin/classes" label="Back to Classes" />
+            <BackButton href={`/admin/classes/${classId}`} label="Back to Class" />
             <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
                 <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
                     <CardHeader className="text-center pb-8">

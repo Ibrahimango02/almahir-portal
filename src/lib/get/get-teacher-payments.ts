@@ -2,6 +2,26 @@ import { createClient } from "@/utils/supabase/client"
 import { TeacherPaymentType } from "@/types"
 import { SupabaseClient } from "@supabase/supabase-js"
 
+// Batch size for PostgREST .in() queries (PostgREST has limits on array size)
+const BATCH_SIZE = 100
+
+// Helper function to batch array operations
+async function batchQuery<T>(
+    ids: string[],
+    batchSize: number,
+    queryFn: (batch: string[]) => Promise<T[]>
+): Promise<T[]> {
+    if (ids.length === 0) return []
+
+    const results: T[] = []
+    for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize)
+        const batchResults = await queryFn(batch)
+        results.push(...batchResults)
+    }
+    return results
+}
+
 // Helper to fetch session + class title
 async function getSessionWithClassTitle(supabase: SupabaseClient, sessionId: string) {
     // Get session
@@ -48,38 +68,66 @@ export async function getTeacherPayments(): Promise<TeacherPaymentType[]> {
     }
 
     // Get teacher IDs and session IDs
-    const teacherIds = payments.map((payment: { teacher_id: string }) => payment.teacher_id)
-    const sessionIds = payments.map((payment: { session_id: string }) => payment.session_id)
+    const teacherIds = [...new Set(payments.map((payment: { teacher_id: string }) => payment.teacher_id))]
+    const sessionIds = [...new Set(payments.map((payment: { session_id: string }) => payment.session_id))]
 
-    // Get teachers data from profiles
-    const { data: teachersProfiles, error: teachersError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', teacherIds)
-    if (teachersError) throw teachersError;
+    // Get teachers data from profiles (with batching)
+    const teachersProfiles = await batchQuery(
+        teacherIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
-    // Get teachers data from teachers table (for currency)
-    const { data: teachersData, error: teachersDataError } = await supabase
-        .from('teachers')
-        .select('profile_id, currency')
-        .in('profile_id', teacherIds)
-    if (teachersDataError) throw teachersDataError;
+    // Get teachers data from teachers table (for currency) (with batching)
+    const teachersData = await batchQuery(
+        teacherIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('teachers')
+                .select('profile_id, currency')
+                .in('profile_id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
-    // Get sessions data (with class_id)
-    const { data: sessions, error: sessionsError } = await supabase
-        .from('class_sessions')
-        .select('id, start_date, end_date, class_id')
-        .in('id', sessionIds)
-    if (sessionsError) throw sessionsError;
+    // Get sessions data (with class_id) (with batching)
+    const sessions = await batchQuery(
+        sessionIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('class_sessions')
+                .select('id, start_date, end_date, class_id')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
     // Get class_ids
-    const classIds = sessions.map((s: { class_id: string }) => s.class_id)
-    // Get classes data
-    const { data: classes, error: classesError } = await supabase
-        .from('classes')
-        .select('id, title')
-        .in('id', classIds)
-    if (classesError) throw classesError;
+    const classIds = [...new Set(sessions.map((s: { class_id: string }) => s.class_id))]
+    // Get classes data (with batching)
+    const classes = await batchQuery(
+        classIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('classes')
+                .select('id, title')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
     return payments.map((payment: { id: string; teacher_id: string; session_id: string; hours: number; amount: number; status: string; paid_date: string | null; created_at: string; updated_at: string }) => {
         const teacherProfile = teachersProfiles.find((t: { id: string }) => t.id === payment.teacher_id) || { id: '', first_name: '', last_name: '' };
@@ -198,21 +246,35 @@ export async function getTeacherPaymentsByTeacherId(teacherId: string): Promise<
     if (teacherDataError) throw teacherDataError;
 
     // Get session IDs
-    const sessionIds = payments.map((payment: { session_id: string }) => payment.session_id)
-    // Get sessions data (with class_id)
-    const { data: sessions, error: sessionsError } = await supabase
-        .from('class_sessions')
-        .select('id, start_date, end_date, class_id')
-        .in('id', sessionIds)
-    if (sessionsError) throw sessionsError;
+    const sessionIds = [...new Set(payments.map((payment: { session_id: string }) => payment.session_id))]
+    // Get sessions data (with class_id) (with batching)
+    const sessions = await batchQuery(
+        sessionIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('class_sessions')
+                .select('id, start_date, end_date, class_id')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
     // Get class_ids
-    const classIds = sessions.map((s: { class_id: string }) => s.class_id)
-    // Get classes data
-    const { data: classes, error: classesError } = await supabase
-        .from('classes')
-        .select('id, title')
-        .in('id', classIds)
-    if (classesError) throw classesError;
+    const classIds = [...new Set(sessions.map((s: { class_id: string }) => s.class_id))]
+    // Get classes data (with batching)
+    const classes = await batchQuery(
+        classIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('classes')
+                .select('id, title')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
     return payments.map((payment: { id: string; teacher_id: string; session_id: string; hours: number; amount: number; status: string; paid_date: string | null; created_at: string; updated_at: string }) => {
         const session = sessions.find((s: { id: string }) => s.id === payment.session_id) || { id: '', start_date: '', end_date: '', class_id: '' };
@@ -258,20 +320,34 @@ export async function getTeacherPaymentsBySessionId(sessionId: string): Promise<
     }
 
     // Get teacher IDs
-    const teacherIds = payments.map((payment: { teacher_id: string }) => payment.teacher_id)
-    // Get teachers data from profiles
-    const { data: teachersProfiles, error: teachersError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .in('id', teacherIds)
-    if (teachersError) throw teachersError;
+    const teacherIds = [...new Set(payments.map((payment: { teacher_id: string }) => payment.teacher_id))]
+    // Get teachers data from profiles (with batching)
+    const teachersProfiles = await batchQuery(
+        teacherIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('profiles')
+                .select('id, first_name, last_name')
+                .in('id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
-    // Get teachers data from teachers table (for currency)
-    const { data: teachersData, error: teachersDataError } = await supabase
-        .from('teachers')
-        .select('profile_id, currency')
-        .in('profile_id', teacherIds)
-    if (teachersDataError) throw teachersDataError;
+    // Get teachers data from teachers table (for currency) (with batching)
+    const teachersData = await batchQuery(
+        teacherIds,
+        BATCH_SIZE,
+        async (batch) => {
+            const { data: batchData, error } = await supabase
+                .from('teachers')
+                .select('profile_id, currency')
+                .in('profile_id', batch)
+            if (error) throw error
+            return batchData || []
+        }
+    )
 
     // Get session + class title
     const session = await getSessionWithClassTitle(supabase, sessionId);
