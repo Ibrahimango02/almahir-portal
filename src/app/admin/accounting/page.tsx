@@ -9,7 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { getInvoices } from "@/lib/get/get-invoices"
 import { getTeacherPayments } from "@/lib/get/get-teacher-payments"
 import { StudentInvoiceType, TeacherPaymentType } from "@/types"
-import { DollarSign, HandCoins, Calendar, X } from "lucide-react"
+import { DollarSign, HandCoins, ListFilter, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -232,7 +232,7 @@ export default function AdminAccountingPage() {
       <Card className="border-0 shadow-none">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+            <ListFilter className="h-5 w-5" />
             Filters
           </CardTitle>
         </CardHeader>

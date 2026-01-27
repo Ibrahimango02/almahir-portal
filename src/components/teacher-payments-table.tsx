@@ -57,10 +57,8 @@ export function TeacherPaymentsTable({ payments }: TeacherPaymentsTableProps) {
         return acc
     }, {} as Record<string, TeacherAggregate>)
 
-    // Convert to array and filter out teachers with no pending payments
-    let aggregatedTeachers = Object.values(teacherAggregates).filter(
-        teacher => teacher.total_pending_amount > 0 || teacher.total_hours > 0
-    )
+    // Convert to array - show all teachers with payments, even if they have no pending payments
+    let aggregatedTeachers = Object.values(teacherAggregates)
 
     // Sort aggregated teachers
     if (sortConfig.direction !== 'none') {

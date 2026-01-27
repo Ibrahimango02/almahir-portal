@@ -5,27 +5,38 @@ import { ChevronDown, Search, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
+// // Define the subjects available for selection
+// const subjects = [
+//     "Qur'an Recitation",
+//     "Qur'an Memorization",
+//     "Tajweed (Beginner)",
+//     "Tajweed (Advanced)",
+//     "Tajweed and Recitation Certificate",
+//     "Qur'an Memorization Ijaazah",
+//     "Learn Ten Qura'at",
+//     "Tafseer",
+//     "Learn to Read Arabic",
+//     "Arabic Grammar",
+//     "Arabic Conversation",
+//     "Modern Standard Arabic",
+//     "Islamic Studies for Kids",
+//     "Prayer Lessons",
+//     "Azan Program",
+//     "Five Pillars of Islam",
+//     "Stories of the Qur'an",
+//     "Stories of the Prophets",
+//     "Daily Duas"
+// ]
+
 // Define the subjects available for selection
 const subjects = [
-    "Qur'an Recitation",
-    "Qur'an Memorization",
+    "Qur'an",
+    "Arabic",
     "Tajweed (Beginner)",
+    "Tajweed (Intermediate)",
     "Tajweed (Advanced)",
-    "Tajweed and Recitation Certificate",
-    "Qur'an Memorization Ijaazah",
-    "Learn Ten Qura'at",
-    "Tafseer",
-    "Learn to Read Arabic",
-    "Arabic Grammar",
-    "Arabic Conversation",
-    "Modern Standard Arabic",
-    "Islamic Studies for Kids",
-    "Prayer Lessons",
-    "Azan Program",
-    "Five Pillars of Islam",
-    "Stories of the Qur'an",
-    "Stories of the Prophets",
-    "Daily Duas"
+    "Islamic Studies",
+    "Special Program",
 ]
 
 interface SubjectsComboboxProps {

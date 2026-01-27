@@ -1,8 +1,9 @@
 import { TimeSlot, WeeklySchedule } from '@/types'
 import { getSessionsByTeacherId, getSessionsByStudentId } from '@/lib/get/get-classes'
 import { getTeacherAvailability } from '@/lib/get/get-teachers'
-import { formatInTimeZone } from 'date-fns-tz'
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 import { createClient } from '@/utils/supabase/client'
+import { format } from 'date-fns'
 
 export interface ConflictInfo {
     hasConflict: boolean
@@ -17,6 +18,7 @@ export interface ConflictInfo {
 
 /**
  * Convert UTC time to local time in HH:mm format for comparison
+ * Used for teacher availability which is stored in UTC
  */
 function convertUtcTimeToLocalForComparison(utcTime: string, timezone: string): string {
     try {
@@ -32,6 +34,48 @@ function convertUtcTimeToLocalForComparison(utcTime: string, timezone: string): 
     } catch (error) {
         console.error('Error converting UTC time to local for comparison:', error)
         return utcTime // Fallback to original time if conversion fails
+    }
+}
+
+/**
+ * Convert a local time from one timezone to another timezone
+ * This is used for comparing class times that are stored in local format
+ * @param localTime - Time in HH:mm format in sourceTimezone
+ * @param sourceTimezone - IANA timezone of the source time
+ * @param targetTimezone - IANA timezone to convert to
+ * @returns Time in HH:mm format in targetTimezone
+ */
+function convertLocalTimeBetweenTimezones(
+    localTime: string,
+    sourceTimezone: string,
+    targetTimezone: string
+): string {
+    try {
+        // If timezones are the same, no conversion needed
+        if (sourceTimezone === targetTimezone) {
+            return localTime
+        }
+
+        // Create a date object for today with the local time in the source timezone
+        const today = new Date()
+        const [hours, minutes] = localTime.split(':').map(Number)
+
+        // Create a date object for today with the local time
+        const dateString = format(today, 'yyyy-MM-dd')
+        const timeString = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`
+        const dateTimeString = `${dateString}T${timeString}`
+
+        // Parse the date string and treat it as if it's in the source timezone
+        const localDate = new Date(dateTimeString)
+
+        // Convert from source timezone to UTC (treating localDate as if it's in sourceTimezone)
+        const utcDate = fromZonedTime(localDate, sourceTimezone)
+
+        // Format in target timezone as HH:mm
+        return formatInTimeZone(utcDate, targetTimezone, 'HH:mm')
+    } catch (error) {
+        console.error('Error converting local time between timezones:', error)
+        return localTime // Fallback to original time if conversion fails
     }
 }
 
@@ -94,12 +138,15 @@ export async function checkTeacherScheduleConflicts(
         const supabase = createClient()
         const { data: classes } = await supabase
             .from('classes')
-            .select('id, days_repeated')
+            .select('id, days_repeated, timezone')
             .in('id', classIds)
 
-        // Create a map of class_id to days_repeated for quick lookup
+        // Create a map of class_id to days_repeated and timezone for quick lookup
         const classDaysRepeatedMap = new Map(
             classes?.map(c => [c.id, c.days_repeated]) || []
+        )
+        const classTimezoneMap = new Map(
+            classes?.map(c => [c.id, c.timezone || 'America/Toronto']) || []
         )
 
         // Check each day of the new class
@@ -139,9 +186,21 @@ export async function checkTeacherScheduleConflicts(
                         const dayTimeSlot = (daysRepeated as Record<string, { start: string; end: string }>)[normalizedDay]
 
                         if (dayTimeSlot && dayTimeSlot.start && dayTimeSlot.end) {
-                            // Use the class's recurring time (stored in UTC) and convert to target timezone
-                            existingStartTime = convertUtcTimeToLocalForComparison(dayTimeSlot.start, timezone)
-                            existingEndTime = convertUtcTimeToLocalForComparison(dayTimeSlot.end, timezone)
+                            // days_repeated times are stored in LOCAL format (not UTC)
+                            // Get the existing class's timezone
+                            const existingClassTimezone = classTimezoneMap.get(session.class_id) || 'America/Toronto'
+
+                            // Convert the existing class's local time to the new class's timezone for comparison
+                            existingStartTime = convertLocalTimeBetweenTimezones(
+                                dayTimeSlot.start,
+                                existingClassTimezone,
+                                timezone
+                            )
+                            existingEndTime = convertLocalTimeBetweenTimezones(
+                                dayTimeSlot.end,
+                                existingClassTimezone,
+                                timezone
+                            )
                         } else {
                             // Fallback to session timestamp if days_repeated doesn't have this day
                             existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')
@@ -353,12 +412,15 @@ export async function checkStudentScheduleConflicts(
         const supabase = createClient()
         const { data: classes } = await supabase
             .from('classes')
-            .select('id, days_repeated')
+            .select('id, days_repeated, timezone')
             .in('id', classIds)
 
-        // Create a map of class_id to days_repeated for quick lookup
+        // Create a map of class_id to days_repeated and timezone for quick lookup
         const classDaysRepeatedMap = new Map(
             classes?.map(c => [c.id, c.days_repeated]) || []
+        )
+        const classTimezoneMap = new Map(
+            classes?.map(c => [c.id, c.timezone || 'America/Toronto']) || []
         )
 
         // Check each day of the new class
@@ -398,9 +460,21 @@ export async function checkStudentScheduleConflicts(
                         const dayTimeSlot = (daysRepeated as Record<string, { start: string; end: string }>)[normalizedDay]
 
                         if (dayTimeSlot && dayTimeSlot.start && dayTimeSlot.end) {
-                            // Use the class's recurring time (stored in UTC) and convert to target timezone
-                            existingStartTime = convertUtcTimeToLocalForComparison(dayTimeSlot.start, timezone)
-                            existingEndTime = convertUtcTimeToLocalForComparison(dayTimeSlot.end, timezone)
+                            // days_repeated times are stored in LOCAL format (not UTC)
+                            // Get the existing class's timezone
+                            const existingClassTimezone = classTimezoneMap.get(session.class_id) || 'America/Toronto'
+
+                            // Convert the existing class's local time to the new class's timezone for comparison
+                            existingStartTime = convertLocalTimeBetweenTimezones(
+                                dayTimeSlot.start,
+                                existingClassTimezone,
+                                timezone
+                            )
+                            existingEndTime = convertLocalTimeBetweenTimezones(
+                                dayTimeSlot.end,
+                                existingClassTimezone,
+                                timezone
+                            )
                         } else {
                             // Fallback to session timestamp if days_repeated doesn't have this day
                             existingStartTime = formatInTimeZone(sessionDate, timezone, 'HH:mm')

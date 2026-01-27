@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Save } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -22,11 +23,14 @@ export default function EditModeratorPage() {
   const router = useRouter()
 
   // All hooks at the top
-  const [moderator, setModerator] = useState<ProfileType | null>(null)
+  const [moderator, setModerator] = useState<(ProfileType & { notes?: string | null; payment_method?: string | null; payment_account?: string | null }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     status: "",
     phone: "",
+    notes: "",
+    payment_method: "",
+    payment_account: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,6 +43,9 @@ export default function EditModeratorPage() {
           setFormData({
             status: moderatorData.status || "",
             phone: moderatorData.phone || "",
+            notes: moderatorData.notes || "",
+            payment_method: moderatorData.payment_method || "none",
+            payment_account: moderatorData.payment_account || "",
           })
         }
       } catch (error) {
@@ -63,7 +70,7 @@ export default function EditModeratorPage() {
     notFound()
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
@@ -77,9 +84,13 @@ export default function EditModeratorPage() {
     setIsSubmitting(true)
 
     try {
+      // Convert "none" values back to empty string for the API
       await updateModerator(moderator.id, {
         status: formData.status,
         phone: formData.phone || null,
+        notes: formData.notes || null,
+        payment_method: formData.payment_method === "none" ? null : formData.payment_method || null,
+        payment_account: formData.payment_account || null,
       })
 
       toast({
@@ -141,6 +152,51 @@ export default function EditModeratorPage() {
                   placeholder="Enter phone number"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="payment_method">Payment Method</Label>
+                <Select
+                  value={formData.payment_method || "none"}
+                  onValueChange={(value) => handleSelectChange("payment_method", value)}
+                >
+                  <SelectTrigger id="payment_method">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="Vodafone Cash">Vodafone Cash</SelectItem>
+                    <SelectItem value="Instapay">Instapay</SelectItem>
+                    <SelectItem value="PayPal">PayPal</SelectItem>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="payment_account">Payment Account</Label>
+                <Input
+                  id="payment_account"
+                  name="payment_account"
+                  value={formData.payment_account}
+                  onChange={handleChange}
+                  placeholder="e.g., account number, email, etc."
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={4}
+                className="resize-none"
+                placeholder="Add any additional notes about the moderator..."
+              />
             </div>
             <div className="flex justify-end gap-4">
               <Button variant="outline" asChild>

@@ -117,21 +117,35 @@ export async function getModerators(): Promise<ProfileType[]> {
     return profiles
 }
 
-export async function getModeratorById(id: string): Promise<ProfileType | null> {
+export async function getModeratorById(id: string): Promise<(ProfileType & { notes?: string | null; payment_method?: string | null; payment_account?: string | null }) | null> {
     const supabase = createClient()
 
-    const { data: profile, error } = await supabase
+    // Get the moderator's profile data
+    const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
         .eq('role', 'moderator')
         .single()
 
-    if (error) {
+    if (profileError || !profile) {
         return null
     }
 
-    return profile
+    // Get the moderator-specific data from moderators table
+    const { data: moderator } = await supabase
+        .from('moderators')
+        .select('notes, payment_method, payment_account')
+        .eq('profile_id', id)
+        .single()
+
+    // Combine the profile and moderator data
+    return {
+        ...profile,
+        notes: moderator?.notes || null,
+        payment_method: moderator?.payment_method || null,
+        payment_account: moderator?.payment_account || null,
+    }
 }
 
 export async function getAdminById(id: string): Promise<AdminType> {

@@ -227,21 +227,6 @@ export function TeacherPaymentSessionsTable({ payments, onStatusUpdate }: Teache
 
     return (
         <div className="space-y-4">
-            {/* Mark All as Paid Button - Only show if all payments are pending */}
-            {allPaymentsArePending && (
-                <div className="flex justify-end">
-                    <Button
-                        onClick={handleMarkAllAsPaid}
-                        disabled={updatingAll}
-                        size="sm"
-                        style={{ backgroundColor: "#3d8f5b", color: "white" }}
-                    >
-                        <CheckCheck className="mr-2 h-3.5 w-3.5" />
-                        {updatingAll ? 'Updating...' : 'Mark All as Paid'}
-                    </Button>
-                </div>
-            )}
-
             {/* Table Container */}
             <div className="rounded-lg border bg-card shadow-sm">
                 <div className="overflow-hidden">
@@ -400,7 +385,19 @@ export function TeacherPaymentSessionsTable({ payments, onStatusUpdate }: Teache
                                         {/* Status column - empty in footer */}
                                     </TableCell>
                                     <TableCell className="py-3 px-3">
-                                        {/* Actions column - empty in footer */}
+                                        {/* Mark All as Paid Button - Only show if all payments are pending */}
+                                        {allPaymentsArePending && (
+                                            <Button
+                                                onClick={handleMarkAllAsPaid}
+                                                disabled={updatingAll}
+                                                size="sm"
+                                                style={{ backgroundColor: "#3d8f5b", color: "white" }}
+                                                className="h-7"
+                                            >
+                                                <CheckCheck className="mr-2 h-3.5 w-3.5" />
+                                                {updatingAll ? 'Updating...' : 'Mark All as Paid'}
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             </tfoot>
