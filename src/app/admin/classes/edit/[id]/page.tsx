@@ -466,6 +466,13 @@ export default function EditClassPage() {
             // Prepare update data for basic class information (excluding teacher and student assignments)
             // Use the form's timezone value
             const classTimezone = values.timezone || timezone || 'America/Toronto'
+            const previousEndDate = classData?.end_date ? utcToLocal(classData.end_date, classTimezone) : null
+            const todayStart = startOfDay(new Date())
+            const hasEndDateChanged = previousEndDate
+                ? startOfDay(previousEndDate).getTime() !== startOfDay(values.endDate).getTime()
+                : true
+            const shouldSetClassActive = hasEndDateChanged && startOfDay(values.endDate) > todayStart
+
             const updateData = {
                 classId: classId,
                 title: values.title,
@@ -477,6 +484,7 @@ export default function EditClassPage() {
                 class_link: finalClassLink,
                 timezone: classTimezone,
                 times: timesWithUtc,
+                ...(shouldSetClassActive ? { status: "active" } : {}),
             }
 
             // Update class basic information first

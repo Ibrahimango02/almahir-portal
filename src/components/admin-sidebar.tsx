@@ -15,6 +15,7 @@ import {
   User,
   UserCog,
   UserPen,
+  Wrench,
   X,
   LibraryBig,
   FolderOpen,
@@ -68,6 +69,12 @@ const routes = [
     label: "Accounting",
     icon: DollarSign,
     href: "/admin/accounting",
+    color: "text-green-600",
+  },
+  {
+    label: "Tools",
+    icon: Wrench,
+    href: "/admin/tools",
     color: "text-green-600",
   },
   {

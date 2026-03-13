@@ -429,6 +429,48 @@ export type TeacherPaymentType = {
     };
 };
 
+export type AdminClassSessionsToolFilters = {
+    classId?: string
+    teacherId?: string
+    studentId?: string
+    status?: string
+    statuses?: string[]
+    startDate?: string // YYYY-MM-DD
+    endDate?: string // YYYY-MM-DD
+}
+
+export type AdminClassSessionsToolOption = {
+    id: string
+    label: string
+}
+
+export type AdminClassSessionsToolRow = {
+    session_id: string
+    class_id: string
+    class_name: string
+    teacher_ids: string[]
+    teacher_names: string[]
+    student_ids: string[]
+    student_names: string[]
+    teacher_hourly_rates: number[]
+    teacher_hourly_rate_currencies: (string | null)[]
+    session_date: string
+    duration: string | null
+    status: string
+    amount: number | null
+    actual_start_time: string | null
+    actual_end_time: string | null
+    session_summary: string | null
+}
+
+export type AdminClassSessionsToolData = {
+    rows: AdminClassSessionsToolRow[]
+    totalItems: number
+    classOptions: AdminClassSessionsToolOption[]
+    teacherOptions: AdminClassSessionsToolOption[]
+    studentOptions: AdminClassSessionsToolOption[]
+}
+
 // Notification types
 export type NotificationType = {
     id: string
