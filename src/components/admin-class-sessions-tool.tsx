@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { format, parseISO } from "date-fns"
+import { formatInTimeZone } from "date-fns-tz"
 import { CalendarDays, Check, ChevronDown, Download, Filter, Search, Wrench, X } from "lucide-react"
 import * as XLSX from "xlsx"
 import {
@@ -22,10 +23,12 @@ function formatDateValue(date: Date): string {
     return format(date, "yyyy-MM-dd")
 }
 
+const SESSION_DISPLAY_TIMEZONE = "America/Toronto"
+
 function formatTimeOnly(value: string | null): string {
     if (!value) return "-"
     try {
-        return format(parseISO(value), "hh:mm a")
+        return formatInTimeZone(parseISO(value), SESSION_DISPLAY_TIMEZONE, "hh:mm a")
     } catch {
         return value
     }
@@ -33,7 +36,7 @@ function formatTimeOnly(value: string | null): string {
 
 function formatDateOnly(value: string): string {
     try {
-        return format(parseISO(value), "MMM d, yyyy")
+        return formatInTimeZone(parseISO(value), SESSION_DISPLAY_TIMEZONE, "MMM d, yyyy")
     } catch {
         return value
     }
@@ -527,6 +530,7 @@ export function AdminClassSessionsTool() {
                 "Student(s)": row.student_names.join(", "),
                 "Hourly Rate": formatRates(row.teacher_hourly_rates, row.teacher_hourly_rate_currencies),
                 "Session Date": formatDateOnly(row.session_date),
+                "Start Time": formatTimeOnly(row.session_date),
                 Duration: row.duration || "-",
                 Status: row.status || "-",
                 Amount: formatAmount(row.amount, row.teacher_hourly_rate_currencies),
@@ -696,6 +700,9 @@ export function AdminClassSessionsTool() {
                         </div>
                     ) : (
                         <div className="space-y-4">
+                            <p className="text-sm text-muted-foreground">
+                                All session dates and times are shown in {SESSION_DISPLAY_TIMEZONE}.
+                            </p>
                             <div className="overflow-x-auto">
                                 <Table className="min-w-[1600px]">
                                     <TableHeader>
@@ -705,6 +712,7 @@ export function AdminClassSessionsTool() {
                                             <TableHead className={`${tableHeaderCellClass} w-[170px]`}>Student(s)</TableHead>
                                             <TableHead className={`${tableHeaderCellClass} w-[140px]`}>Hourly Rate</TableHead>
                                             <TableHead className={`${tableHeaderCellClass} w-[140px]`}>Session Date</TableHead>
+                                            <TableHead className={`${tableHeaderCellClass} w-[110px]`}>Start Time</TableHead>
                                             <TableHead className={tableHeaderCellClass}>Duration</TableHead>
                                             <TableHead className={tableHeaderCellClass}>Status</TableHead>
                                             <TableHead className={`${tableHeaderCellClass} w-[100px]`}>Amount</TableHead>
@@ -758,6 +766,7 @@ export function AdminClassSessionsTool() {
                                                     {formatRates(row.teacher_hourly_rates, row.teacher_hourly_rate_currencies)}
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap">{formatDateOnly(row.session_date)}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{formatTimeOnly(row.session_date)}</TableCell>
                                                 <TableCell>{row.duration || "-"}</TableCell>
                                                 <TableCell>{row.status || "-"}</TableCell>
                                                 <TableCell>{formatAmount(row.amount, row.teacher_hourly_rate_currencies)}</TableCell>
