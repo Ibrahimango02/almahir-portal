@@ -428,25 +428,6 @@ export function AdminClassSessionsTool() {
     const [currentPage, setCurrentPage] = useState(1)
     const [pageSize, setPageSize] = useState(100)
 
-    useEffect(() => {
-        const fetchOptions = async () => {
-            try {
-                setLoadingOptions(true)
-                const data = await getClassSessionsToolData({}, { includeRows: false })
-                setClassOptions(data.classOptions)
-                setTeacherOptions(data.teacherOptions)
-                setStudentOptions(data.studentOptions)
-            } catch (fetchError) {
-                console.error("Error loading class session tool options:", fetchError)
-                setError("Failed to load filters")
-            } finally {
-                setLoadingOptions(false)
-            }
-        }
-
-        fetchOptions()
-    }, [])
-
     const normalizedFilters = useMemo<AdminClassSessionsToolFilters>(() => {
         return {
             classId: classId !== "all" ? classId : undefined,
@@ -457,6 +438,46 @@ export function AdminClassSessionsTool() {
             endDate: endDate ? formatDateValue(endDate) : undefined,
         }
     }, [classId, teacherId, studentId, selectedStatuses, startDate, endDate])
+
+    useEffect(() => {
+        let cancelled = false
+
+        const fetchOptions = async () => {
+            try {
+                setLoadingOptions(true)
+                const data = await getClassSessionsToolData(normalizedFilters, { includeRows: false })
+                if (cancelled) return
+
+                setClassOptions(data.classOptions)
+                setTeacherOptions(data.teacherOptions)
+                setStudentOptions(data.studentOptions)
+
+                setClassId((current) =>
+                    current !== "all" && !data.classOptions.some((option) => option.id === current) ? "all" : current
+                )
+                setTeacherId((current) =>
+                    current !== "all" && !data.teacherOptions.some((option) => option.id === current) ? "all" : current
+                )
+                setStudentId((current) =>
+                    current !== "all" && !data.studentOptions.some((option) => option.id === current) ? "all" : current
+                )
+            } catch (fetchError) {
+                if (cancelled) return
+                console.error("Error loading class session tool options:", fetchError)
+                setError("Failed to load filters")
+            } finally {
+                if (!cancelled) {
+                    setLoadingOptions(false)
+                }
+            }
+        }
+
+        fetchOptions()
+
+        return () => {
+            cancelled = true
+        }
+    }, [normalizedFilters])
 
     const fetchRows = async (page = currentPage, perPage = pageSize, markApplied = true) => {
         try {
@@ -584,6 +605,24 @@ export function AdminClassSessionsTool() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Start Date</label>
+                            <DatePicker
+                                date={startDate}
+                                onDateChange={setStartDate}
+                                placeholder="Select start date"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">End Date</label>
+                            <DatePicker
+                                date={endDate}
+                                onDateChange={setEndDate}
+                                placeholder="Select end date"
+                            />
+                        </div>
+
                         <SearchSelect
                             label="Class"
                             value={classId}
@@ -631,24 +670,6 @@ export function AdminClassSessionsTool() {
                             emptyText="No statuses found"
                             disabled={loadingOptions}
                         />
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Start Date</label>
-                            <DatePicker
-                                date={startDate}
-                                onDateChange={setStartDate}
-                                placeholder="Select start date"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">End Date</label>
-                            <DatePicker
-                                date={endDate}
-                                onDateChange={setEndDate}
-                                placeholder="Select end date"
-                            />
-                        </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2">

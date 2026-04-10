@@ -42,6 +42,19 @@ function formatPersonName(firstName?: string | null, lastName?: string | null): 
     return fullName || "Unknown"
 }
 
+function buildOptionListFromIds(
+    ids: Set<string>,
+    labelById: Map<string, string>,
+    fallbackLabel: string
+): AdminClassSessionsToolOption[] {
+    return Array.from(ids)
+        .map((id) => ({
+            id,
+            label: labelById.get(id) || fallbackLabel,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 function intersectSets(a: Set<string> | null, b: Set<string>): Set<string> {
     if (!a) return new Set(b)
     return new Set([...a].filter((value) => b.has(value)))
@@ -163,6 +176,7 @@ export async function getClassSessionsToolData(
                 label: classItem.title || "Untitled Class",
             }))
         )
+        const classLabelMap = new Map(classOptions.map((option) => [option.id, option.label]))
 
         const teacherOptions = dedupeAndSortOptions(
             teacherProfiles.map((teacher) => ({
@@ -170,6 +184,7 @@ export async function getClassSessionsToolData(
                 label: formatPersonName(teacher.first_name, teacher.last_name),
             }))
         )
+        const teacherLabelMap = new Map(teacherOptions.map((option) => [option.id, option.label]))
 
         const studentNameMap = new Map<string, string>()
         studentsData.forEach((student) => {
@@ -193,19 +208,7 @@ export async function getClassSessionsToolData(
                 label: studentNameMap.get(id) || "Unknown Student",
             }))
         )
-
-        if (options.includeRows === false) {
-            return {
-                rows: [],
-                totalItems: 0,
-                classOptions,
-                teacherOptions,
-                studentOptions,
-            }
-        }
-
-        const page = options.page && options.page > 0 ? options.page : 1
-        const pageSize = options.pageSize && options.pageSize > 0 ? options.pageSize : 50
+        const studentLabelMap = new Map(studentOptions.map((option) => [option.id, option.label]))
 
         let filteredClassIds: Set<string> | null = null
 
@@ -231,8 +234,93 @@ export async function getClassSessionsToolData(
             filteredClassIds = intersectSets(filteredClassIds, studentClassIds)
         }
 
+        if (filters.startDate || filters.endDate || (filters.statuses && filters.statuses.length > 0) || filters.status) {
+            let classIdsBySessionFiltersQuery = supabase
+                .from("class_sessions")
+                .select("class_id")
+                .lt("start_date", new Date().toISOString())
+
+            if (filters.startDate) {
+                classIdsBySessionFiltersQuery = classIdsBySessionFiltersQuery.gte("start_date", `${filters.startDate}T00:00:00`)
+            }
+            if (filters.endDate) {
+                classIdsBySessionFiltersQuery = classIdsBySessionFiltersQuery.lte("start_date", `${filters.endDate}T23:59:59.999`)
+            }
+            if (filters.statuses && filters.statuses.length > 0) {
+                classIdsBySessionFiltersQuery = classIdsBySessionFiltersQuery.in("status", filters.statuses)
+            } else if (filters.status) {
+                classIdsBySessionFiltersQuery = classIdsBySessionFiltersQuery.eq("status", filters.status)
+            }
+
+            const { data: classIdsBySessionFilters, error: classIdsBySessionFiltersError } = await classIdsBySessionFiltersQuery
+            if (classIdsBySessionFiltersError) throw classIdsBySessionFiltersError
+
+            const sessionFilteredClassIds = new Set(
+                (classIdsBySessionFilters || [])
+                    .map((session) => session.class_id)
+                    .filter((id): id is string => Boolean(id))
+            )
+            filteredClassIds = intersectSets(filteredClassIds, sessionFilteredClassIds)
+        }
+
+        const constrainedClassIds = filteredClassIds
+            ? new Set(filteredClassIds)
+            : new Set((classesData || []).map((classItem) => classItem.id))
+        const hasConstrainedClasses = filteredClassIds !== null
+
+        const constrainedTeacherIds = hasConstrainedClasses
+            ? new Set(
+                (allClassTeachers || [])
+                    .filter((row) => constrainedClassIds.has(row.class_id))
+                    .map((row) => row.teacher_id)
+            )
+            : new Set(allTeacherIds)
+
+        const constrainedStudentIds = hasConstrainedClasses
+            ? new Set(
+                (allClassStudents || [])
+                    .filter((row) => constrainedClassIds.has(row.class_id))
+                    .map((row) => row.student_id)
+            )
+            : new Set(allStudentIds)
+
+        const constrainedClassOptions = buildOptionListFromIds(
+            constrainedClassIds,
+            classLabelMap,
+            "Untitled Class"
+        )
+        const constrainedTeacherOptions = buildOptionListFromIds(
+            constrainedTeacherIds,
+            teacherLabelMap,
+            "Unknown Teacher"
+        )
+        const constrainedStudentOptions = buildOptionListFromIds(
+            constrainedStudentIds,
+            studentLabelMap,
+            "Unknown Student"
+        )
+
+        if (options.includeRows === false) {
+            return {
+                rows: [],
+                totalItems: 0,
+                classOptions: constrainedClassOptions,
+                teacherOptions: constrainedTeacherOptions,
+                studentOptions: constrainedStudentOptions,
+            }
+        }
+
+        const page = options.page && options.page > 0 ? options.page : 1
+        const pageSize = options.pageSize && options.pageSize > 0 ? options.pageSize : 50
+
         if (filteredClassIds && filteredClassIds.size === 0) {
-            return { rows: [], totalItems: 0, classOptions, teacherOptions, studentOptions }
+            return {
+                rows: [],
+                totalItems: 0,
+                classOptions: constrainedClassOptions,
+                teacherOptions: constrainedTeacherOptions,
+                studentOptions: constrainedStudentOptions,
+            }
         }
 
         let sessionsQuery = supabase
@@ -265,7 +353,13 @@ export async function getClassSessionsToolData(
         if (sessionsError) throw sessionsError
 
         if (!sessions || sessions.length === 0) {
-            return { rows: [], totalItems: sessionsCount || 0, classOptions, teacherOptions, studentOptions }
+            return {
+                rows: [],
+                totalItems: sessionsCount || 0,
+                classOptions: constrainedClassOptions,
+                teacherOptions: constrainedTeacherOptions,
+                studentOptions: constrainedStudentOptions,
+            }
         }
 
         const sessionIds = sessions.map((session) => session.id)
@@ -384,9 +478,9 @@ export async function getClassSessionsToolData(
         return {
             rows,
             totalItems: sessionsCount || 0,
-            classOptions,
-            teacherOptions,
-            studentOptions,
+            classOptions: constrainedClassOptions,
+            teacherOptions: constrainedTeacherOptions,
+            studentOptions: constrainedStudentOptions,
         }
     } catch (error) {
         console.error("Error fetching class sessions tool data:", error)
