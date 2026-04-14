@@ -4,6 +4,8 @@ import { SupabaseClient } from "@supabase/supabase-js"
 
 // Batch size for PostgREST .in() queries (PostgREST has limits on array size)
 const BATCH_SIZE = 100
+// Page size for reading large tables (Supabase default select cap is 1000 rows)
+const FETCH_PAGE_SIZE = 1000
 
 // Helper function to batch array operations
 async function batchQuery<T>(
@@ -55,15 +57,58 @@ async function getSessionWithClassTitle(supabase: SupabaseClient, sessionId: str
 export async function getTeacherPayments(): Promise<TeacherPaymentType[]> {
     const supabase = createClient()
 
-    const { data: payments, error } = await supabase
-        .from('teacher_payments')
-        .select('*')
-
-    if (error) {
-        throw error
+    type TeacherPaymentRow = {
+        id: string
+        teacher_id: string
+        session_id: string
+        hours: number
+        amount: number
+        status: string
+        paid_date: string | null
+        created_at: string
+        updated_at: string
     }
 
-    if (!payments) {
+    const payments: TeacherPaymentRow[] = []
+    let page = 0
+    let pagesFetched = 0
+
+    while (true) {
+        const from = page * FETCH_PAGE_SIZE
+        const to = from + FETCH_PAGE_SIZE - 1
+
+        const { data: pageData, error } = await supabase
+            .from('teacher_payments')
+            .select('*')
+            .order('id', { ascending: true })
+            .range(from, to)
+
+        if (error) {
+            throw error
+        }
+
+        if (!pageData || pageData.length === 0) {
+            break
+        }
+
+        payments.push(...(pageData as TeacherPaymentRow[]))
+        pagesFetched += 1
+
+        if (pageData.length < FETCH_PAGE_SIZE) {
+            break
+        }
+
+        page += 1
+    }
+
+    console.log('[getTeacherPayments] Paginated query result:', {
+        pagesFetched,
+        totalRows: payments.length,
+        sample: payments[0] ?? null,
+    })
+
+    if (payments.length === 0) {
+        console.log('[getTeacherPayments] No payments returned')
         return []
     }
 
@@ -129,7 +174,7 @@ export async function getTeacherPayments(): Promise<TeacherPaymentType[]> {
         }
     )
 
-    return payments.map((payment: { id: string; teacher_id: string; session_id: string; hours: number; amount: number; status: string; paid_date: string | null; created_at: string; updated_at: string }) => {
+    const mappedPayments = payments.map((payment: { id: string; teacher_id: string; session_id: string; hours: number; amount: number; status: string; paid_date: string | null; created_at: string; updated_at: string }) => {
         const teacherProfile = teachersProfiles.find((t: { id: string }) => t.id === payment.teacher_id) || { id: '', first_name: '', last_name: '' };
         const teacherData = teachersData.find((t: { profile_id: string }) => t.profile_id === payment.teacher_id) || { currency: null };
         const session = sessions.find((s: { id: string }) => s.id === payment.session_id) || { id: '', start_date: '', end_date: '', class_id: '' };
@@ -156,6 +201,26 @@ export async function getTeacherPayments(): Promise<TeacherPaymentType[]> {
             },
         }
     })
+
+    const pendingMapped = mappedPayments.filter((payment) => payment.status === 'pending')
+    const pendingTotals = pendingMapped.reduce(
+        (acc, payment) => {
+            acc.hours += Number(payment.hours || 0)
+            acc.amount += Number(payment.amount || 0)
+            return acc
+        },
+        { hours: 0, amount: 0 }
+    )
+
+    console.log('[getTeacherPayments] Mapped output summary:', {
+        totalMappedRows: mappedPayments.length,
+        pendingRows: pendingMapped.length,
+        pendingTotalHours: pendingTotals.hours,
+        pendingTotalAmount: pendingTotals.amount,
+        sampleMappedRow: mappedPayments[0] ?? null,
+    })
+
+    return mappedPayments
 }
 
 export async function getTeacherPaymentById(id: string): Promise<TeacherPaymentType | null> {

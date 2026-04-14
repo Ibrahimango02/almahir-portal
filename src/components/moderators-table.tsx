@@ -156,8 +156,8 @@ export function ModeratorsTable({ moderators, loading }: ModeratorsTableProps) {
                                     <React.Fragment key={group.status}>
                                         {/* Group Header */}
                                         <TableRow className="bg-muted/50 hover:bg-muted/50 border-b-2 border-border">
-                                            <TableCell 
-                                                colSpan={6} 
+                                            <TableCell
+                                                colSpan={6}
                                                 className="py-3 px-4"
                                             >
                                                 <div className="flex items-center gap-2">
