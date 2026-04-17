@@ -189,8 +189,8 @@ export default function AdminAccountingPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Summary Cards (commented out) */}
+      {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
@@ -226,7 +226,7 @@ export default function AdminAccountingPage() {
             <div className="text-2xl font-bold">{pendingPayments}</div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Filters Section */}
       <Card className="border-0 shadow-none">

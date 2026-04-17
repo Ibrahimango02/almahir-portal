@@ -1,18 +1,54 @@
 import { createClient } from "@/utils/supabase/client"
 import { StudentInvoiceType } from "@/types"
 
+const FETCH_PAGE_SIZE = 1000
+
 export async function getInvoices(): Promise<StudentInvoiceType[]> {
     const supabase = createClient();
 
-    const { data: invoices, error } = await supabase
-        .from('student_invoices')
-        .select('*');
-
-    if (error) {
-        throw error;
+    type StudentInvoiceRow = {
+        id: string
+        student_subscription: string
+        months: string
+        issue_date: string
+        due_date: string
+        paid_date: string | null
+        status: string
+        created_at: string
+        updated_at: string
     }
 
-    if (!invoices) {
+    const invoices: StudentInvoiceRow[] = []
+    let page = 0
+
+    while (true) {
+        const from = page * FETCH_PAGE_SIZE
+        const to = from + FETCH_PAGE_SIZE - 1
+
+        const { data: pageData, error } = await supabase
+            .from('student_invoices')
+            .select('*')
+            .order('id', { ascending: true })
+            .range(from, to)
+
+        if (error) {
+            throw error;
+        }
+
+        if (!pageData || pageData.length === 0) {
+            break
+        }
+
+        invoices.push(...(pageData as StudentInvoiceRow[]))
+
+        if (pageData.length < FETCH_PAGE_SIZE) {
+            break
+        }
+
+        page += 1
+    }
+
+    if (invoices.length === 0) {
         return [];
     }
 
