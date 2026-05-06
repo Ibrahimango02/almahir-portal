@@ -477,8 +477,8 @@ export default function RegisterPage() {
                                             <SelectItem value="ramadan-stars-league">Ramadan Stars League Program</SelectItem>
                                             <SelectItem value="siraati-program">Siraati Program</SelectItem>
                                             <SelectItem value="tajweed-lab">Tajweed Lab</SelectItem>
-                                            <SelectItem value="alhusoon-alkhamsah-one-year">Al-Husoon Al-Khamasah (One Year)</SelectItem>
-                                            <SelectItem value="alhusoon-alkhamsah-two-years">Al-Husoon Al-Khamasah (Two Years)</SelectItem>
+                                            <SelectItem value="alhusoon-alkhamsah-one-year">Al-Husoon Al-Khamsah (One Year)</SelectItem>
+                                            <SelectItem value="alhusoon-alkhamsah-two-years">Al-Husoon Al-Khamsah (Two Years)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
