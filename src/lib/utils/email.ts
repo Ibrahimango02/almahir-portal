@@ -179,10 +179,20 @@ export async function sendRegistrationEmail(
   const languageDisplay = firstLanguage === 'english' ? 'English' : firstLanguage === 'arabic' ? 'Arabic' : 'Other'
 
   // Format program display
-  const programDisplay = program === 'quran' ? 'Quran' :
-    program === 'arabic' ? 'Arabic' :
-      program === 'islamic-studies' ? 'Islamic Studies' :
-        'Special Courses'
+  const programDisplayMap: Record<string, string> = {
+    'quran': 'Quran',
+    'arabic': 'Arabic',
+    'islamic-studies': 'Islamic Studies',
+    'special-courses': 'Special Courses',
+    'al-fatihah': 'Al-Fatihah Hifz (FREE)',
+    'al-isra-al-miraj': "Al-Isra & Al-Mi'raj (FREE)",
+    'ramadan-stars-league': 'Ramadan Stars League Program',
+    'siraati-program': 'Siraati Program',
+    'tajweed-lab': 'Tajweed Lab',
+    'alhusoon-alkhamsah-one-year': 'Al-Husoon Al-Khamsah (One Year)',
+    'alhusoon-alkhamsah-two-years': 'Al-Husoon Al-Khamsah (Two Years)',
+  }
+  const programDisplay = programDisplayMap[program] ?? program
 
   // Format class duration display
   const durationDisplay = classDuration === '30-min' ? '30 min' :
