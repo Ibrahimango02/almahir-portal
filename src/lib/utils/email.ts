@@ -191,6 +191,7 @@ export async function sendRegistrationEmail(
     'tajweed-lab': 'Tajweed Lab',
     'alhusoon-alkhamsah-one-year': 'Al-Husoon Al-Khamsah (One Year)',
     'alhusoon-alkhamsah-two-years': 'Al-Husoon Al-Khamsah (Two Years)',
+    'spark-camps': 'SPARK Camps',
   }
   const programDisplay = programDisplayMap[program] ?? program
 
