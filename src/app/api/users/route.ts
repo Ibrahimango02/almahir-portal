@@ -34,6 +34,24 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
     try {
+        // Only admins may create users
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+        }
+
+        const { data: requesterProfile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (requesterProfile?.role !== 'admin') {
+            return NextResponse.json({ error: 'Only admins can create users' }, { status: 403 });
+        }
+
         const body = await request.json();
         const { email, password, first_name, last_name, role } = body;
 

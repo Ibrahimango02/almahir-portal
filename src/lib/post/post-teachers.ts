@@ -61,15 +61,18 @@ export async function assignTeacherToClass(data: TeacherAssignmentData) {
             }
         }
 
-        // Create teacher attendance records for existing class sessions
+        // Create teacher attendance records for the class's upcoming sessions.
+        // Past sessions keep the teacher they had (see session-participants.ts)
         const teacherAttendanceRecords: { session_id: string; teacher_id: string; attendance_status: string }[] = []
+        const now = new Date().toISOString()
 
         for (const class_id of data.class_ids) {
-            // Get existing sessions for this class
+            // Get upcoming sessions for this class
             const { data: classSessions, error: sessionsError } = await supabase
                 .from('class_sessions')
                 .select('id')
                 .eq('class_id', class_id)
+                .gte('start_date', now)
 
             if (sessionsError) {
                 console.error(`Error fetching sessions for class ${class_id}:`, sessionsError)

@@ -39,6 +39,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
         }
 
+        // Only admins may send invitations
+        const { data: inviterProfile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (inviterProfile?.role !== 'admin') {
+            return NextResponse.json({ error: 'Only admins can send invitations' }, { status: 403 })
+        }
+
         // Check if user is already invited or registered
         const { data: existingInvitation } = await supabase
             .from('invitations')

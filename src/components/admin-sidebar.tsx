@@ -136,7 +136,7 @@ export function AdminSidebar() {
 
   const copyRegistrationLink = async () => {
     try {
-      const registrationUrl = `${window.location.origin}/register`
+      const registrationUrl = "https://almahir.ca/register"
       await navigator.clipboard.writeText(registrationUrl)
       toast({
         title: "Link Copied",
