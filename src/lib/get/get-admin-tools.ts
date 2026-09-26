@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/client"
+import { getSessionStudentIds, getSessionTeacherIds } from "@/lib/get/session-participants"
 import {
     AdminClassSessionsToolData,
     AdminClassSessionsToolFilters,
@@ -363,12 +364,14 @@ export async function getClassSessionsToolData(
         }
 
         const sessionIds = sessions.map((session) => session.id)
-        const classIds = [...new Set(sessions.map((session) => session.class_id))]
 
-        const classTeachers = (allClassTeachers || []).filter((row) => classIds.includes(row.class_id))
-        const classStudents = (allClassStudents || []).filter((row) => classIds.includes(row.class_id))
+        // The teachers and students each session had, which can differ from the class's current ones
+        const [sessionTeacherIds, sessionStudentIds] = await Promise.all([
+            getSessionTeacherIds(supabase, sessions),
+            getSessionStudentIds(supabase, sessions),
+        ])
 
-        const teacherIdsForRows = [...new Set(classTeachers.map((row) => row.teacher_id))]
+        const teacherIdsForRows = [...new Set([...sessionTeacherIds.values()].flat())]
         const teacherData = teacherIdsForRows.length
             ? await batchQuery(teacherIdsForRows, BATCH_SIZE, async (batch) => {
                 const { data, error } = await supabase
@@ -440,15 +443,11 @@ export async function getClassSessionsToolData(
         })
 
         const rows: AdminClassSessionsToolRow[] = sessions.map((session) => {
-            const teachersForClass = classTeachers
-                .filter((row) => row.class_id === session.class_id)
-                .map((row) => row.teacher_id)
-            const studentsForClass = classStudents
-                .filter((row) => row.class_id === session.class_id)
-                .map((row) => row.student_id)
+            const teachersForSession = sessionTeacherIds.get(session.id) || []
+            const studentsForSession = sessionStudentIds.get(session.id) || []
 
             const history = latestSessionHistoryMap.get(session.id)
-            const teacherRateEntries = teachersForClass
+            const teacherRateEntries = teachersForSession
                 .map((id) => ({
                     rate: teacherRateMap.get(id),
                     currency: teacherCurrencyMap.get(id) || null,
@@ -459,10 +458,10 @@ export async function getClassSessionsToolData(
                 session_id: session.id,
                 class_id: session.class_id,
                 class_name: classMap.get(session.class_id) || "Unknown Class",
-                teacher_ids: teachersForClass,
-                teacher_names: teachersForClass.map((id) => teacherProfileMap.get(id) || "Unknown Teacher"),
-                student_ids: studentsForClass,
-                student_names: studentsForClass.map((id) => studentNameMap.get(id) || "Unknown Student"),
+                teacher_ids: teachersForSession,
+                teacher_names: teachersForSession.map((id) => teacherProfileMap.get(id) || "Unknown Teacher"),
+                student_ids: studentsForSession,
+                student_names: studentsForSession.map((id) => studentNameMap.get(id) || "Unknown Student"),
                 teacher_hourly_rates: teacherRateEntries.map((entry) => entry.rate),
                 teacher_hourly_rate_currencies: teacherRateEntries.map((entry) => entry.currency),
                 session_date: session.start_date,

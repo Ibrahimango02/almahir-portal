@@ -134,15 +134,18 @@ export async function assignStudentToClasses(data: AssignmentData) {
             }
         }
 
-        // Create student attendance records for existing class sessions
+        // Create student attendance records for the class's upcoming sessions.
+        // Past sessions keep the students they had (see session-participants.ts)
         const studentAttendanceRecords: { session_id: string; student_id: string; attendance_status: string }[] = []
+        const now = new Date().toISOString()
 
         for (const class_id of data.class_ids) {
-            // Get existing sessions for this class
+            // Get upcoming sessions for this class
             const { data: classSessions, error: sessionsError } = await supabase
                 .from('class_sessions')
                 .select('id')
                 .eq('class_id', class_id)
+                .gte('start_date', now)
 
             if (sessionsError) {
                 console.error(`Error fetching sessions for class ${class_id}:`, sessionsError)

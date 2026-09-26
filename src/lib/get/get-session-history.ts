@@ -1,5 +1,11 @@
 import { createClient } from '@/utils/supabase/client'
 import { SessionHistoryType } from '@/types'
+import {
+    getSessionIdsForStudents,
+    getSessionIdsForTeacher,
+    getSessionStudentIds,
+    getSessionTeacherIds
+} from '@/lib/get/session-participants'
 
 // Batch size for PostgREST .in() queries (PostgREST has limits on array size)
 const BATCH_SIZE = 100
@@ -119,30 +125,33 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
     const supabase = createClient()
 
     try {
-        // Step 1: Get all classes this student is enrolled in
-        const { data: studentClasses } = await supabase
-            .from('class_students')
-            .select('class_id')
-            .eq('student_id', studentId)
+        // Step 1: Get the sessions this student is on
+        const allStudentSessionIds = await getSessionIdsForStudents(supabase, [studentId])
 
-        if (!studentClasses || studentClasses.length === 0) {
+        if (allStudentSessionIds.length === 0) {
             return []
         }
 
-        const classIds = studentClasses.map(sc => sc.class_id)
+        // Step 2: Get the session_history records of these sessions (with batching)
+        const sessionHistory = await batchQuery(
+            allStudentSessionIds,
+            BATCH_SIZE,
+            async (batch) => {
+                const { data: batchData, error } = await supabase
+                    .from('session_history')
+                    .select('*')
+                    .in('session_id', batch)
+                    .order('created_at', { ascending: false })
 
-        // Step 2: Get all session_history records
-        const { data: sessionHistory, error: historyError } = await supabase
-            .from('session_history')
-            .select('*')
-            .order('created_at', { ascending: false })
+                if (error) {
+                    console.error('Error fetching session history:', error)
+                    throw error
+                }
+                return batchData || []
+            }
+        )
 
-        if (historyError) {
-            console.error('Error fetching session history:', historyError)
-            throw historyError
-        }
-
-        if (!sessionHistory || sessionHistory.length === 0) {
+        if (sessionHistory.length === 0) {
             return []
         }
 
@@ -150,7 +159,7 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
         const sessionIds = [...new Set(sessionHistory.map(h => h.session_id))]
 
         // Step 4: Get the corresponding class_sessions records (with batching)
-        const sessions = await batchQuery(
+        const studentSessions = await batchQuery(
             sessionIds,
             BATCH_SIZE,
             async (batch) => {
@@ -167,27 +176,18 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
             }
         )
 
-        if (sessions.length === 0) {
-            return []
-        }
-
-        // Step 5: Filter sessions to only those belonging to student's classes
-        const studentSessions = sessions.filter(session =>
-            classIds.includes(session.class_id)
-        )
-
         if (studentSessions.length === 0) {
             return []
         }
 
-        // Step 6: Get class details for these sessions
+        // Step 5: Get class details for these sessions
         const studentClassIds = [...new Set(studentSessions.map(s => s.class_id))]
         const { data: classes } = await supabase
             .from('classes')
             .select('*')
             .in('id', studentClassIds)
 
-        // Step 7: Get student attendance for these sessions (with batching)
+        // Step 6: Get student attendance for these sessions (with batching)
         const studentSessionIds = studentSessions.map(s => s.id)
         const studentAttendance = await batchQuery(
             studentSessionIds,
@@ -202,7 +202,7 @@ export async function getStudentSessionHistory(studentId: string): Promise<Array
             }
         )
 
-        // Step 8: Combine the data for sessions that have history
+        // Step 7: Combine the data for sessions that have history
         const result = studentSessions.map(session => {
             const classData = classes?.find(c => c.id === session.class_id)
             const history = sessionHistory.find(h => h.session_id === session.id)
@@ -245,30 +245,33 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
     const supabase = createClient()
 
     try {
-        // Step 1: Get all classes this teacher teaches
-        const { data: teacherClasses } = await supabase
-            .from('class_teachers')
-            .select('class_id')
-            .eq('teacher_id', teacherId)
+        // Step 1: Get the sessions this teacher is on
+        const allTeacherSessionIds = await getSessionIdsForTeacher(supabase, teacherId)
 
-        if (!teacherClasses || teacherClasses.length === 0) {
+        if (allTeacherSessionIds.length === 0) {
             return []
         }
 
-        const classIds = teacherClasses.map(tc => tc.class_id)
+        // Step 2: Get the session_history records of these sessions (with batching)
+        const sessionHistory = await batchQuery(
+            allTeacherSessionIds,
+            BATCH_SIZE,
+            async (batch) => {
+                const { data: batchData, error } = await supabase
+                    .from('session_history')
+                    .select('*')
+                    .in('session_id', batch)
+                    .order('created_at', { ascending: false })
 
-        // Step 2: Get all session_history records
-        const { data: sessionHistory, error: historyError } = await supabase
-            .from('session_history')
-            .select('*')
-            .order('created_at', { ascending: false })
+                if (error) {
+                    console.error('Error fetching session history:', error)
+                    throw error
+                }
+                return batchData || []
+            }
+        )
 
-        if (historyError) {
-            console.error('Error fetching session history:', historyError)
-            throw historyError
-        }
-
-        if (!sessionHistory || sessionHistory.length === 0) {
+        if (sessionHistory.length === 0) {
             return []
         }
 
@@ -276,7 +279,7 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
         const sessionIds = [...new Set(sessionHistory.map(h => h.session_id))]
 
         // Step 4: Get the corresponding class_sessions records (with batching)
-        const sessions = await batchQuery(
+        const teacherSessions = await batchQuery(
             sessionIds,
             BATCH_SIZE,
             async (batch) => {
@@ -293,27 +296,18 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
             }
         )
 
-        if (sessions.length === 0) {
-            return []
-        }
-
-        // Step 5: Filter sessions to only those belonging to teacher's classes
-        const teacherSessions = sessions.filter(session =>
-            classIds.includes(session.class_id)
-        )
-
         if (teacherSessions.length === 0) {
             return []
         }
 
-        // Step 6: Get class details for these sessions
+        // Step 5: Get class details for these sessions
         const teacherClassIds = [...new Set(teacherSessions.map(s => s.class_id))]
         const { data: classes } = await supabase
             .from('classes')
             .select('*')
             .in('id', teacherClassIds)
 
-        // Step 7: Get teacher attendance for these sessions (with batching)
+        // Step 6: Get teacher attendance for these sessions (with batching)
         const teacherSessionIds = teacherSessions.map(s => s.id)
         const teacherAttendance = await batchQuery(
             teacherSessionIds,
@@ -328,7 +322,7 @@ export async function getTeacherSessionHistory(teacherId: string): Promise<Array
             }
         )
 
-        // Step 8: Combine the data for sessions that have history
+        // Step 7: Combine the data for sessions that have history
         const result = teacherSessions.map(session => {
             const classData = classes?.find(c => c.id === session.class_id)
             const history = sessionHistory.find(h => h.session_id === session.id)
@@ -452,21 +446,14 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             }
         )
 
-        // Step 7: Get class teachers (with batching)
-        const classTeachers = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_teachers')
-                    .select('class_id, teacher_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
+        // Step 7: Get the teachers and students of each session (not the class's current ones)
+        const [sessionTeacherIds, sessionStudentIds] = await Promise.all([
+            getSessionTeacherIds(supabase, sessions),
+            getSessionStudentIds(supabase, sessions)
+        ])
 
         // Step 8: Get teacher profiles (with batching)
-        const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+        const teacherIds = [...new Set([...sessionTeacherIds.values()].flat())]
         const teacherProfiles = teacherIds.length > 0
             ? await batchQuery(
                 teacherIds,
@@ -481,21 +468,8 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             )
             : []
 
-        // Step 9: Get class students (with batching)
-        const classStudents = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_students')
-                    .select('class_id, student_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
-
-        // Step 10: Get student data from students table (with batching)
-        const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+        // Step 9: Get student data from students table (with batching)
+        const studentIds = [...new Set([...sessionStudentIds.values()].flat())]
         const studentData = studentIds.length > 0
             ? await batchQuery(
                 studentIds,
@@ -510,7 +484,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             )
             : []
 
-        // Step 11: Get profiles for independent students (with batching)
+        // Step 10: Get profiles for independent students (with batching)
         const independentStudentProfileIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
         const independentStudentProfiles = independentStudentProfileIds.length > 0
             ? await batchQuery(
@@ -526,7 +500,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             )
             : []
 
-        // Step 12: Get child profiles for dependent students (with batching)
+        // Step 11: Get child profiles for dependent students (with batching)
         const dependentStudentIds = studentData?.filter(s => s.student_type === 'dependent').map(s => s.id) || []
         const childProfiles = dependentStudentIds.length > 0
             ? await batchQuery(
@@ -542,7 +516,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             )
             : []
 
-        // Step 13: Get teacher attendance (with batching)
+        // Step 12: Get teacher attendance (with batching)
         const teacherAttendance = await batchQuery(
             sessionIds,
             BATCH_SIZE,
@@ -555,7 +529,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             }
         )
 
-        // Step 14: Create lookup maps
+        // Step 13: Create lookup maps
         const sessionMap = new Map(
             sessions.map(s => [s.id, s])
         )
@@ -572,7 +546,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             (teacherAttendance || []).map(a => [a.session_id, a.attendance_status])
         )
 
-        // Step 15: Create student name map (student_id -> name)
+        // Step 14: Create student name map (student_id -> name)
         const studentNameMap = new Map<string, string>()
 
         // Map independent students (from profiles)
@@ -590,25 +564,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             studentNameMap.set(child.student_id, `${child.first_name} ${child.last_name}`)
         })
 
-        // Step 16: Create class to teacher mapping
-        const classTeacherMap = new Map()
-        classTeachers?.forEach(ct => {
-            if (!classTeacherMap.has(ct.class_id)) {
-                classTeacherMap.set(ct.class_id, [])
-            }
-            classTeacherMap.get(ct.class_id).push(ct.teacher_id)
-        })
-
-        // Step 17: Create class to students mapping
-        const classStudentMap = new Map()
-        classStudents?.forEach(cs => {
-            if (!classStudentMap.has(cs.class_id)) {
-                classStudentMap.set(cs.class_id, [])
-            }
-            classStudentMap.get(cs.class_id).push(cs.student_id)
-        })
-
-        // Step 18: Combine the data - iterate over session_history records
+        // Step 15: Combine the data - iterate over session_history records
         const result = sessionHistory.map(history => {
             const session = sessionMap.get(history.session_id)
             if (!session) {
@@ -620,17 +576,15 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             const remarks = sessionRemarksMap.get(session.id)
             const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
 
-            // Get teacher names for this class
-            const classTeacherIds = classTeacherMap.get(session.class_id) || []
-            const teacherNames = classTeacherIds
+            // Get teacher names for this session
+            const teacherNames = (sessionTeacherIds.get(session.id) || [])
                 .map((teacherId: string) => {
                     const teacher = teacherProfiles?.find(t => t.id === teacherId)
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
                 })
 
-            // Get student names for this class
-            const classStudentIds = classStudentMap.get(session.class_id) || []
-            const studentNames = classStudentIds
+            // Get student names for this session
+            const studentNames = (sessionStudentIds.get(session.id) || [])
                 .map((studentId: string) => {
                     return studentNameMap.get(studentId) || 'Unknown Student'
                 })
@@ -653,7 +607,7 @@ export async function getAllSessionHistoryForReports(): Promise<Array<{
             }
         }).filter((item): item is NonNullable<typeof item> => item !== null)
 
-        // Step 19: Filter to only sessions with status "complete" or "absence", then sort by date (newest first)
+        // Step 16: Filter to only sessions with status "complete" or "absence", then sort by date (newest first)
         return result
             .filter(session =>
                 session.status === 'complete' ||
@@ -686,28 +640,23 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
     const supabase = createClient()
 
     try {
-        // Step 1: Get all classes this teacher teaches
-        const { data: teacherClasses } = await supabase
-            .from('class_teachers')
-            .select('class_id')
-            .eq('teacher_id', teacherId)
+        // Step 1: Get the sessions this teacher is on
+        const teacherSessionIds = await getSessionIdsForTeacher(supabase, teacherId)
 
-        if (!teacherClasses || teacherClasses.length === 0) {
+        if (teacherSessionIds.length === 0) {
             return []
         }
 
-        const classIds = [...new Set(teacherClasses.map(tc => tc.class_id))]
-
-        // Step 2: Get all sessions for these classes (with batching)
+        // Step 2: Get these sessions (with batching)
         // Only fetch sessions with status "complete" or "absence"
         const sessions = await batchQuery(
-            classIds,
+            teacherSessionIds,
             BATCH_SIZE,
             async (batch) => {
                 const { data: batchData } = await supabase
                     .from('class_sessions')
                     .select('id, class_id, start_date, end_date, status')
-                    .in('class_id', batch)
+                    .in('id', batch)
                     .in('status', ['complete', 'absence'])
                 return batchData || []
             }
@@ -718,6 +667,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
         }
 
         const sessionIds = sessions.map(s => s.id)
+        const classIds = [...new Set(sessions.map(s => s.class_id))]
 
         // Step 3: Get session history for these sessions (with batching)
         const sessionHistory = await batchQuery(
@@ -773,21 +723,14 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             }
         )
 
-        // Step 6: Get class teachers (for all classes this teacher teaches) (with batching)
-        const classTeachers = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_teachers')
-                    .select('class_id, teacher_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
+        // Step 6: Get the teachers and students of each session (not the class's current ones)
+        const [sessionTeacherIds, sessionStudentIds] = await Promise.all([
+            getSessionTeacherIds(supabase, sessions),
+            getSessionStudentIds(supabase, sessions)
+        ])
 
         // Step 7: Get teacher profiles (with batching)
-        const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+        const teacherIds = [...new Set([...sessionTeacherIds.values()].flat())]
         const teacherProfiles = teacherIds.length > 0
             ? await batchQuery(
                 teacherIds,
@@ -802,21 +745,8 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             )
             : []
 
-        // Step 8: Get class students (with batching)
-        const classStudents = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_students')
-                    .select('class_id, student_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
-
-        // Step 9: Get student data from students table (with batching)
-        const studentIds = [...new Set(classStudents?.map(cs => cs.student_id) || [])]
+        // Step 8: Get student data from students table (with batching)
+        const studentIds = [...new Set([...sessionStudentIds.values()].flat())]
         const studentData = studentIds.length > 0
             ? await batchQuery(
                 studentIds,
@@ -831,7 +761,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             )
             : []
 
-        // Step 10: Get profiles for independent students (with batching)
+        // Step 9: Get profiles for independent students (with batching)
         const independentStudentProfileIds = studentData?.filter(s => s.student_type === 'independent' && s.profile_id).map(s => s.profile_id) || []
         const independentStudentProfiles = independentStudentProfileIds.length > 0
             ? await batchQuery(
@@ -847,7 +777,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             )
             : []
 
-        // Step 11: Get child profiles for dependent students (with batching)
+        // Step 10: Get child profiles for dependent students (with batching)
         const dependentStudentIds = studentData?.filter(s => s.student_type === 'dependent').map(s => s.id) || []
         const childProfiles = dependentStudentIds.length > 0
             ? await batchQuery(
@@ -863,7 +793,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             )
             : []
 
-        // Step 12: Get teacher attendance for this specific teacher (with batching)
+        // Step 11: Get teacher attendance for this specific teacher (with batching)
         const teacherAttendance = await batchQuery(
             sessionIds,
             BATCH_SIZE,
@@ -877,7 +807,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             }
         )
 
-        // Step 13: Create lookup maps
+        // Step 12: Create lookup maps
         const sessionMap = new Map(
             sessions.map(s => [s.id, s])
         )
@@ -894,7 +824,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             (teacherAttendance || []).map(a => [a.session_id, a.attendance_status])
         )
 
-        // Step 14: Create student name map (student_id -> name)
+        // Step 13: Create student name map (student_id -> name)
         const studentNameMap = new Map<string, string>()
 
         // Map independent students (from profiles)
@@ -912,25 +842,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             studentNameMap.set(child.student_id, `${child.first_name} ${child.last_name}`)
         })
 
-        // Step 15: Create class to teacher mapping
-        const classTeacherMap = new Map()
-        classTeachers?.forEach(ct => {
-            if (!classTeacherMap.has(ct.class_id)) {
-                classTeacherMap.set(ct.class_id, [])
-            }
-            classTeacherMap.get(ct.class_id).push(ct.teacher_id)
-        })
-
-        // Step 16: Create class to students mapping
-        const classStudentMap = new Map()
-        classStudents?.forEach(cs => {
-            if (!classStudentMap.has(cs.class_id)) {
-                classStudentMap.set(cs.class_id, [])
-            }
-            classStudentMap.get(cs.class_id).push(cs.student_id)
-        })
-
-        // Step 17: Combine the data - iterate over session_history records
+        // Step 14: Combine the data - iterate over session_history records
         const result = sessionHistory.map(history => {
             const session = sessionMap.get(history.session_id)
             if (!session) {
@@ -942,17 +854,15 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             const remarks = sessionRemarksMap.get(session.id)
             const teacherAttendanceStatus = teacherAttendanceMap.get(session.id) || 'N/A'
 
-            // Get teacher names for this class
-            const classTeacherIds = classTeacherMap.get(session.class_id) || []
-            const teacherNames = classTeacherIds
+            // Get teacher names for this session
+            const teacherNames = (sessionTeacherIds.get(session.id) || [])
                 .map((tid: string) => {
                     const teacher = teacherProfiles?.find(t => t.id === tid)
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
                 })
 
-            // Get student names for this class
-            const classStudentIds = classStudentMap.get(session.class_id) || []
-            const studentNames = classStudentIds
+            // Get student names for this session
+            const studentNames = (sessionStudentIds.get(session.id) || [])
                 .map((studentId: string) => {
                     return studentNameMap.get(studentId) || 'Unknown Student'
                 })
@@ -975,7 +885,7 @@ export async function getTeacherSessionHistoryForReports(teacherId: string): Pro
             }
         }).filter((item): item is NonNullable<typeof item> => item !== null)
 
-        // Step 18: Filter to only sessions with status "complete" or "absence", then sort by date (newest first)
+        // Step 15: Filter to only sessions with status "complete" or "absence", then sort by date (newest first)
         return result
             .filter(session =>
                 session.status === 'complete' ||
@@ -1026,40 +936,23 @@ export async function getParentSessionHistoryForReports(parentProfileId: string)
 
         const parentStudentIds = parentChildProfiles.map(cp => cp.student_id)
 
-        // Step 2: Get all classes these students are enrolled in (with batching)
-        const classStudents = await batchQuery(
-            parentStudentIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData, error } = await supabase
-                    .from('class_students')
-                    .select('class_id, student_id')
-                    .in('student_id', batch)
+        // Step 2: Get the sessions these students are on
+        const studentSessionIds = await getSessionIdsForStudents(supabase, parentStudentIds)
 
-                if (error) {
-                    console.error('Error fetching class_students for parent:', error)
-                    throw error
-                }
-                return batchData || []
-            }
-        )
-
-        if (classStudents.length === 0) {
+        if (studentSessionIds.length === 0) {
             return []
         }
 
-        const classIds = [...new Set(classStudents.map(cs => cs.class_id))]
-
-        // Step 3: Get all sessions for these classes (with batching)
+        // Step 3: Get these sessions (with batching)
         // Only fetch sessions with status "complete" or "absence"
         const sessions = await batchQuery(
-            classIds,
+            studentSessionIds,
             BATCH_SIZE,
             async (batch) => {
                 const { data: batchData, error } = await supabase
                     .from('class_sessions')
                     .select('id, class_id, start_date, end_date, status')
-                    .in('class_id', batch)
+                    .in('id', batch)
                     .in('status', ['complete', 'absence'])
 
                 if (error) {
@@ -1075,6 +968,7 @@ export async function getParentSessionHistoryForReports(parentProfileId: string)
         }
 
         const sessionIds = sessions.map(s => s.id)
+        const classIds = [...new Set(sessions.map(s => s.class_id))]
 
         // Step 4: Get session history for these sessions (with batching)
         const sessionHistory = await batchQuery(
@@ -1130,21 +1024,14 @@ export async function getParentSessionHistoryForReports(parentProfileId: string)
             }
         )
 
-        // Step 7: Get class teachers (with batching)
-        const classTeachers = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_teachers')
-                    .select('class_id, teacher_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
+        // Step 7: Get the teachers and students of each session (not the class's current ones)
+        const [sessionTeacherIds, sessionStudentIds] = await Promise.all([
+            getSessionTeacherIds(supabase, sessions),
+            getSessionStudentIds(supabase, sessions)
+        ])
 
         // Step 8: Get teacher profiles (with batching)
-        const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+        const teacherIds = [...new Set([...sessionTeacherIds.values()].flat())]
         const teacherProfiles = teacherIds.length > 0
             ? await batchQuery(
                 teacherIds,
@@ -1260,26 +1147,21 @@ export async function getParentSessionHistoryForReports(parentProfileId: string)
             const classData = classMap.get(session.class_id)
             const remarks = sessionRemarksMap.get(session.id)
 
-            // Find this parent's students in this class
-            const studentsInThisClass = classStudents.filter(cs =>
-                cs.class_id === session.class_id && parentStudentIds.includes(cs.student_id)
-            ).map(cs => cs.student_id)
+            // Find this parent's students in this session
+            const studentsInThisSession = (sessionStudentIds.get(session.id) || [])
+                .filter(studentId => parentStudentIds.includes(studentId))
 
-            if (studentsInThisClass.length === 0) {
-                // No students of this parent in this class/session
+            if (studentsInThisSession.length === 0) {
+                // No students of this parent in this session
                 return null
             }
 
-            // Student names for this class that belong to the parent
-            const studentNames = studentsInThisClass
+            // Student names for this session that belong to the parent
+            const studentNames = studentsInThisSession
                 .map(studentId => studentNameMap.get(studentId) || 'Unknown Student')
 
-            // Teacher names for this class
-            const classTeacherIds = classTeachers
-                ?.filter(ct => ct.class_id === session.class_id)
-                .map(ct => ct.teacher_id) || []
-
-            const teacherNames = classTeacherIds
+            // Teacher names for this session
+            const teacherNames = (sessionTeacherIds.get(session.id) || [])
                 .map((tid: string) => {
                     const teacher = teacherProfiles?.find(t => t.id === tid)
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
@@ -1351,33 +1233,23 @@ export async function getStudentSessionHistoryForReports(studentId: string): Pro
     const supabase = createClient()
 
     try {
-        // Step 1: Get all classes this student is enrolled in
-        const { data: studentClasses, error: studentClassesError } = await supabase
-            .from('class_students')
-            .select('class_id, student_id')
-            .eq('student_id', studentId)
+        // Step 1: Get the sessions this student is on
+        const studentSessionIds = await getSessionIdsForStudents(supabase, [studentId])
 
-        if (studentClassesError) {
-            console.error('Error fetching class_students for student:', studentClassesError)
-            throw studentClassesError
-        }
-
-        if (!studentClasses || studentClasses.length === 0) {
+        if (studentSessionIds.length === 0) {
             return []
         }
 
-        const classIds = [...new Set(studentClasses.map(cs => cs.class_id))]
-
-        // Step 2: Get all sessions for these classes (with batching)
+        // Step 2: Get these sessions (with batching)
         // Only fetch sessions with status "complete" or "absence"
         const sessions = await batchQuery(
-            classIds,
+            studentSessionIds,
             BATCH_SIZE,
             async (batch) => {
                 const { data: batchData, error } = await supabase
                     .from('class_sessions')
                     .select('id, class_id, start_date, end_date, status')
-                    .in('class_id', batch)
+                    .in('id', batch)
                     .in('status', ['complete', 'absence'])
 
                 if (error) {
@@ -1393,6 +1265,7 @@ export async function getStudentSessionHistoryForReports(studentId: string): Pro
         }
 
         const sessionIds = sessions.map(s => s.id)
+        const classIds = [...new Set(sessions.map(s => s.class_id))]
 
         // Step 3: Get session history for these sessions (with batching)
         const sessionHistory = await batchQuery(
@@ -1448,21 +1321,14 @@ export async function getStudentSessionHistoryForReports(studentId: string): Pro
             }
         )
 
-        // Step 6: Get class teachers for these classes (with batching)
-        const classTeachers = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_teachers')
-                    .select('class_id, teacher_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
+        // Step 6: Get the teachers and students (classmates) of each session (not the class's current ones)
+        const [sessionTeacherIds, sessionStudentIds] = await Promise.all([
+            getSessionTeacherIds(supabase, sessions),
+            getSessionStudentIds(supabase, sessions)
+        ])
 
         // Step 7: Get teacher profiles (with batching)
-        const teacherIds = [...new Set(classTeachers?.map(ct => ct.teacher_id) || [])]
+        const teacherIds = [...new Set([...sessionTeacherIds.values()].flat())]
         const teacherProfiles = teacherIds.length > 0
             ? await batchQuery(
                 teacherIds,
@@ -1477,20 +1343,8 @@ export async function getStudentSessionHistoryForReports(studentId: string): Pro
             )
             : []
 
-        // Step 8: Get all students in these classes (for showing classmates) (with batching)
-        const allClassStudents = await batchQuery(
-            classIds,
-            BATCH_SIZE,
-            async (batch) => {
-                const { data: batchData } = await supabase
-                    .from('class_students')
-                    .select('class_id, student_id')
-                    .in('class_id', batch)
-                return batchData || []
-            }
-        )
-
-        const allStudentIds = [...new Set(allClassStudents?.map(cs => cs.student_id) || [])]
+        // Step 8: Get student data for all students in these sessions (with batching)
+        const allStudentIds = [...new Set([...sessionStudentIds.values()].flat())]
 
         const studentData = allStudentIds.length > 0
             ? await batchQuery(
@@ -1592,23 +1446,15 @@ export async function getStudentSessionHistoryForReports(studentId: string): Pro
             const remarks = sessionRemarksMap.get(session.id)
             const attendanceStatus = studentAttendanceMap.get(session.id) || 'N/A'
 
-            // Teachers for this class
-            const classTeacherIds = classTeachers
-                ?.filter(ct => ct.class_id === session.class_id)
-                .map(ct => ct.teacher_id) || []
-
-            const teacherNames = classTeacherIds
+            // Teachers for this session
+            const teacherNames = (sessionTeacherIds.get(session.id) || [])
                 .map((tid: string) => {
                     const teacher = teacherProfiles?.find(t => t.id === tid)
                     return teacher ? `${teacher.first_name} ${teacher.last_name}` : 'Unknown Teacher'
                 })
 
-            // Students for this class
-            const classStudentIds = allClassStudents
-                ?.filter(cs => cs.class_id === session.class_id)
-                .map(cs => cs.student_id) || []
-
-            const studentNames = classStudentIds
+            // Students for this session
+            const studentNames = (sessionStudentIds.get(session.id) || [])
                 .map(sid => studentNameMap.get(sid) || 'Unknown Student')
 
             return {
