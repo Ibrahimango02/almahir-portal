@@ -5,6 +5,9 @@ import {
     AdminClassSessionsToolFilters,
     AdminClassSessionsToolOption,
     AdminClassSessionsToolRow,
+    AdminRegistrationsToolData,
+    AdminRegistrationsToolFilters,
+    AdminRegistrationsToolRow,
 } from "@/types"
 
 const BATCH_SIZE = 100
@@ -490,5 +493,52 @@ export async function getClassSessionsToolData(
             teacherOptions: [],
             studentOptions: [],
         }
+    }
+}
+
+export async function getRegistrationsToolData(
+    filters: AdminRegistrationsToolFilters = {},
+    options: { page?: number; pageSize?: number } = {}
+): Promise<AdminRegistrationsToolData> {
+    const supabase = createClient()
+
+    try {
+        const page = options.page && options.page > 0 ? options.page : 1
+        const pageSize = options.pageSize && options.pageSize > 0 ? options.pageSize : 50
+
+        let query = supabase
+            .from("registrations")
+            .select("*", { count: "exact" })
+            .order("created_at", { ascending: false })
+
+        if (filters.startDate) {
+            query = query.gte("created_at", `${filters.startDate}T00:00:00`)
+        }
+        if (filters.endDate) {
+            query = query.lte("created_at", `${filters.endDate}T23:59:59.999`)
+        }
+        if (filters.search) {
+            // Strip characters that would break the PostgREST or() filter syntax
+            const term = filters.search.replace(/[,()%*]/g, " ").trim()
+            if (term) {
+                query = query.or(
+                    `name.ilike.%${term}%,email.ilike.%${term}%,parent_guardian_name.ilike.%${term}%,country.ilike.%${term}%`
+                )
+            }
+        }
+
+        const rangeFrom = (page - 1) * pageSize
+        query = query.range(rangeFrom, rangeFrom + pageSize - 1)
+
+        const { data, error, count } = await query
+        if (error) throw error
+
+        return {
+            rows: (data || []) as AdminRegistrationsToolRow[],
+            totalItems: count || 0,
+        }
+    } catch (error) {
+        console.error("Error fetching registrations tool data:", error)
+        throw error
     }
 }

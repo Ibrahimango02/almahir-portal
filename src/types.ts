@@ -471,6 +471,38 @@ export type AdminClassSessionsToolData = {
     studentOptions: AdminClassSessionsToolOption[]
 }
 
+export type AdminRegistrationsToolFilters = {
+    search?: string
+    startDate?: string // YYYY-MM-DD
+    endDate?: string // YYYY-MM-DD
+}
+
+export type AdminRegistrationsToolRow = {
+    id: string
+    name: string
+    gender: string | null
+    age: string | null
+    parent_guardian_name: string | null
+    relation_to_applicant: string | null
+    first_language: string | null
+    country: string | null
+    email: string | null
+    phone: string | null
+    whatsapp: string | null
+    program: string | null
+    class_duration: string | null
+    availability: string[] | null
+    hear_about_us: string | null
+    friend_name: string | null
+    comments: string | null
+    created_at: string
+}
+
+export type AdminRegistrationsToolData = {
+    rows: AdminRegistrationsToolRow[]
+    totalItems: number
+}
+
 // Notification types
 export type NotificationType = {
     id: string

@@ -1,5 +1,5 @@
-import { AdminClassSessionsTool } from "@/components/admin-class-sessions-tool"
+import { AdminTools } from "@/components/admin-tools"
 
 export default function AdminToolsPage() {
-    return <AdminClassSessionsTool />
+    return <AdminTools />
 }
